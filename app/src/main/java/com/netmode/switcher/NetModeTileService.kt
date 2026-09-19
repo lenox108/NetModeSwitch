@@ -13,7 +13,20 @@ class NetModeTileService : TileService() {
         paint(ModeController.current.value, busy = false)
         App.scope.launch {
             ModeController.read()
-            requestUpdate()
+            // ВАЖНО: красим напрямую, а НЕ через requestUpdate().
+            //
+            // requestUpdate() зовёт requestListeningState(), то есть просит систему перевести
+            // тайл в listening — и система отвечает вызовом onStartListening(). Вызванный
+            // отсюда, он замыкает сам себя: чтение режима → запрос listening → снова
+            // onStartListening → снова чтение. Выхода из круга нет, он живёт до смерти
+            // процесса, а каждый оборот — это root-команда `cmd phone` к телефонии.
+            //
+            // На телефоне владельца (19.09.2026) это дало 32 оборота в секунду в течение
+            // шести часов: 35 % ядра в root-шелле на форки `cmd phone`, 12 % в самом
+            // приложении, плюс SystemUI и logd, обслуживающие поток «refreshState: tile not
+            // listening, ignore». Телефон ушёл в severe-троттлинг, ядра 90–99 °C, экран
+            // система сбросила со 120 на 60 Гц.
+            paint(ModeController.current.value, busy = false)
         }
     }
 
@@ -24,7 +37,9 @@ class NetModeTileService : TileService() {
         // which would cancel a root rebind mid-flight.
         App.scope.launch {
             ModeController.toggle(ModeController.Source.TILE)
-            requestUpdate()
+            // Тоже без requestUpdate: тайл в этот момент ЗАВЕДОМО слушает (его только что
+            // нажали), а ModeController.apply сам дёргает requestUpdate для внешних поводов.
+            paint(ModeController.current.value, busy = false)
         }
     }
 
