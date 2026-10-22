@@ -36,8 +36,34 @@ object Privileged {
     var lastUsed: Backend? = null
         private set
 
+    /**
+     * The watchdog against a runaway loop of privileged commands — what once kept a tile's
+     * root shell forking `cmd phone` 32 times a second for six hours, the phone at 99 °C. Real
+     * work comes in bursts of a few; past [BURST] in [BURST_WINDOW_MS] every further command
+     * waits [THROTTLE_MS], which caps a loop at two a second, and the log says so.
+     */
+    private val guard = RateGuard(BURST_WINDOW_MS, BURST)
+    private const val BURST = 60
+    private const val BURST_WINDOW_MS = 10_000L
+    private const val THROTTLE_MS = 500L
+    @Volatile private var warnedAt = 0L
+
+    private suspend fun throttle() {
+        val now = android.os.SystemClock.elapsedRealtime()
+        val count = guard.hit(now)
+        if (count <= BURST) return
+        if (now - warnedAt > 60_000L) {
+            warnedAt = now
+            Log.w(TAG, "privileged commands: $count in ${BURST_WINDOW_MS / 1000} s, throttling")
+            Prefs.log("слишком частые root-команды: $count за ${BURST_WINDOW_MS / 1000} с — притормаживаю")
+        }
+        kotlinx.coroutines.delay(THROTTLE_MS)
+    }
+
     /** [timeoutMs]: null for the channel's own limit; long scripts (many apps) pass their own. */
-    suspend fun exec(command: String, timeoutMs: Long? = null): String = when (choose()) {
+    suspend fun exec(command: String, timeoutMs: Long? = null): String = throttle().let { execNow(command, timeoutMs) }
+
+    private suspend fun execNow(command: String, timeoutMs: Long?): String = when (choose()) {
         Backend.ROOT -> Root.exec(command, timeoutMs).also { lastUsed = Backend.ROOT }
         Backend.SHIZUKU -> ShizukuChannel.exec(command, timeoutMs).also { lastUsed = Backend.SHIZUKU }
         Backend.AUTO -> throw NoPrivilege("Нет ни root, ни Shizuku")
@@ -55,6 +81,20 @@ object Privileged {
             ShizukuChannel.available() -> Backend.SHIZUKU
             else -> Backend.AUTO
         }
+    }
+}
+
+/** Counts events in a sliding window: [hit] returns how many fell within the last [windowMs]. */
+class RateGuard(private val windowMs: Long, private val keep: Int) {
+    private val times = ArrayDeque<Long>()
+
+    @Synchronized
+    fun hit(now: Long): Int {
+        times.addLast(now)
+        while (times.isNotEmpty() && now - times.first() > windowMs) times.removeFirst()
+        // Past the limit only the count matters; the window need not grow without end.
+        while (times.size > keep * 4) times.removeFirst()
+        return times.size
     }
 }
 
