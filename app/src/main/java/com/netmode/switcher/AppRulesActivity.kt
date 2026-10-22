@@ -64,6 +64,13 @@ class AppRulesActivity : AppCompatActivity() {
 
     private fun iconOf(t: Trigger) = when (t) {
         Trigger.MANUAL -> R.drawable.ic_t_manual
+        Trigger.NOTIFY_APP -> R.drawable.ic_t_notify
+        Trigger.USB -> R.drawable.ic_t_usb
+        Trigger.CAR -> R.drawable.ic_t_car
+        Trigger.ALARM -> R.drawable.ic_t_alarm
+        Trigger.SUN -> R.drawable.ic_t_sun
+        Trigger.TRAFFIC -> R.drawable.ic_t_traffic
+        Trigger.WIFI_OTHER -> R.drawable.ic_t_wifi
         Trigger.TIME -> R.drawable.ic_t_time
         Trigger.WIFI, Trigger.WIFI_LEFT -> R.drawable.ic_t_wifi
         Trigger.BLUETOOTH -> R.drawable.ic_t_bt

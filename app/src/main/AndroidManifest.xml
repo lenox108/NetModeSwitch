@@ -279,6 +279,16 @@
             android:name=".RunNoticeReceiver"
             android:exported="false" />
 
+        <!-- "Уведомление от приложения": only package names and "ongoing" are looked at. -->
+        <service
+            android:name=".NotifListener"
+            android:exported="true"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
         <receiver
             android:name=".BtReceiver"
             android:exported="true">

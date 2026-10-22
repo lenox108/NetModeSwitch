@@ -21,6 +21,7 @@ enum class ExtraKind(val trigger: Trigger) {
     ROAMING(Trigger.ROAMING),
     DND(Trigger.DND),
     LOCKED(Trigger.LOCKED),
+    DARK(Trigger.SUN),
 }
 
 /**
@@ -45,6 +46,7 @@ data class Extra(
             ExtraKind.ROAMING -> if (negate) "не в роуминге" else "в роуминге"
             ExtraKind.DND -> if (negate) "«Не беспокоить» выкл" else "«Не беспокоить» вкл"
             ExtraKind.LOCKED -> if (negate) "телефон разблокирован" else "телефон заблокирован"
+            ExtraKind.DARK -> if (negate) "светло" else "темно"
         }
 
     /** Whether a time window holds at [now]; one that ends where it starts is the whole day. */

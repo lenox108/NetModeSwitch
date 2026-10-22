@@ -92,7 +92,31 @@ enum class Trigger {
     DND,
 
     /** While there is no internet for longer than [AppRule.level] seconds (see [InternetLoss]). */
-    NO_INTERNET;
+    NO_INTERNET,
+
+    /**
+     * While one of [AppRule.triggerApps] has a notification up; with [AppRule.level] 1 only a
+     * lasting one — the app works in the background: music, a download, navigation.
+     */
+    NOTIFY_APP,
+
+    /** While a computer is connected over USB. */
+    USB,
+
+    /** While the phone is in car mode — Android Auto. */
+    CAR,
+
+    /** From [AppRule.level] minutes before the next alarm clock until it rings. */
+    ALARM,
+
+    /** While it is dark — after sunset, before sunrise — or, with [AppRule.level] 1, light. */
+    SUN,
+
+    /** While mobile traffic of the day (or the month, [AppRule.trafficMonth]) is at least [AppRule.level] MB. */
+    TRAFFIC,
+
+    /** While connected to a Wi-Fi network not in [AppRule.knownSsids] — a café, a hotel. */
+    WIFI_OTHER;
 
     /** Triggers that hold for a while and then stop: their rules can put things back. */
     val isCondition: Boolean get() = this != TIME && this != WIFI_LEFT
@@ -108,6 +132,9 @@ enum class RunNotice {
     /** A notification asking first: the start waits for "Выполнить". */
     ASK,
 }
+
+/** "500 МБ", "5 ГБ" */
+internal fun trafficLabel(mb: Int): String = if (mb >= 1024 && mb % 1024 == 0) "${mb / 1024} ГБ" else "$mb МБ"
 
 private val CONFLICT_NAMES = mapOf(
     "NET" to "режим сети", "DATA" to "моб. интернет", "WIFI" to "Wi-Fi", "HOTSPOT" to "точка доступа",
@@ -285,6 +312,10 @@ data class AppRule(
     val endHttp: String? = null,
     val shell: String? = null,
     val endShell: String? = null,
+    /** [Trigger.TRAFFIC]: count the month rather than the day. */
+    val trafficMonth: Boolean = false,
+    /** [Trigger.WIFI_OTHER]: the user's own networks. */
+    val knownSsids: List<String> = emptyList(),
 ) {
     /** What the start sets, key → value, to tell rules that pull the same thing different ways. */
     val sets: Map<String, String>
@@ -593,6 +624,14 @@ data class AppRule(
                 else ""
             Trigger.DND -> "включён «Не беспокоить»"
             Trigger.NO_INTERNET -> "нет интернета дольше " + Steps.words(level)
+            Trigger.NOTIFY_APP -> (if (level == 1) "работает в фоне: " else "уведомление: ") +
+                AppPickerActivity.labels(triggerApps).joinToString(", ").ifEmpty { "?" }
+            Trigger.USB -> "USB подключён к компьютеру"
+            Trigger.CAR -> "в машине (Android Auto)"
+            Trigger.ALARM -> "за " + Steps.words(level * 60) + " до будильника"
+            Trigger.SUN -> if (level == 1) "светло (от восхода до заката)" else "темно (от заката до восхода)"
+            Trigger.TRAFFIC -> "моб. трафик за ${if (trafficMonth) "месяц" else "день"} ≥ " + trafficLabel(level)
+            Trigger.WIFI_OTHER -> "Wi-Fi не из своих"
         }
 
     val daysLabel: String get() = formatDays(days)
@@ -641,6 +680,7 @@ data class AppRule(
         .put("note", note ?: JSONObject.NULL).put("eNote", endNote ?: JSONObject.NULL)
         .put("http", http ?: JSONObject.NULL).put("eHttp", endHttp ?: JSONObject.NULL)
         .put("shell", shell ?: JSONObject.NULL).put("eShell", endShell ?: JSONObject.NULL)
+        .put("tMonth", trafficMonth).put("known", JSONArray(knownSsids))
         .put("leaveS", appLeaveDelay).put("tPass", JSONArray(appPassThrough)).put("screenStay", appScreenOffStays)
 
     companion object {
@@ -744,6 +784,7 @@ data class AppRule(
                     endSys = o.optJSONObject("eSys")?.let { m -> m.keys().asSequence().associateWith { m.getString(it) } }.orEmpty(),
                     note = o.str("note"), endNote = o.str("eNote"), http = o.str("http"), endHttp = o.str("eHttp"),
                     shell = o.str("shell"), endShell = o.str("eShell"),
+                    trafficMonth = o.optBoolean("tMonth", false), knownSsids = o.strings("known"),
                     endAppMethods = o.optJSONObject("eMethods")?.let { m ->
                         m.keys().asSequence().mapNotNull { p ->
                             runCatching { FreezeMethod.valueOf(m.getString(p)) }.getOrNull()?.let { p to it }

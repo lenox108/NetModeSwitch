@@ -80,3 +80,16 @@ class SysSettingsTest {
         assertEquals(listOf("яркость"), r(1, "auto").conflicts(listOf(r(2, "50")))[0].second)
     }
 }
+
+class NewTriggerLabelTest {
+    private fun r(t: Trigger, level: Int = 0, month: Boolean = false) = AppRule(id = 1, enabled = true, hour = 0, minute = 0,
+        endHour = null, endMinute = null, days = 0, packages = emptyList(), method = FreezeMethod.STOP,
+        trigger = t, level = level, trafficMonth = month)
+
+    @Test fun labels() {
+        assertEquals("моб. трафик за месяц ≥ 5 ГБ", r(Trigger.TRAFFIC, 5120, month = true).timeLabel)
+        assertEquals("моб. трафик за день ≥ 500 МБ", r(Trigger.TRAFFIC, 500).timeLabel)
+        assertEquals("за 30 мин до будильника", r(Trigger.ALARM, 30).timeLabel)
+        assertEquals("темно (от заката до восхода)", r(Trigger.SUN).timeLabel)
+    }
+}

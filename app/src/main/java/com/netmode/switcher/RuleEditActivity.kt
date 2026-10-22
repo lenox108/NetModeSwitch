@@ -84,6 +84,13 @@ class RuleEditActivity : AppCompatActivity() {
         TriggerInfo(Trigger.HEADPHONES, R.drawable.ic_t_headphones, R.string.trigger_headphones, R.string.trigger_headphones_hint, R.string.pick_headphones),
         TriggerInfo(Trigger.DND, R.drawable.ic_t_dnd, R.string.trigger_dnd, R.string.trigger_dnd_hint, R.string.pick_dnd),
         TriggerInfo(Trigger.NO_INTERNET, R.drawable.ic_t_nonet, R.string.trigger_nonet, R.string.trigger_nonet_hint, R.string.pick_nonet),
+        TriggerInfo(Trigger.WIFI_OTHER, R.drawable.ic_t_wifi, R.string.trigger_wifi_other, R.string.trigger_wifi_other_hint, R.string.pick_wifi_other),
+        TriggerInfo(Trigger.NOTIFY_APP, R.drawable.ic_t_notify, R.string.trigger_notify, R.string.trigger_notify_hint, R.string.pick_notify),
+        TriggerInfo(Trigger.ALARM, R.drawable.ic_t_alarm, R.string.trigger_alarm, R.string.trigger_alarm_hint, R.string.pick_alarm),
+        TriggerInfo(Trigger.SUN, R.drawable.ic_t_sun, R.string.trigger_sun, R.string.trigger_sun_hint, R.string.pick_sun),
+        TriggerInfo(Trigger.TRAFFIC, R.drawable.ic_t_traffic, R.string.trigger_traffic, R.string.trigger_traffic_hint, R.string.pick_traffic),
+        TriggerInfo(Trigger.CAR, R.drawable.ic_t_car, R.string.trigger_car, R.string.trigger_car_hint, R.string.pick_car),
+        TriggerInfo(Trigger.USB, R.drawable.ic_t_usb, R.string.trigger_usb, R.string.trigger_usb_hint, R.string.pick_usb),
     )
 
     private lateinit var v: ActivityRuleEditBinding
@@ -106,6 +113,11 @@ class RuleEditActivity : AppCompatActivity() {
     private var signalLevel = 1
     private var manualMinutes = 0
     private var netLostSeconds = 60
+    private var notifyLevel = 0
+    private var alarmMinutes = 30
+    private var sunLevel = 0
+    private var trafficIdx = 2
+    private var knownSsids = listOf<String>()
     private var notice = RunNotice.SILENT
     private val extras = mutableListOf<Extra>()
     /** The wait switch follows the trigger's default until the user sets it. */
@@ -322,8 +334,13 @@ class RuleEditActivity : AppCompatActivity() {
             Trigger.WEAK_SIGNAL -> signalLevel = r.level
             Trigger.MANUAL -> manualMinutes = r.level
             Trigger.NO_INTERNET -> netLostSeconds = r.level
+            Trigger.NOTIFY_APP -> notifyLevel = r.level
+            Trigger.ALARM -> alarmMinutes = r.level
+            Trigger.SUN -> sunLevel = r.level
+            Trigger.TRAFFIC -> trafficIdx = TRAFFIC_OPTS.indexOf(r.level to r.trafficMonth).coerceAtLeast(0)
             else -> Unit
         }
+        knownSsids = r?.knownSsids.orEmpty()
         v.tSlot.setItems(simSlots.map { "SIM ${it + 1}" }, simSlots.indexOf(r?.triggerSlot ?: 0))
         v.tMode.setItems(NetMode.entries.map { it.label }, NetMode.entries.indexOf(r?.triggerMode ?: NetMode.FULL))
 
@@ -439,6 +456,10 @@ class RuleEditActivity : AppCompatActivity() {
                 Trigger.WEAK_SIGNAL -> signalLevel = i
                 Trigger.MANUAL -> manualMinutes = MANUAL_MINUTES[i]
                 Trigger.NO_INTERNET -> netLostSeconds = NET_LOST_SECONDS[i]
+                Trigger.NOTIFY_APP -> notifyLevel = i
+                Trigger.ALARM -> alarmMinutes = ALARM_MINUTES[i]
+                Trigger.SUN -> sunLevel = i
+                Trigger.TRAFFIC -> trafficIdx = i
                 else -> Unit
             }
             paint()
@@ -453,6 +474,8 @@ class RuleEditActivity : AppCompatActivity() {
         v.triggerApps.setOnClickListener { pickPlain(Pick.TRIGGER, triggerApps) }
         v.appPass.setOnClickListener { pickPlain(Pick.PASS, appPass) }
         v.addExtra.setOnClickListener { addExtra() }
+        v.sunPlace.setOnClickListener { askSunPlace { paint() } }
+        v.knownSsids.setOnClickListener { askKnownSsids() }
         v.notice.onChange = { i ->
             notice = RunNotice.entries[i]
             // Without notifications a question cannot be seen; the rule would run unasked.
@@ -552,15 +575,15 @@ class RuleEditActivity : AppCompatActivity() {
     private fun allowed(a: Act): Boolean {
         val t = effectiveTrigger
         return when (a) {
-            Act.WIFI, Act.HOTSPOT -> t != Trigger.WIFI
+            Act.WIFI, Act.HOTSPOT -> t != Trigger.WIFI && t != Trigger.WIFI_OTHER
             Act.DATA -> t != Trigger.MOBILE_DATA
             Act.BT -> t != Trigger.BLUETOOTH && t != Trigger.HEADPHONES && !(t == Trigger.WIFI_LEFT && v.leftEndBtOn.isChecked)
             Act.AIRPLANE -> t !in setOf(Trigger.WIFI, Trigger.WIFI_LEFT, Trigger.BLUETOOTH, Trigger.MOBILE_DATA,
-                Trigger.PLACE, Trigger.ROAMING, Trigger.WEAK_SIGNAL, Trigger.CALL, Trigger.NET_MODE, Trigger.NO_INTERNET)
+                Trigger.PLACE, Trigger.ROAMING, Trigger.WEAK_SIGNAL, Trigger.CALL, Trigger.NET_MODE, Trigger.NO_INTERNET, Trigger.WIFI_OTHER)
             // Airplane mode for a moment drops Wi-Fi, Bluetooth and the SIMs, which these watch;
             // a lost internet is what it is for.
             Act.RECONNECT -> t !in setOf(Trigger.WIFI, Trigger.WIFI_LEFT, Trigger.BLUETOOTH, Trigger.MOBILE_DATA,
-                Trigger.PLACE, Trigger.ROAMING, Trigger.WEAK_SIGNAL, Trigger.CALL, Trigger.NET_MODE)
+                Trigger.PLACE, Trigger.ROAMING, Trigger.WEAK_SIGNAL, Trigger.CALL, Trigger.NET_MODE, Trigger.WIFI_OTHER)
             Act.POWERSAVE -> !(t == Trigger.BATTERY && batteryLevel == 0)
             Act.DATASIM -> simSlots.size > 1
             else -> true
@@ -589,7 +612,14 @@ class RuleEditActivity : AppCompatActivity() {
         show(v.slotRow, t == Trigger.NET_MODE || t == Trigger.WEAK_SIGNAL)
         show(v.modeRow, t == Trigger.NET_MODE)
         show(v.levelRow, t == Trigger.BATTERY || t == Trigger.SCREEN_OFF || t == Trigger.LOCKED || t == Trigger.WEAK_SIGNAL ||
-            (t == Trigger.MANUAL && v.releaseOnLeave.isChecked) || t == Trigger.NO_INTERNET)
+            (t == Trigger.MANUAL && v.releaseOnLeave.isChecked) || t == Trigger.NO_INTERNET ||
+            t == Trigger.NOTIFY_APP || t == Trigger.ALARM || t == Trigger.SUN || t == Trigger.TRAFFIC)
+        show(v.sunPlace, t == Trigger.SUN || extras.any { it.kind == ExtraKind.DARK })
+        v.sunPlace.text = Prefs.sunPlace?.let { (la, lo) -> getString(R.string.sun_place, "%.4f, %.4f".format(java.util.Locale.US, la, lo)) }
+            ?: getString(R.string.sun_place_none)
+        show(v.knownSsids, t == Trigger.WIFI_OTHER)
+        v.knownSsids.text = if (knownSsids.isEmpty()) getString(R.string.known_ssids_none)
+        else getString(R.string.known_ssids, knownSsids.joinToString(", "))
         // Locked, nobody is using the phone: there is nothing to wait for. A scene is pressed by
         // someone using it: waiting would only hide that it worked.
         show(v.waitRow.root, t != Trigger.LOCKED && t != Trigger.MANUAL)
@@ -611,7 +641,7 @@ class RuleEditActivity : AppCompatActivity() {
         v.sceneShortcut.isEnabled = existing != null
         v.sceneShortcut.text = getString(if (existing != null) R.string.scene_shortcut else R.string.scene_shortcut_save_first)
         v.releaseOnLeave.setText(if (t == Trigger.MANUAL) R.string.manual_toggle else R.string.release_on_leave)
-        show(v.triggerApps, t == Trigger.APP_OPEN)
+        show(v.triggerApps, t == Trigger.APP_OPEN || t == Trigger.NOTIFY_APP)
         show(v.appLeaveBlock, t == Trigger.APP_OPEN)
         show(v.placeBlock, t == Trigger.PLACE)
         val condition = t.isCondition && !wifiLeft
@@ -639,6 +669,24 @@ class RuleEditActivity : AppCompatActivity() {
             Trigger.WEAK_SIGNAL -> {
                 v.levelLabel.setText(R.string.level_signal)
                 v.level.setItems(resources.getStringArray(R.array.signal_levels).toList(), signalLevel)
+            }
+            Trigger.NOTIFY_APP -> {
+                v.levelLabel.setText(R.string.level_notify)
+                v.level.setItems(listOf(getString(R.string.notify_any), getString(R.string.notify_ongoing)), notifyLevel)
+            }
+            Trigger.ALARM -> {
+                v.levelLabel.setText(R.string.level_alarm)
+                v.level.setItems(ALARM_MINUTES.map { Steps.words(it * 60) }, ALARM_MINUTES.indexOf(alarmMinutes).coerceAtLeast(0))
+            }
+            Trigger.SUN -> {
+                v.levelLabel.setText(R.string.level_sun)
+                v.level.setItems(listOf(getString(R.string.sun_dark), getString(R.string.sun_light)), sunLevel)
+            }
+            Trigger.TRAFFIC -> {
+                v.levelLabel.setText(R.string.level_traffic)
+                v.level.setItems(TRAFFIC_OPTS.map { (mb, month) ->
+                    trafficLabel(mb) + " " + getString(if (month) R.string.traffic_month else R.string.traffic_day)
+                }, trafficIdx)
             }
             Trigger.NO_INTERNET -> {
                 v.levelLabel.setText(R.string.level_screen)
@@ -1354,6 +1402,7 @@ class RuleEditActivity : AppCompatActivity() {
         ExtraKind.ROAMING -> R.drawable.ic_t_roaming
         ExtraKind.DND -> R.drawable.ic_t_dnd
         ExtraKind.LOCKED -> R.drawable.ic_t_lock
+        ExtraKind.DARK -> R.drawable.ic_t_sun
     }
 
     private fun renderExtras() {
@@ -1376,6 +1425,7 @@ class RuleEditActivity : AppCompatActivity() {
             Extra(ExtraKind.ROAMING), Extra(ExtraKind.ROAMING, negate = true),
             Extra(ExtraKind.DND), Extra(ExtraKind.DND, negate = true),
             Extra(ExtraKind.LOCKED), Extra(ExtraKind.LOCKED, negate = true),
+            Extra(ExtraKind.DARK), Extra(ExtraKind.DARK, negate = true),
         )
         val options = listOf(
             getString(R.string.extra_time) to Extra(ExtraKind.TIME, from = 23 * 60, to = 7 * 60),
@@ -1386,7 +1436,11 @@ class RuleEditActivity : AppCompatActivity() {
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.extras_add)
             .setItems(options.map { it.first }.toTypedArray()) { _, i ->
-                editExtra(options[i].second) { extras += it; paint() }
+                editExtra(options[i].second) {
+                    extras += it
+                    if (it.kind == ExtraKind.DARK && Prefs.sunPlace == null) askSunPlace { paint() }
+                    paint()
+                }
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
@@ -1435,6 +1489,56 @@ class RuleEditActivity : AppCompatActivity() {
         }
     }
 
+    /** "55.75, 37.62": two numbers, latitude first; kept for every rule. */
+    private fun askSunPlace(done: () -> Unit) {
+        val input = com.google.android.material.textfield.TextInputEditText(this).apply {
+            setSingleLine()
+            Prefs.sunPlace?.let { (la, lo) -> setText("%.4f, %.4f".format(java.util.Locale.US, la, lo)) }
+        }
+        val box = android.widget.LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(24), dp(8), dp(24), 0)
+            addView(input)
+            addView(hint(getString(R.string.sun_place_hint)))
+        }
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.trigger_sun)
+            .setView(box)
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                val n = Regex("-?\\d+(?:\\.\\d+)?").findAll(input.text.toString()).map { it.value.toDouble() }.toList()
+                if (n.size == 2 && n[0] in -90.0..90.0 && n[1] in -180.0..180.0) {
+                    Prefs.sunPlace = n[0] to n[1]
+                    done()
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun askKnownSsids() {
+        val input = com.google.android.material.textfield.TextInputEditText(this).apply {
+            setText(knownSsids.joinToString("\n"))
+            minLines = 3
+        }
+        val box = android.widget.FrameLayout(this).apply {
+            setPadding(dp(24), dp(8), dp(24), 0)
+            addView(input)
+        }
+        // The network the phone is on now is most likely one of the user's own.
+        if (knownSsids.isEmpty()) lifecycleScope.launch {
+            WifiSsid.current()?.let { if (input.text.isNullOrEmpty()) input.setText(it) }
+        }
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.known_ssids_title)
+            .setView(box)
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                knownSsids = input.text.toString().lines().map { it.trim().trim('"') }.filter { it.isNotEmpty() }.distinct()
+                paint()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
     private fun askTime(initial: Pair<Int, Int>, done: (Pair<Int, Int>) -> Unit) {
         TimePickerDialog(this, { _, h, m -> done(h to m); paint() }, initial.first, initial.second, true).show()
     }
@@ -1452,7 +1556,9 @@ class RuleEditActivity : AppCompatActivity() {
             .setTitle(R.string.sec_when)
             .setSingleChoiceItems(items, triggerInfos.indexOfFirst { it.trigger == trigger }) { d, i ->
                 trigger = triggerInfos[i].trigger
-                if (trigger == Trigger.APP_OPEN && triggerApps.isEmpty()) v.triggerApps.post { v.triggerApps.performClick() }
+                if ((trigger == Trigger.APP_OPEN || trigger == Trigger.NOTIFY_APP) && triggerApps.isEmpty()) v.triggerApps.post { v.triggerApps.performClick() }
+                if (trigger == Trigger.SUN && Prefs.sunPlace == null) v.sunPlace.post { v.sunPlace.performClick() }
+                if (trigger == Trigger.WIFI_OTHER && knownSsids.isEmpty()) v.knownSsids.post { v.knownSsids.performClick() }
                 // Putting back what fixed the internet once it is back would break it again.
                 if (trigger == Trigger.NO_INTERNET && existing == null) v.releaseOnLeave.isChecked = false
                 d.dismiss()
@@ -1589,9 +1695,15 @@ class RuleEditActivity : AppCompatActivity() {
                 Trigger.WEAK_SIGNAL -> signalLevel
                 Trigger.MANUAL -> manualMinutes.takeIf { v.releaseOnLeave.isChecked } ?: 0
                 Trigger.NO_INTERNET -> netLostSeconds
+                Trigger.NOTIFY_APP -> notifyLevel
+                Trigger.ALARM -> alarmMinutes
+                Trigger.SUN -> sunLevel
+                Trigger.TRAFFIC -> TRAFFIC_OPTS[trafficIdx].first
                 else -> 0
             },
-            triggerApps = triggerApps.takeIf { t == Trigger.APP_OPEN }.orEmpty(),
+            trafficMonth = t == Trigger.TRAFFIC && TRAFFIC_OPTS[trafficIdx].second,
+            knownSsids = knownSsids.takeIf { t == Trigger.WIFI_OTHER }.orEmpty(),
+            triggerApps = triggerApps.takeIf { t == Trigger.APP_OPEN || t == Trigger.NOTIFY_APP }.orEmpty(),
             appLeaveDelay = appLeaveDelay.takeIf { t == Trigger.APP_OPEN } ?: 0,
             appPassThrough = appPass.takeIf { t == Trigger.APP_OPEN }.orEmpty(),
             appScreenOffStays = t == Trigger.APP_OPEN && v.appScreenStays.isChecked,
@@ -1672,7 +1784,11 @@ class RuleEditActivity : AppCompatActivity() {
         }
         rule.trigger == Trigger.BLUETOOTH && rule.btAddress == null -> R.string.device_required to v.btDevice
         rule.trigger == Trigger.WIFI_LEFT && v.leftEndBtOn.isChecked && rule.endBtAddress == null -> R.string.device_required to v.leftEndBt
-        rule.trigger == Trigger.APP_OPEN && rule.triggerApps.isEmpty() -> R.string.trigger_apps_required to v.triggerApps
+        (rule.trigger == Trigger.APP_OPEN || rule.trigger == Trigger.NOTIFY_APP) && rule.triggerApps.isEmpty() ->
+            R.string.trigger_apps_required to v.triggerApps
+        (rule.trigger == Trigger.SUN || rule.extras.any { it.kind == ExtraKind.DARK }) && Prefs.sunPlace == null ->
+            R.string.sun_place_required to v.sunPlace
+        rule.trigger == Trigger.WIFI_OTHER && rule.knownSsids.isEmpty() -> R.string.known_ssids_none to v.knownSsids
         rule.trigger == Trigger.MANUAL && rule.name == null -> R.string.scene_name_required to v.ruleName
         rule.trigger == Trigger.PLACE && rule.cells.isEmpty() -> R.string.place_required to v.placeAdd
         !rule.hasActions -> R.string.apps_required to v.addAction
@@ -1770,5 +1886,9 @@ class RuleEditActivity : AppCompatActivity() {
         private val MANUAL_MINUTES = listOf(0, 15, 30, 60, 120, 240, 480)
         /** How long the internet has to be gone, in seconds. */
         private val NET_LOST_SECONDS = listOf(30, 60, 120, 300, 600)
+        private val ALARM_MINUTES = listOf(5, 15, 30, 60, 120)
+        /** Traffic thresholds: megabytes, and whether of the month. */
+        private val TRAFFIC_OPTS = listOf(100 to false, 500 to false, 1024 to false, 2048 to false,
+            5120 to true, 10240 to true, 20480 to true, 51200 to true)
     }
 }

@@ -178,6 +178,13 @@ object Widgets {
 
     fun iconOf(t: Trigger) = when (t) {
         Trigger.MANUAL -> R.drawable.w_ic_t_manual
+        Trigger.NOTIFY_APP -> R.drawable.w_ic_t_notify
+        Trigger.USB -> R.drawable.w_ic_t_usb
+        Trigger.CAR -> R.drawable.w_ic_t_car
+        Trigger.ALARM -> R.drawable.w_ic_t_alarm
+        Trigger.SUN -> R.drawable.w_ic_t_sun
+        Trigger.TRAFFIC -> R.drawable.w_ic_t_traffic
+        Trigger.WIFI_OTHER -> R.drawable.w_ic_t_wifi
         Trigger.TIME -> R.drawable.w_ic_t_time
         Trigger.WIFI, Trigger.WIFI_LEFT -> R.drawable.w_ic_t_wifi
         Trigger.BLUETOOTH -> R.drawable.w_ic_t_bt

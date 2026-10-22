@@ -51,7 +51,14 @@ object ConditionWatch {
     val TRIGGERS = setOf(
         Trigger.BATTERY, Trigger.CHARGING, Trigger.SCREEN_OFF, Trigger.LOCKED, Trigger.APP_OPEN, Trigger.PLACE,
         Trigger.ROAMING, Trigger.WEAK_SIGNAL, Trigger.CALL, Trigger.HEADPHONES, Trigger.DND, Trigger.NO_INTERNET,
+        Trigger.NOTIFY_APP, Trigger.USB, Trigger.CAR, Trigger.ALARM, Trigger.SUN, Trigger.TRAFFIC, Trigger.WIFI_OTHER,
     )
+
+    /** Kinds that change with the clock alone: an exact alarm wakes the check (see scheduleScreenAlarm). */
+    private val TIMED = setOf(Trigger.SCREEN_OFF, Trigger.LOCKED, Trigger.ALARM, Trigger.SUN)
+
+    private const val USB_STATE = "android.hardware.usb.action.USB_STATE"
+    private const val TRAFFIC_EVERY_MS = 10 * 60_000L
 
     /**
      * A network the system still counts as working may have stopped passing traffic: the
@@ -92,6 +99,11 @@ object ConditionWatch {
     /** The Wi-Fi network connected, for "в сети «…»" conditions; [wifiKnown] once read. */
     @Volatile private var wifiSsid: String? = null
     @Volatile private var wifiKnown = false
+    @Volatile private var usbConnected = false
+    /** Mobile bytes of today and of this month, by NetworkStatsManager; null until read. */
+    @Volatile private var trafficDay: Long? = null
+    @Volatile private var trafficMonth: Long? = null
+    private var trafficPoll: Job? = null
     /** Since when the internet is gone (elapsed realtime); 0 while there is internet. */
     @Volatile private var netLostSince = 0L
     private val signal = mutableMapOf<Int, Int>()
@@ -137,6 +149,17 @@ object ConditionWatch {
         Trigger.DND -> dnd()
         Trigger.WEAK_SIGNAL -> weakHolds(rule, openSince)
         Trigger.NO_INTERNET -> InternetLoss.holds(netLostSince, SystemClock.elapsedRealtime(), rule.level * 1000L)
+        Trigger.NOTIFY_APP -> if (!NotifWatch.connected) null else rule.triggerApps.any { k ->
+            NotifWatch.active[AppKey.pkg(k)]?.let { ongoing -> rule.level != 1 || ongoing } == true
+        }
+        Trigger.USB -> usbConnected
+        Trigger.CAR -> carMode()
+        Trigger.ALARM -> nextAlarm()?.let { at -> val now = System.currentTimeMillis(); now >= at - rule.level * 60_000L && now < at } ?: false
+        Trigger.SUN -> Prefs.sunPlace?.let { (la, lo) -> Sun.dark(java.time.ZonedDateTime.now(), la, lo) != (rule.level == 1) }
+        Trigger.TRAFFIC -> (if (rule.trafficMonth) trafficMonth else trafficDay)?.let { it >= rule.level * 1024L * 1024L }
+        Trigger.WIFI_OTHER -> if (!wifiKnown) null else wifiSsid?.let { now ->
+            rule.knownSsids.none { it.trim('"').equals(now.trim('"'), ignoreCase = true) }
+        } ?: false
         else -> null
     }
 
@@ -236,6 +259,7 @@ object ConditionWatch {
             ExtraKind.ROAMING -> roaming
             ExtraKind.DND -> dnd()
             ExtraKind.LOCKED -> locked
+            ExtraKind.DARK -> Prefs.sunPlace?.let { (la, lo) -> Sun.dark(java.time.ZonedDateTime.now(), la, lo) }
         }
         return v?.let { it != e.negate }
     }
@@ -271,7 +295,7 @@ object ConditionWatch {
             val changed = !wifiKnown || now != wifiSsid
             wifiSsid = now
             wifiKnown = true
-            if (changed) evaluate(Trigger.WIFI)
+            if (changed) evaluate(Trigger.WIFI, Trigger.WIFI_OTHER)
         }
     }
 
@@ -288,7 +312,7 @@ object ConditionWatch {
         WifiWatchService.start(ctx, WifiWatchService.MODE_ALWAYS)
         refreshAll(ctx)
         // Started with the screen already off: no SCREEN_OFF broadcast will come to set it.
-        if (Trigger.SCREEN_OFF in want || Trigger.LOCKED in want) scheduleScreenAlarm(ctx)
+        if (want.any { it in TIMED }) scheduleScreenAlarm(ctx)
         evaluate()
     }
 
@@ -327,6 +351,15 @@ object ConditionWatch {
                 }
                 NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED -> evaluate(Trigger.DND)
                 Intent.ACTION_AIRPLANE_MODE_CHANGED -> readInternet()
+                USB_STATE -> {
+                    val now = intent.getBooleanExtra("connected", false)
+                    if (now != usbConnected) { usbConnected = now; evaluate(Trigger.USB) }
+                }
+                android.app.UiModeManager.ACTION_ENTER_CAR_MODE, android.app.UiModeManager.ACTION_EXIT_CAR_MODE -> evaluate(Trigger.CAR)
+                AlarmManager.ACTION_NEXT_ALARM_CLOCK_CHANGED -> {
+                    evaluate(Trigger.ALARM)
+                    scheduleScreenAlarm(context)
+                }
             }
         }
     }
@@ -371,10 +404,22 @@ object ConditionWatch {
             filter.addAction(Intent.ACTION_SCREEN_ON)
         }
         if (Trigger.NO_INTERNET in want) filter.addAction(Intent.ACTION_AIRPLANE_MODE_CHANGED)
+        if (Trigger.USB in want) filter.addAction(USB_STATE)
+        if (Trigger.CAR in want) {
+            filter.addAction(android.app.UiModeManager.ACTION_ENTER_CAR_MODE)
+            filter.addAction(android.app.UiModeManager.ACTION_EXIT_CAR_MODE)
+        }
+        if (Trigger.ALARM in want) filter.addAction(AlarmManager.ACTION_NEXT_ALARM_CLOCK_CHANGED)
         if (Trigger.LOCKED in want) filter.addAction(Intent.ACTION_USER_PRESENT)
         if (Trigger.DND in want) filter.addAction(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED)
         if (filter.countActions() > 0) {
-            ctx.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)?.let { readBattery(it) }
+            ctx.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
+                ?.takeIf { it.action == Intent.ACTION_BATTERY_CHANGED }?.let { readBattery(it) }
+            // Sticky, but only one sticky comes back above: each is read for itself.
+            ctx.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))?.let { readBattery(it) }
+            if (Trigger.USB in want) {
+                usbConnected = ctx.registerReceiver(null, IntentFilter(USB_STATE))?.getBooleanExtra("connected", false) == true
+            }
         }
         val audio = ctx.getSystemService(AudioManager::class.java)
         if (Trigger.HEADPHONES in want) audio.registerAudioDeviceCallback(audioDevices, Handler(Looper.getMainLooper()))
@@ -388,7 +433,12 @@ object ConditionWatch {
             if (ctx.getSystemService(PowerManager::class.java).isInteractive) startAppPoll()
         }
         if (Trigger.PLACE in want) startPlacePoll()
-        if (Trigger.WIFI in want) {
+        if (Trigger.NOTIFY_APP in want) App.scope.launch { NotifWatch.enable() }
+        if (Trigger.TRAFFIC in want) {
+            grantUsageAccess()
+            startTrafficPoll()
+        }
+        if (Trigger.WIFI in want || Trigger.WIFI_OTHER in want) {
             runCatching {
                 ctx.getSystemService(ConnectivityManager::class.java).registerNetworkCallback(
                     NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_WIFI).build(),
@@ -416,6 +466,7 @@ object ConditionWatch {
         appPoll?.cancel()
         placePoll?.cancel()
         netProbe?.cancel()
+        trafficPoll?.cancel()
         runCatching { ctx.getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(netCallback) }
         runCatching { ctx.getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(wifiCallback) }
         netLostSince = 0L
@@ -613,6 +664,43 @@ object ConditionWatch {
         try { c.responseCode == 204 } finally { c.disconnect() }
     }.getOrDefault(false)
 
+    private fun carMode(): Boolean = runCatching {
+        App.ctx.getSystemService(android.app.UiModeManager::class.java).currentModeType ==
+            android.content.res.Configuration.UI_MODE_TYPE_CAR
+    }.getOrDefault(false)
+
+    /** When the next alarm clock rings (wall time), or null with none set. */
+    private fun nextAlarm(): Long? =
+        runCatching { App.ctx.getSystemService(AlarmManager::class.java).nextAlarmClock?.triggerTime }.getOrNull()
+
+    /**
+     * Mobile traffic of today and of the month, all SIMs together — the per-SIM figures are
+     * the system's own. Read every ten minutes; a day or a month starting over shows at the next.
+     */
+    private fun startTrafficPoll() {
+        trafficPoll?.cancel()
+        trafficPoll = App.scope.launch {
+            while (true) {
+                val zone = java.time.ZoneId.systemDefault()
+                val today = java.time.LocalDate.now(zone)
+                val day = mobileBytes(today.atStartOfDay(zone).toInstant().toEpochMilli())
+                val month = mobileBytes(today.withDayOfMonth(1).atStartOfDay(zone).toInstant().toEpochMilli())
+                val changed = day != trafficDay || month != trafficMonth
+                trafficDay = day
+                trafficMonth = month
+                if (changed) evaluate(Trigger.TRAFFIC)
+                delay(TRAFFIC_EVERY_MS)
+            }
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun mobileBytes(from: Long): Long? = runCatching {
+        val b = App.ctx.getSystemService(android.app.usage.NetworkStatsManager::class.java)
+            .querySummaryForDevice(ConnectivityManager.TYPE_MOBILE, null, from, System.currentTimeMillis())
+        b.rxBytes + b.txBytes
+    }.onFailure { Log.w(TAG, "traffic read failed", it) }.getOrNull()
+
     /** Tower changes come in bursts; one shell read per 15 s is plenty. */
     private fun readPlaceSoon(force: Boolean = false) {
         val now = SystemClock.elapsedRealtime()
@@ -744,7 +832,16 @@ object ConditionWatch {
             r.lastStart(wall)?.let { r.lockWindowEnd(it) }?.takeIf { it.isAfter(wall) }
                 ?.let { it.toInstant().toEpochMilli() - System.currentTimeMillis() }
         }
-        val next = (offWaits + lockWaits + windowWaits + nightWaits).filter { it > 0 }.minOrNull() ?: return
+        // "Перед будильником" opens and closes with the alarm clock.
+        val alarmWaits = if (Trigger.ALARM !in registered) emptyList() else nextAlarm()?.let { at ->
+            rules.filter { it.trigger == Trigger.ALARM }.map { at - it.level * 60_000L - System.currentTimeMillis() } +
+                (at - System.currentTimeMillis())
+        }.orEmpty()
+        // Sunset and sunrise, for the trigger and for "темно" among the extra conditions.
+        val sunWaits = if (Trigger.SUN !in registered) emptyList() else Prefs.sunPlace?.let { (la, lo) ->
+            Sun.nextEdge(wall, la, lo)?.let { listOf(it.toInstant().toEpochMilli() - System.currentTimeMillis()) }
+        }.orEmpty()
+        val next = (offWaits + lockWaits + windowWaits + nightWaits + alarmWaits + sunWaits).filter { it > 0 }.minOrNull() ?: return
         val at = System.currentTimeMillis() + next + 1_000
         if (Compat.canExact(am)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
         else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
@@ -765,7 +862,7 @@ class ConditionReceiver : BroadcastReceiver() {
         wake.acquire(3 * 60_000L)
         val work = App.scope.launch {
             try {
-                ConditionWatch.evaluateNow(Trigger.SCREEN_OFF, Trigger.LOCKED)
+                ConditionWatch.evaluateNow(Trigger.SCREEN_OFF, Trigger.LOCKED, Trigger.ALARM, Trigger.SUN)
                 ConditionWatch.scheduleScreenAlarm(context)
             } finally {
                 if (wake.isHeld) wake.release()

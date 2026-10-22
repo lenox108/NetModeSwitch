@@ -314,6 +314,18 @@
                         style="@style/NMS.PickButton"
                         android:layout_marginTop="8dp" />
 
+                    <!-- sunset and sunrise: the place -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/sunPlace"
+                        style="@style/NMS.PickButton"
+                        android:layout_marginTop="8dp" />
+
+                    <!-- someone else's Wi-Fi: the user's own networks -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/knownSsids"
+                        style="@style/NMS.PickButton"
+                        android:layout_marginTop="8dp" />
+
                     <!-- a scene on the home screen -->
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/sceneShortcut"

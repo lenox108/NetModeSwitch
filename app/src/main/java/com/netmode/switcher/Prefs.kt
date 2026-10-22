@@ -276,6 +276,12 @@ object Prefs {
         get() = sp.getStringSet("extra_ran", emptySet())!!.mapNotNull { it.toLongOrNull() }.toSet()
         set(value) = sp.edit().putStringSet("extra_ran", value.map { it.toString() }.toSet()).commit().let { }
 
+    /** Where sunrise and sunset are reckoned for, typed in by the user: latitude to longitude. */
+    var sunPlace: Pair<Double, Double>?
+        get() = sp.getString("sun_place", null)?.split(',')?.mapNotNull { it.trim().toDoubleOrNull() }
+            ?.takeIf { it.size == 2 }?.let { it[0] to it[1] }
+        set(value) = sp.edit().putString("sun_place", value?.let { "${it.first},${it.second}" }).commit().let { }
+
     /** Rules whose start waits for an answer to "Выполнить?" (see [RunNotices]). */
     var askedStarts: Set<Long>
         get() = sp.getStringSet("asked_starts", emptySet())!!.mapNotNull { it.toLongOrNull() }.toSet()
