@@ -467,6 +467,14 @@ object AppFreezer {
         if (leaving.isEmpty() && entering.isEmpty()) return@withLock
         beginEvent()
         Prefs.appHandled = Prefs.appHandled - leaving.map { it.id }.toSet()
+        // From one app straight into another: the new app's rule starts first, so whatever both
+        // set — the VPN on — is handed over at the old one's end instead of put back and set
+        // again a moment later.
+        val (handover, rest) = entering.partition { it.trigger == Trigger.APP_OPEN }
+        for (rule in handover) {
+            Prefs.appHandled = Prefs.appHandled + (rule.id to System.currentTimeMillis())
+            freezeLocked(rule, rule.timeLabel)
+        }
         val now = ZonedDateTime.now()
         for (rule in leaving.filter { it.releaseOnLeave }) {
             // Unlocked inside its time: its unlock block, and the night goes on.
@@ -474,7 +482,7 @@ object AppFreezer {
             if (spec != null && rule.id in Prefs.openWindows) unlockLocked(rule, spec, "${rule.timeLabel} — разблокирован")
             else releaseLocked(listOf(rule), "${rule.timeLabel} — больше нет")
         }
-        for (rule in entering) {
+        for (rule in rest) {
             Prefs.appHandled = Prefs.appHandled + (rule.id to System.currentTimeMillis())
             freezeLocked(rule, rule.timeLabel)
         }
