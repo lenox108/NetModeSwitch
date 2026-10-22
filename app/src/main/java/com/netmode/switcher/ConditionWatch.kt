@@ -12,6 +12,9 @@ import android.content.IntentFilter
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.os.BatteryManager
 import android.os.Handler
 import android.os.Looper
@@ -31,13 +34,14 @@ import java.util.concurrent.Executors
 /**
  * The "while …" triggers that are states of the phone rather than connections: battery,
  * charging, screen off, an app on screen, a place, roaming, a weak signal, a call, headphones,
- * Do Not Disturb.
+ * Do Not Disturb, no internet.
  *
  * Everything is event-driven where Android offers an event — runtime receivers, telephony and
  * audio callbacks — and lives in the app process, which the watcher service keeps alive while
  * such a rule exists. Two things have no event and are looked at instead: the app on screen
  * (every 2 s, only while the screen is on) and the cell towers (on every service-state change,
- * at most every 15 s, and every 5 minutes).
+ * at most every 15 s, and every 5 minutes). The internet is the system's own check, nudged by a
+ * probe once a minute while the screen is on.
  */
 object ConditionWatch {
 
@@ -45,8 +49,15 @@ object ConditionWatch {
 
     val TRIGGERS = setOf(
         Trigger.BATTERY, Trigger.CHARGING, Trigger.SCREEN_OFF, Trigger.LOCKED, Trigger.APP_OPEN, Trigger.PLACE,
-        Trigger.ROAMING, Trigger.WEAK_SIGNAL, Trigger.CALL, Trigger.HEADPHONES, Trigger.DND,
+        Trigger.ROAMING, Trigger.WEAK_SIGNAL, Trigger.CALL, Trigger.HEADPHONES, Trigger.DND, Trigger.NO_INTERNET,
     )
+
+    /**
+     * A network the system still counts as working may have stopped passing traffic: the
+     * system only looks again when something tells it to. This probe, twice failed, does.
+     */
+    private const val PROBE_URL = "http://connectivitycheck.gstatic.com/generate_204"
+    private const val PROBE_EVERY_MS = 60_000L
 
     /** A weak signal has to last this long before it counts, and a good one to end it. */
     private const val WEAK_AFTER_MS = 30_000L
@@ -77,12 +88,15 @@ object ConditionWatch {
     @Volatile private var roaming = false
     @Volatile private var inCall = false
     @Volatile private var headphones = false
+    /** Since when the internet is gone (elapsed realtime); 0 while there is internet. */
+    @Volatile private var netLostSince = 0L
     private val signal = mutableMapOf<Int, Int>()
     private val weakSince = mutableMapOf<Int, Long>()
     private val goodSince = mutableMapOf<Int, Long>()
 
     private var registered = emptySet<Trigger>()
     private var appPoll: Job? = null
+    private var netProbe: Job? = null
     private var placePoll: Job? = null
     private var lastPlaceRead = 0L
     /** Undo for each phone listener registered. */
@@ -112,6 +126,7 @@ object ConditionWatch {
         Trigger.HEADPHONES -> headphones
         Trigger.DND -> dnd()
         Trigger.WEAK_SIGNAL -> weakHolds(rule, openSince)
+        Trigger.NO_INTERNET -> InternetLoss.holds(netLostSince, SystemClock.elapsedRealtime(), rule.level * 1000L)
         else -> null
     }
 
@@ -146,22 +161,22 @@ object ConditionWatch {
         val look = AppPresence.look(seen, openSince != 0L, before, SystemClock.elapsedRealtime(), delayMs, rule.appScreenOffStays)
         if (look.awaySince == null) awaySince.remove(rule.id) else awaySince[rule.id] = look.awaySince
         // The delay only passes with time: look again once it is over.
-        if (before == null && look.awaySince != null) recheckApps(delayMs)
+        if (before == null && look.awaySince != null) recheck(Trigger.APP_OPEN, delayMs)
         return look.holds
     }
 
     /**
-     * Wakes the app check after [ms]. The screen may be off by then, with no polling to notice;
-     * the wake lock keeps deep sleep from stretching a minute's delay into many.
+     * Looks at [kind] again after [ms]: a delay that passes with time and no event. The screen
+     * may be off by then; the wake lock keeps deep sleep from stretching minutes into many.
      */
-    private fun recheckApps(ms: Long) {
+    private fun recheck(kind: Trigger, ms: Long) {
         App.scope.launch {
             val wake = App.ctx.getSystemService(PowerManager::class.java)
-                .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "netmode:appleave")
+                .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "netmode:recheck")
             wake.acquire(ms + 60_000L)
             try {
                 delay(ms + 500L)
-                evaluateNow(Trigger.APP_OPEN)
+                evaluateNow(kind)
             } finally {
                 if (wake.isHeld) wake.release()
             }
@@ -230,6 +245,7 @@ object ConditionWatch {
                     foreground = null
                     foregroundPasses = false
                     appPoll?.cancel()
+                    netProbe?.cancel()
                     scheduleScreenAlarm(context)
                     evaluate(Trigger.SCREEN_OFF, Trigger.LOCKED, Trigger.APP_OPEN)
                 }
@@ -238,6 +254,7 @@ object ConditionWatch {
                     // No lock screen at all, or one dismissed by itself (Smart Lock): unlocked now.
                     if (!keyguardLocked(context)) locked = false
                     if (Trigger.APP_OPEN in registered) startAppPoll()
+                    if (Trigger.NO_INTERNET in registered) startNetProbe()
                     evaluate(Trigger.SCREEN_OFF, Trigger.LOCKED)
                 }
                 Intent.ACTION_USER_PRESENT -> {
@@ -245,8 +262,16 @@ object ConditionWatch {
                     evaluate(Trigger.LOCKED)
                 }
                 NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED -> evaluate(Trigger.DND)
+                Intent.ACTION_AIRPLANE_MODE_CHANGED -> readInternet()
             }
         }
+    }
+
+    /** The default network: whichever it is, a change may be the internet going or coming. */
+    private val netCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) = readInternet()
+        override fun onLost(network: Network) = readInternet()
+        override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) = readInternet()
     }
 
     private val audioDevices = object : AudioDeviceCallback() {
@@ -277,10 +302,11 @@ object ConditionWatch {
             filter.addAction(Intent.ACTION_BATTERY_CHANGED)
             filter.addAction(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED)
         }
-        if (Trigger.SCREEN_OFF in want || Trigger.LOCKED in want || Trigger.APP_OPEN in want) {
+        if (Trigger.SCREEN_OFF in want || Trigger.LOCKED in want || Trigger.APP_OPEN in want || Trigger.NO_INTERNET in want) {
             filter.addAction(Intent.ACTION_SCREEN_OFF)
             filter.addAction(Intent.ACTION_SCREEN_ON)
         }
+        if (Trigger.NO_INTERNET in want) filter.addAction(Intent.ACTION_AIRPLANE_MODE_CHANGED)
         if (Trigger.LOCKED in want) filter.addAction(Intent.ACTION_USER_PRESENT)
         if (Trigger.DND in want) filter.addAction(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED)
         if (filter.countActions() > 0) {
@@ -298,6 +324,14 @@ object ConditionWatch {
             if (ctx.getSystemService(PowerManager::class.java).isInteractive) startAppPoll()
         }
         if (Trigger.PLACE in want) startPlacePoll()
+        if (Trigger.NO_INTERNET in want) {
+            runCatching {
+                ctx.getSystemService(ConnectivityManager::class.java)
+                    .registerDefaultNetworkCallback(netCallback, Handler(Looper.getMainLooper()))
+            }.onFailure { Log.w(TAG, "network callback failed", it) }
+            readInternet(notify = false)
+            if (ctx.getSystemService(PowerManager::class.java).isInteractive) startNetProbe()
+        }
     }
 
     private fun unregister(ctx: Context) {
@@ -309,6 +343,9 @@ object ConditionWatch {
         phoneCallbacks.clear()
         appPoll?.cancel()
         placePoll?.cancel()
+        netProbe?.cancel()
+        runCatching { ctx.getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(netCallback) }
+        netLostSince = 0L
     }
 
     /** One callback per active SIM: service state for roaming and towers, strength for bars. */
@@ -443,6 +480,64 @@ object ConditionWatch {
             if (notify) evaluate(Trigger.ROAMING)
         }
     }
+
+    /**
+     * Whether the internet is there now, by the system's check of the default network. A loss
+     * starts the clock; each rule's "longer than" is looked at again once it has run out.
+     */
+    private fun readInternet(notify: Boolean = true) {
+        val ctx = App.ctx
+        val cm = ctx.getSystemService(ConnectivityManager::class.java)
+        val caps = runCatching { cm.activeNetwork?.let { cm.getNetworkCapabilities(it) } }.getOrNull()
+        val airplane = android.provider.Settings.Global.getInt(ctx.contentResolver, android.provider.Settings.Global.AIRPLANE_MODE_ON, 0) == 1
+        val lost = InternetLoss.lost(
+            hasNetwork = caps != null,
+            validated = caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true,
+            dataWanted = DataWatch.enabled(),
+            airplane = airplane,
+        )
+        if (lost == (netLostSince != 0L)) return
+        netLostSince = if (lost) SystemClock.elapsedRealtime() else 0L
+        Log.i(TAG, if (lost) "internet lost" else "internet back")
+        if (lost) {
+            Prefs.appRules.filter { it.enabled && it.trigger == Trigger.NO_INTERNET }
+                .map { it.level }.distinct().forEach { recheck(Trigger.NO_INTERNET, it * 1000L) }
+        }
+        if (notify) evaluate(Trigger.NO_INTERNET)
+    }
+
+    /**
+     * While the screen is on: a request to the same kind of address the system checks with,
+     * once a minute. Failing twice in a row on a network the system still counts as working,
+     * it asks the system to check again — the system's answer is what counts, not the probe's.
+     */
+    private fun startNetProbe() {
+        netProbe?.cancel()
+        netProbe = App.scope.launch {
+            var failures = 0
+            while (screenOn) {
+                delay(PROBE_EVERY_MS)
+                // Already lost: the system knows, there is nothing to tell it.
+                if (netLostSince != 0L) { failures = 0; continue }
+                val cm = App.ctx.getSystemService(ConnectivityManager::class.java)
+                val net = cm.activeNetwork ?: continue
+                if (probe(net)) { failures = 0; continue }
+                if (++failures < 2) continue
+                failures = 0
+                Log.i(TAG, "internet probe failed twice: asking the system to check the network")
+                runCatching { cm.reportNetworkConnectivity(net, false) }
+            }
+        }
+    }
+
+    private fun probe(net: Network): Boolean = runCatching {
+        val c = net.openConnection(java.net.URL(PROBE_URL)) as java.net.HttpURLConnection
+        c.connectTimeout = 10_000
+        c.readTimeout = 10_000
+        c.instanceFollowRedirects = false
+        c.useCaches = false
+        try { c.responseCode == 204 } finally { c.disconnect() }
+    }.getOrDefault(false)
 
     /** Tower changes come in bursts; one shell read per 15 s is plenty. */
     private fun readPlaceSoon(force: Boolean = false) {

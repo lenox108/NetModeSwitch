@@ -193,6 +193,7 @@ object Widgets {
         Trigger.CALL -> R.drawable.w_ic_t_call
         Trigger.HEADPHONES -> R.drawable.w_ic_t_headphones
         Trigger.DND -> R.drawable.w_ic_t_dnd
+        Trigger.NO_INTERNET -> R.drawable.w_ic_t_nonet
         Trigger.LOCKED -> R.drawable.w_ic_t_lock
     }
 

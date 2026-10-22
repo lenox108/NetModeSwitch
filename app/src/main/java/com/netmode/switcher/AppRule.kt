@@ -89,7 +89,10 @@ enum class Trigger {
     HEADPHONES,
 
     /** While Do Not Disturb is on. */
-    DND;
+    DND,
+
+    /** While there is no internet for longer than [AppRule.level] seconds (see [InternetLoss]). */
+    NO_INTERNET;
 
     /** Triggers that hold for a while and then stop: their rules can put things back. */
     val isCondition: Boolean get() = this != TIME && this != WIFI_LEFT
@@ -173,7 +176,10 @@ data class AppRule(
     val appMethods: Map<String, FreezeMethod> = emptyMap(),
     val netMode: NetMode? = null,
     val netSlot: Int = SLOT_ALL,
-    /** Threshold of the trigger: battery %, minutes of screen off, signal bars; a scene's minutes until it ends by itself. */
+    /**
+     * Threshold of the trigger: battery %, minutes of screen off, signal bars, seconds without
+     * internet; a scene's minutes until it ends by itself.
+     */
     val level: Int = 0,
     val triggerApps: List<String> = emptyList(),
     /** For [Trigger.PLACE]: "tac:ci" of the towers seen there, and the user's name for it. */
@@ -504,6 +510,7 @@ data class AppRule(
                     " · %02d:%02d–%02d:%02d".format(hour, minute, endHour, endMinute) + if (days != 0) " · " + formatDays(days) else ""
                 else ""
             Trigger.DND -> "включён «Не беспокоить»"
+            Trigger.NO_INTERNET -> "нет интернета дольше " + Steps.words(level)
         }
 
     val daysLabel: String get() = formatDays(days)

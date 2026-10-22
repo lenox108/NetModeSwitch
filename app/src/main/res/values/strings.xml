@@ -291,6 +291,8 @@
     <string name="trigger_headphones">Наушники</string>
     <string name="trigger_headphones_hint">Пока подключены проводные или Bluetooth-наушники</string>
     <string name="trigger_dnd">Не беспокоить</string>
+    <string name="trigger_nonet">Интернет пропал</string>
+    <string name="trigger_nonet_hint">Сеть есть, а интернет не работает, или сети нет при включённом моб. интернете. Режим полёта не считается</string>
     <string name="trigger_dnd_hint">Пока включён режим «Не беспокоить»</string>
     <string name="trigger_sim">SIM</string>
     <string name="trigger_in_mode">в режиме</string>
@@ -516,6 +518,7 @@
     <string name="pick_signal">Мало делений сети</string>
     <string name="pick_call">Во время звонка</string>
     <string name="pick_headphones">Подключены наушники</string>
+    <string name="pick_nonet">Сеть есть, а интернета нет</string>
     <string name="pick_dnd">Включён «Не беспокоить»</string>
     <string name="dual_summary">SIM с интернетом — основной режим, вторая — запасной</string>
     <string name="how_it_works">Как это работает</string>

@@ -72,6 +72,7 @@ class RuleEditActivity : AppCompatActivity() {
         TriggerInfo(Trigger.CALL, R.drawable.ic_t_call, R.string.trigger_call, R.string.trigger_call_hint, R.string.pick_call),
         TriggerInfo(Trigger.HEADPHONES, R.drawable.ic_t_headphones, R.string.trigger_headphones, R.string.trigger_headphones_hint, R.string.pick_headphones),
         TriggerInfo(Trigger.DND, R.drawable.ic_t_dnd, R.string.trigger_dnd, R.string.trigger_dnd_hint, R.string.pick_dnd),
+        TriggerInfo(Trigger.NO_INTERNET, R.drawable.ic_t_nonet, R.string.trigger_nonet, R.string.trigger_nonet_hint, R.string.pick_nonet),
     )
 
     private lateinit var v: ActivityRuleEditBinding
@@ -93,6 +94,7 @@ class RuleEditActivity : AppCompatActivity() {
     private var lockMinutes = 0
     private var signalLevel = 1
     private var manualMinutes = 0
+    private var netLostSeconds = 60
     /** The wait switch follows the trigger's default until the user sets it. */
     private var waitTouched = false
 
@@ -290,6 +292,7 @@ class RuleEditActivity : AppCompatActivity() {
             Trigger.LOCKED -> lockMinutes = r.level
             Trigger.WEAK_SIGNAL -> signalLevel = r.level
             Trigger.MANUAL -> manualMinutes = r.level
+            Trigger.NO_INTERNET -> netLostSeconds = r.level
             else -> Unit
         }
         v.tSlot.setItems(simSlots.map { "SIM ${it + 1}" }, simSlots.indexOf(r?.triggerSlot ?: 0))
@@ -396,6 +399,7 @@ class RuleEditActivity : AppCompatActivity() {
                 Trigger.LOCKED -> lockMinutes = LOCK_MINUTES[i]
                 Trigger.WEAK_SIGNAL -> signalLevel = i
                 Trigger.MANUAL -> manualMinutes = MANUAL_MINUTES[i]
+                Trigger.NO_INTERNET -> netLostSeconds = NET_LOST_SECONDS[i]
                 else -> Unit
             }
             paint()
@@ -503,7 +507,7 @@ class RuleEditActivity : AppCompatActivity() {
             Act.DATA -> t != Trigger.MOBILE_DATA
             Act.BT -> t != Trigger.BLUETOOTH && t != Trigger.HEADPHONES && !(t == Trigger.WIFI_LEFT && v.leftEndBtOn.isChecked)
             Act.AIRPLANE -> t !in setOf(Trigger.WIFI, Trigger.WIFI_LEFT, Trigger.BLUETOOTH, Trigger.MOBILE_DATA,
-                Trigger.PLACE, Trigger.ROAMING, Trigger.WEAK_SIGNAL, Trigger.CALL, Trigger.NET_MODE)
+                Trigger.PLACE, Trigger.ROAMING, Trigger.WEAK_SIGNAL, Trigger.CALL, Trigger.NET_MODE, Trigger.NO_INTERNET)
             Act.POWERSAVE -> !(t == Trigger.BATTERY && batteryLevel == 0)
             Act.DATASIM -> simSlots.size > 1
             else -> true
@@ -532,7 +536,7 @@ class RuleEditActivity : AppCompatActivity() {
         show(v.slotRow, t == Trigger.NET_MODE || t == Trigger.WEAK_SIGNAL)
         show(v.modeRow, t == Trigger.NET_MODE)
         show(v.levelRow, t == Trigger.BATTERY || t == Trigger.SCREEN_OFF || t == Trigger.LOCKED || t == Trigger.WEAK_SIGNAL ||
-            (t == Trigger.MANUAL && v.releaseOnLeave.isChecked))
+            (t == Trigger.MANUAL && v.releaseOnLeave.isChecked) || t == Trigger.NO_INTERNET)
         // Locked, nobody is using the phone: there is nothing to wait for. A scene is pressed by
         // someone using it: waiting would only hide that it worked.
         show(v.waitRow.root, t != Trigger.LOCKED && t != Trigger.MANUAL)
@@ -568,6 +572,10 @@ class RuleEditActivity : AppCompatActivity() {
             Trigger.WEAK_SIGNAL -> {
                 v.levelLabel.setText(R.string.level_signal)
                 v.level.setItems(resources.getStringArray(R.array.signal_levels).toList(), signalLevel)
+            }
+            Trigger.NO_INTERNET -> {
+                v.levelLabel.setText(R.string.level_screen)
+                v.level.setItems(NET_LOST_SECONDS.map { Steps.words(it) }, NET_LOST_SECONDS.indexOf(netLostSeconds).coerceAtLeast(0))
             }
             Trigger.MANUAL -> {
                 v.levelLabel.setText(R.string.level_manual)
@@ -1205,6 +1213,8 @@ class RuleEditActivity : AppCompatActivity() {
             .setSingleChoiceItems(items, triggerInfos.indexOfFirst { it.trigger == trigger }) { d, i ->
                 trigger = triggerInfos[i].trigger
                 if (trigger == Trigger.APP_OPEN && triggerApps.isEmpty()) v.triggerApps.post { v.triggerApps.performClick() }
+                // Putting back what fixed the internet once it is back would break it again.
+                if (trigger == Trigger.NO_INTERNET && existing == null) v.releaseOnLeave.isChecked = false
                 d.dismiss()
                 paint()
             }
@@ -1338,6 +1348,7 @@ class RuleEditActivity : AppCompatActivity() {
                 Trigger.LOCKED -> lockMinutes
                 Trigger.WEAK_SIGNAL -> signalLevel
                 Trigger.MANUAL -> manualMinutes.takeIf { v.releaseOnLeave.isChecked } ?: 0
+                Trigger.NO_INTERNET -> netLostSeconds
                 else -> 0
             },
             triggerApps = triggerApps.takeIf { t == Trigger.APP_OPEN }.orEmpty(),
@@ -1503,5 +1514,7 @@ class RuleEditActivity : AppCompatActivity() {
         private val LEAVE_DELAYS = listOf(0, 5, 15, 30, 60, 300)
         /** Minutes until a scene ends by itself; 0: until it is switched off. */
         private val MANUAL_MINUTES = listOf(0, 15, 30, 60, 120, 240, 480)
+        /** How long the internet has to be gone, in seconds. */
+        private val NET_LOST_SECONDS = listOf(30, 60, 120, 300, 600)
     }
 }
