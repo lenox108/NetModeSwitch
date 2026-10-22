@@ -26,7 +26,7 @@ object AlarmScheduler {
 
         val now = ZonedDateTime.now()
         val candidates = Prefs.appRules.filter { it.enabled && it.isTime && it.hasActions }.map { it.nextEvent(now) } +
-            leftEnds(now)
+            leftEnds(now) + windowEdges(now)
         val next = candidates.minOrNull() ?: return
         val at = next.toInstant().toEpochMilli()
 
@@ -38,6 +38,13 @@ object AlarmScheduler {
         }
         Log.i(TAG, "next schedule alarm at $next")
     }
+
+    /** Where the "с … до …" windows of extra conditions open or close next. */
+    private fun windowEdges(now: ZonedDateTime): List<ZonedDateTime> =
+        Prefs.appRules.filter { it.enabled && it.hasActions }
+            .flatMap { r -> r.extras.filter { it.kind == ExtraKind.TIME } }
+            .flatMap { e -> listOf(e.from, e.to) }.distinct()
+            .map { m -> nextOccurrence(now, m / 60, m % 60) { true } }
 
     /** Pending end times of open windows with a clock of their own: after leaving Wi-Fi, a scene's time. */
     private fun leftEnds(now: ZonedDateTime): List<ZonedDateTime> {
@@ -64,7 +71,11 @@ class AlarmReceiver : BroadcastReceiver() {
         App.scope.launch {
             try {
                 val acted = runCatching { AppFreezer.reconcile() }.getOrDefault(false)
-                if (!acted) Prefs.log("расписание: сработало, но подходящего правила нет")
+                // A window of an extra condition opening or closing is a change of its own.
+                val extras = runCatching { AppFreezer.onExtras(setOf(Trigger.TIME)) }.getOrDefault(false)
+                if (!acted && !extras && Prefs.appRules.none { r -> r.extras.any { it.kind == ExtraKind.TIME } }) {
+                    Prefs.log("расписание: сработало, но подходящего правила нет")
+                }
             } finally {
                 AlarmScheduler.rearm()
                 pending.finish()
@@ -93,6 +104,7 @@ class BootReceiver : BroadcastReceiver() {
                 runCatching { AppFreezer.reconcile(boot = boot, catchUp = Prefs.catchUpOnBoot) }
                 // Pauses that ran out while the phone was off: the rest of their steps, now.
                 runCatching { StepQueue.runDue() }
+                runCatching { AppFreezer.onExtras(null) }
                 AlarmScheduler.rearm()
             } finally {
                 pending.finish()

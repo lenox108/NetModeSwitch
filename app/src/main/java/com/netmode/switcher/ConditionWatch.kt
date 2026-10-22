@@ -15,6 +15,7 @@ import android.media.AudioManager
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.os.BatteryManager
 import android.os.Handler
 import android.os.Looper
@@ -88,6 +89,9 @@ object ConditionWatch {
     @Volatile private var roaming = false
     @Volatile private var inCall = false
     @Volatile private var headphones = false
+    /** The Wi-Fi network connected, for "в сети «…»" conditions; [wifiKnown] once read. */
+    @Volatile private var wifiSsid: String? = null
+    @Volatile private var wifiKnown = false
     /** Since when the internet is gone (elapsed realtime); 0 while there is internet. */
     @Volatile private var netLostSince = 0L
     private val signal = mutableMapOf<Int, Int>()
@@ -103,10 +107,16 @@ object ConditionWatch {
     private val phoneCallbacks = mutableListOf<() -> Unit>()
     private val executor = Executors.newSingleThreadExecutor()
 
-    /** Waking Wi-Fi near a network needs the towers read just like a place rule does. */
-    private fun used(): Set<Trigger> =
-        Prefs.appRules.filter { it.enabled && it.hasActions && it.trigger in TRIGGERS }.map { it.trigger }.toSet() +
+    /**
+     * Waking Wi-Fi near a network needs the towers read just like a place rule does; an extra
+     * condition needs the same watcher as the trigger of its kind (the time has the alarm).
+     */
+    private fun used(): Set<Trigger> {
+        val rules = Prefs.appRules.filter { it.enabled && it.hasActions }
+        return rules.filter { it.trigger in TRIGGERS }.map { it.trigger }.toSet() +
+            rules.flatMap { r -> r.extras.map { it.kind.trigger } }.filter { it != Trigger.TIME } +
             (if (WifiWake.needed()) setOf(Trigger.PLACE) else emptySet())
+    }
 
     fun needed(): Boolean = used().isNotEmpty()
 
@@ -209,6 +219,60 @@ object ConditionWatch {
         runCatching {
             AppFreezer.onConditions(set) { rule, openSince -> holds(rule, openSince) }
         }.onFailure { Log.w(TAG, "condition check failed", it) }
+        runCatching { AppFreezer.onExtras(kinds.toSet().ifEmpty { null }) }
+            .onFailure { Log.w(TAG, "extra condition check failed", it) }
+    }
+
+    // --- extra conditions ("И ещё если") ------------------------------------------------------
+
+    /** Whether [e] holds now; null when it cannot be told yet. */
+    fun extraHolds(e: Extra): Boolean? {
+        val v: Boolean? = when (e.kind) {
+            ExtraKind.TIME -> e.timeHolds(java.time.LocalTime.now())
+            ExtraKind.WIFI -> if (!wifiKnown) null else e.ssid != null && wifiSsid?.trim('"').equals(e.ssid.trim('"'), ignoreCase = true)
+            ExtraKind.CHARGING -> charging
+            ExtraKind.BATTERY -> batteryPct <= e.level
+            ExtraKind.HEADPHONES -> headphones
+            ExtraKind.ROAMING -> roaming
+            ExtraKind.DND -> dnd()
+            ExtraKind.LOCKED -> locked
+        }
+        return v?.let { it != e.negate }
+    }
+
+    /** All of [rule]'s extra conditions hold: true, one does not: false, one cannot be told: null. */
+    fun extrasHold(rule: AppRule): Boolean? {
+        var unknown = false
+        for (e in rule.extras) when (extraHolds(e)) {
+            false -> return false
+            null -> unknown = true
+            true -> Unit
+        }
+        return if (unknown) null else true
+    }
+
+    /** The first extra condition of [rule] known not to hold. */
+    fun failingExtra(rule: AppRule): Extra? = rule.extras.firstOrNull { extraHolds(it) == false }
+
+    private val wifiCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) = readWifi(settle = true)
+        override fun onLost(network: Network) = readWifi(settle = false)
+    }
+
+    /** The network name, read through the shell; right after association it may lag a moment. */
+    private fun readWifi(settle: Boolean) {
+        App.scope.launch {
+            var now: String? = null
+            repeat(if (settle) 3 else 1) { attempt ->
+                if (settle) delay(if (attempt == 0) 1_000L else 1_500L)
+                now = runCatching { WifiSsid.current() }.getOrNull()
+                if (now != null) return@repeat
+            }
+            val changed = !wifiKnown || now != wifiSsid
+            wifiSsid = now
+            wifiKnown = true
+            if (changed) evaluate(Trigger.WIFI)
+        }
     }
 
     // --- registration ------------------------------------------------------------------------
@@ -324,6 +388,14 @@ object ConditionWatch {
             if (ctx.getSystemService(PowerManager::class.java).isInteractive) startAppPoll()
         }
         if (Trigger.PLACE in want) startPlacePoll()
+        if (Trigger.WIFI in want) {
+            runCatching {
+                ctx.getSystemService(ConnectivityManager::class.java).registerNetworkCallback(
+                    NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_WIFI).build(),
+                    wifiCallback, Handler(Looper.getMainLooper()))
+            }.onFailure { Log.w(TAG, "wifi callback failed", it) }
+            readWifi(settle = false)
+        }
         if (Trigger.NO_INTERNET in want) {
             runCatching {
                 ctx.getSystemService(ConnectivityManager::class.java)
@@ -345,7 +417,9 @@ object ConditionWatch {
         placePoll?.cancel()
         netProbe?.cancel()
         runCatching { ctx.getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(netCallback) }
+        runCatching { ctx.getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(wifiCallback) }
         netLostSince = 0L
+        wifiKnown = false
     }
 
     /** One callback per active SIM: service state for roaming and towers, strength for bars. */

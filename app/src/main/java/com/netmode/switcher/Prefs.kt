@@ -268,6 +268,14 @@ object Prefs {
      * Lock rules unlocked inside their time ([AppRule.splitEnd]): their unlock block has run,
      * the night goes on until the time is over or the phone is locked again.
      */
+    /**
+     * Rules with no end that have run since their extra conditions last came to hold, so a
+     * recheck does not run them again (see [AppFreezer.onExtras]).
+     */
+    var extraRan: Set<Long>
+        get() = sp.getStringSet("extra_ran", emptySet())!!.mapNotNull { it.toLongOrNull() }.toSet()
+        set(value) = sp.edit().putStringSet("extra_ran", value.map { it.toString() }.toSet()).commit().let { }
+
     /** Rules whose start waits for an answer to "Выполнить?" (see [RunNotices]). */
     var askedStarts: Set<Long>
         get() = sp.getStringSet("asked_starts", emptySet())!!.mapNotNull { it.toLongOrNull() }.toSet()

@@ -327,6 +327,57 @@ object AppFreezer {
         DeferWatch.sync()
     }
 
+    /**
+     * The extra conditions of rules have changed ([kinds] of them; null: any): a rule whose
+     * trigger holds starts once they all hold, and one in force ends when one of them goes.
+     * Returns whether anything was done.
+     */
+    suspend fun onExtras(kinds: Set<Trigger>?): Boolean = lock.withLock {
+        val rules = Prefs.appRules.filter { r ->
+            r.enabled && r.hasActions && r.extras.isNotEmpty() && (kinds == null || r.extras.any { it.kind.trigger in kinds })
+        }
+        var acted = false
+        for (rule in rules) {
+            val extras = ConditionWatch.extrasHold(rule)
+            val open = if (rule.restores) rule.id in Prefs.openWindows else rule.id in Prefs.extraRan
+            val step = ExtraGate.step(open, if (extras == true && !open) primaryHolds(rule) else null, extras)
+            when (step) {
+                ExtraGate.Step.START -> {
+                    eventState = 0
+                    freezeLocked(rule, "${rule.timeLabel} — условия выполнены")
+                    acted = true
+                }
+                ExtraGate.Step.END -> {
+                    val gone = ConditionWatch.failingExtra(rule)?.label.orEmpty()
+                    if (rule.restores) {
+                        closeLocked(rule, rule.id, "${rule.timeLabel} — больше нет «$gone»")
+                        acted = true
+                    }
+                    Prefs.extraRan = Prefs.extraRan - rule.id
+                }
+                ExtraGate.Step.NONE -> Unit
+            }
+        }
+        acted
+    }
+
+    /**
+     * Whether [rule]'s own trigger holds now, by its kind; null where that cannot be told — an
+     * event or a press, rather than a state — and such a rule only starts with its trigger.
+     */
+    private suspend fun primaryHolds(rule: AppRule): Boolean? = when (rule.trigger) {
+        in ConditionWatch.TRIGGERS -> (Prefs.appHandled[rule.id] ?: 0L) != 0L
+        Trigger.TIME -> {
+            val now = ZonedDateTime.now()
+            rule.lastStart(now)?.let { rule.endAfter(it)?.isAfter(now) } ?: false
+        }
+        Trigger.WIFI -> rule.matchesSsid(Prefs.lastSsid)
+        Trigger.BLUETOOTH -> rule.btAddress?.uppercase()?.let { it in BtDevices.connected(App.ctx) }
+        Trigger.MOBILE_DATA -> DataWatch.enabled()
+        Trigger.NET_MODE -> ModeController.modeOf(rule.triggerSlot)?.let { it == rule.triggerMode }
+        else -> null
+    }
+
     private fun dropAsked(id: Long) {
         Prefs.askedStarts = Prefs.askedStarts - id
         Prefs.openWindows = Prefs.openWindows - id
@@ -1178,6 +1229,17 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
     private suspend fun freezeLocked(rule: AppRule, reason: String, manual: Boolean = false) {
         val why = rule.logPrefix + reason
         if (!manual && !allowedByChain(rule.timeLabel)) return
+        // "И ещё если": without them the trigger alone does not start the rule; onExtras does
+        // once they come, if the trigger still holds by then.
+        if (!manual && rule.extras.isNotEmpty()) {
+            val failing = ConditionWatch.failingExtra(rule)
+            if (failing != null) {
+                Prefs.extraRan = Prefs.extraRan - rule.id
+                Prefs.log("($why): ждёт — нужно «${failing.label}»")
+                return
+            }
+            if (!rule.restores) Prefs.extraRan = Prefs.extraRan + rule.id
+        }
         acted()
         // Started again: whatever was still pausing, of this start or of the last end, is over.
         StepQueue.cancel(rule.id, end = false)

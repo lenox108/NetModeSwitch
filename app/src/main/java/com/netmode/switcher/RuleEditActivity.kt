@@ -100,6 +100,7 @@ class RuleEditActivity : AppCompatActivity() {
     private var manualMinutes = 0
     private var netLostSeconds = 60
     private var notice = RunNotice.SILENT
+    private val extras = mutableListOf<Extra>()
     /** The wait switch follows the trigger's default until the user sets it. */
     private var waitTouched = false
 
@@ -288,6 +289,8 @@ class RuleEditActivity : AppCompatActivity() {
         triggerApps = r?.triggerApps.orEmpty()
         appPass = r?.appPassThrough.orEmpty()
         notice = r?.notice ?: RunNotice.SILENT
+        extras.clear()
+        extras += r?.extras.orEmpty()
         // A new rule waits a little: leaving for a moment is the common case, not the exception.
         appLeaveDelay = r?.appLeaveDelay ?: 5
         v.appScreenStays.isChecked = r?.appScreenOffStays ?: false
@@ -421,6 +424,7 @@ class RuleEditActivity : AppCompatActivity() {
         }
         v.triggerApps.setOnClickListener { pickPlain(Pick.TRIGGER, triggerApps) }
         v.appPass.setOnClickListener { pickPlain(Pick.PASS, appPass) }
+        v.addExtra.setOnClickListener { addExtra() }
         v.notice.onChange = { i ->
             notice = RunNotice.entries[i]
             // Without notifications a question cannot be seen; the rule would run unasked.
@@ -562,6 +566,10 @@ class RuleEditActivity : AppCompatActivity() {
         // someone using it: waiting would only hide that it worked.
         show(v.waitRow.root, t != Trigger.LOCKED && t != Trigger.MANUAL)
         show(v.sceneShortcut, t == Trigger.MANUAL)
+        // A scene is pressed when wanted; "after leaving" has no state to wait on.
+        show(v.extrasBlock, t != Trigger.MANUAL && !wifiLeft)
+        show(v.extrasHint, extras.isNotEmpty())
+        renderExtras()
         // A scene is pressed by hand: there is nothing to ask or tell.
         show(v.noticeRow, t != Trigger.MANUAL)
         show(v.noticeHint, t != Trigger.MANUAL && notice != RunNotice.SILENT)
@@ -1227,6 +1235,98 @@ class RuleEditActivity : AppCompatActivity() {
         return a.getColor(0, 0xFFB3261E.toInt()).also { a.recycle() }
     }
 
+    // --- "И ещё если" ----------------------------------------------------------------------
+
+    private fun extraIcon(k: ExtraKind) = when (k) {
+        ExtraKind.TIME -> R.drawable.ic_t_time
+        ExtraKind.WIFI -> R.drawable.ic_t_wifi
+        ExtraKind.CHARGING -> R.drawable.ic_t_charging
+        ExtraKind.BATTERY -> R.drawable.ic_t_battery
+        ExtraKind.HEADPHONES -> R.drawable.ic_t_headphones
+        ExtraKind.ROAMING -> R.drawable.ic_t_roaming
+        ExtraKind.DND -> R.drawable.ic_t_dnd
+        ExtraKind.LOCKED -> R.drawable.ic_t_lock
+    }
+
+    private fun renderExtras() {
+        v.extrasList.removeAllViews()
+        extras.toList().forEachIndexed { i, e ->
+            val line = row(v.extrasList, extraIcon(e.kind), e.label.replaceFirstChar { it.uppercase() }, null) {
+                extras.removeAt(i); paint()
+            }
+            // The ones with a value of their own open it again on a tap.
+            if (e.kind == ExtraKind.TIME || e.kind == ExtraKind.WIFI || e.kind == ExtraKind.BATTERY) {
+                line.setOnClickListener { editExtra(e) { extras[i] = it; paint() } }
+            }
+        }
+    }
+
+    private fun addExtra() {
+        val simple = listOf(
+            Extra(ExtraKind.CHARGING), Extra(ExtraKind.CHARGING, negate = true),
+            Extra(ExtraKind.HEADPHONES), Extra(ExtraKind.HEADPHONES, negate = true),
+            Extra(ExtraKind.ROAMING), Extra(ExtraKind.ROAMING, negate = true),
+            Extra(ExtraKind.DND), Extra(ExtraKind.DND, negate = true),
+            Extra(ExtraKind.LOCKED), Extra(ExtraKind.LOCKED, negate = true),
+        )
+        val options = listOf(
+            getString(R.string.extra_time) to Extra(ExtraKind.TIME, from = 23 * 60, to = 7 * 60),
+            getString(R.string.extra_wifi_in) to Extra(ExtraKind.WIFI),
+            getString(R.string.extra_wifi_out) to Extra(ExtraKind.WIFI, negate = true),
+            getString(R.string.extra_battery) to Extra(ExtraKind.BATTERY, level = 20),
+        ) + simple.map { it.label.replaceFirstChar { c -> c.uppercase() } to it }
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.extras_add)
+            .setItems(options.map { it.first }.toTypedArray()) { _, i ->
+                editExtra(options[i].second) { extras += it; paint() }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    /** Asks for what [e] needs of its own — times, a network, a level — and hands it back. */
+    private fun editExtra(e: Extra, done: (Extra) -> Unit) {
+        when (e.kind) {
+            ExtraKind.TIME -> {
+                TimePickerDialog(this, { _, fh, fm ->
+                    TimePickerDialog(this, { _, th, tm -> done(e.copy(from = fh * 60 + fm, to = th * 60 + tm)) },
+                        e.to / 60, e.to % 60, true).apply { setTitle(R.string.extra_time_to) }.show()
+                }, e.from / 60, e.from % 60, true).apply { setTitle(R.string.extra_time_from) }.show()
+            }
+            ExtraKind.WIFI -> {
+                val input = com.google.android.material.textfield.TextInputEditText(this).apply {
+                    setSingleLine()
+                    setText(e.ssid.orEmpty())
+                }
+                val box = android.widget.FrameLayout(this).apply {
+                    setPadding(dp(24), dp(8), dp(24), 0)
+                    addView(input)
+                }
+                // The network the phone is on is the likely one.
+                if (e.ssid == null) lifecycleScope.launch {
+                    WifiSsid.current()?.let { if (input.text.isNullOrEmpty()) input.setText(it) }
+                }
+                MaterialAlertDialogBuilder(this)
+                    .setTitle(R.string.extra_wifi_name)
+                    .setView(box)
+                    .setPositiveButton(android.R.string.ok) { _, _ ->
+                        input.text?.toString()?.trim()?.trim('"')?.takeIf { it.isNotEmpty() }?.let { done(e.copy(ssid = it)) }
+                    }
+                    .setNegativeButton(R.string.cancel, null)
+                    .show()
+            }
+            ExtraKind.BATTERY -> {
+                val levels = listOf(10, 15, 20, 30, 50)
+                MaterialAlertDialogBuilder(this)
+                    .setTitle(R.string.extra_battery)
+                    .setItems(levels.map { "≤ $it%" }.toTypedArray()) { _, i -> done(e.copy(level = levels[i])) }
+                    .setNegativeButton(R.string.cancel, null)
+                    .show()
+            }
+            else -> done(e)
+        }
+    }
+
     private fun askTime(initial: Pair<Int, Int>, done: (Pair<Int, Int>) -> Unit) {
         TimePickerDialog(this, { _, h, m -> done(h to m); paint() }, initial.first, initial.second, true).show()
     }
@@ -1398,6 +1498,7 @@ class RuleEditActivity : AppCompatActivity() {
             unload = Act.UNLOAD in shown,
             reconnect = Act.RECONNECT in shown,
             notice = notice.takeIf { t != Trigger.MANUAL } ?: RunNotice.SILENT,
+            extras = extras.toList().takeIf { t != Trigger.MANUAL && t != Trigger.WIFI_LEFT }.orEmpty(),
             endUnload = restores && Act.UNLOAD in atEnd.shown,
             unloadAll = unloadAll && Act.UNLOAD in shown,
             endUnloadAll = atEnd.unloadAll && restores && Act.UNLOAD in atEnd.shown,

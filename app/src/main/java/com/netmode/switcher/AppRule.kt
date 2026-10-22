@@ -267,6 +267,8 @@ data class AppRule(
      */
     val reconnect: Boolean = false,
     val notice: RunNotice = RunNotice.SILENT,
+    /** "И ещё если": states the rule needs besides its trigger (see [Extra]). */
+    val extras: List<Extra> = emptyList(),
 ) {
     /** The end fields, as one ending. */
     val endSpec: EndSpec
@@ -497,7 +499,11 @@ data class AppRule(
         return listOfNotNull(next, current, endAfter(next)).min()
     }
 
+    /** "Wi-Fi «Дом» · если с 23:00 до 07:00 и на зарядке" */
     val timeLabel: String
+        get() = triggerLabel + if (extras.isEmpty()) "" else " · если " + extras.joinToString(" и ") { it.label }
+
+    private val triggerLabel: String
         get() = when (trigger) {
             Trigger.MANUAL -> "сцена" + when {
                 !restores -> ""
@@ -572,6 +578,7 @@ data class AppRule(
         .put("unlock", unlockEnd?.toJson() ?: JSONObject.NULL)
         .put("eMethods", JSONObject().apply { endAppMethods.forEach { (p, m) -> put(p, m.name) } })
         .put("recon", reconnect).put("notice", notice.name)
+        .put("extras", JSONArray().apply { extras.forEach { put(it.toJson()) } })
         .put("leaveS", appLeaveDelay).put("tPass", JSONArray(appPassThrough)).put("screenStay", appScreenOffStays)
 
     companion object {
@@ -670,6 +677,7 @@ data class AppRule(
                     appScreenOffStays = o.optBoolean("screenStay", false),
                     reconnect = o.optBoolean("recon", false),
                     notice = runCatching { RunNotice.valueOf(o.getString("notice")) }.getOrDefault(RunNotice.SILENT),
+                    extras = Extra.listFromJson(o.optJSONArray("extras")),
                     endAppMethods = o.optJSONObject("eMethods")?.let { m ->
                         m.keys().asSequence().mapNotNull { p ->
                             runCatching { FreezeMethod.valueOf(m.getString(p)) }.getOrNull()?.let { p to it }

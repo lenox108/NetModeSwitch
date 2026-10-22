@@ -344,6 +344,15 @@
     <string name="waiting_answer">ждёт ответа в уведомлении</string>
     <string name="channel_rule_ask">Вопросы правил</string>
     <string name="channel_rule_done">Срабатывание правил</string>
+    <string name="extras_add">И ещё если…</string>
+    <string name="extras_hint">Правило работает, только пока выполнены все условия: ждёт недостающего и заканчивается, когда одно из них пропадёт</string>
+    <string name="extra_time">Время: с … до …</string>
+    <string name="extra_time_from">С какого времени</string>
+    <string name="extra_time_to">До какого времени</string>
+    <string name="extra_wifi_in">В сети Wi-Fi…</string>
+    <string name="extra_wifi_out">Не в сети Wi-Fi…</string>
+    <string name="extra_wifi_name">Название сети</string>
+    <string name="extra_battery">Заряд ≤ …</string>
     <string name="trigger_apps_required">Выбери приложение</string>
     <string name="app_leave_delay">Закрыто, если не вернулся</string>
     <string name="app_leave_now">сразу</string>
