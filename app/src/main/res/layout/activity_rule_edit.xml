@@ -1,0 +1,678 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:importantForAutofill="noExcludeDescendants"
+    android:orientation="vertical">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:navigationIcon="?attr/homeAsUpIndicator" />
+
+    <ScrollView
+        android:id="@+id/scroll"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <!-- Takes the initial focus instead of the name field; see activity_hotspot. -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:descendantFocusability="beforeDescendants"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:orientation="vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="16dp">
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:hint="@string/rule_name_hint">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/ruleName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textCapSentences"
+                    android:maxLength="40"
+                    android:maxLines="1" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- ================= WHEN ================= -->
+            <TextView
+                style="@style/NMS.Section"
+                android:text="@string/sec_when" />
+
+            <com.google.android.material.card.MaterialCardView style="@style/NMS.Card">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/triggerPick"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="start|center_vertical"
+                        android:textSize="16sp"
+                        app:iconGravity="start"
+                        app:iconPadding="12dp" />
+
+                    <TextView
+                        android:id="@+id/triggerHint"
+                        style="@style/NMS.Hint" />
+
+                    <!-- locked: only within a time window, which then uses the time block -->
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/lockWindow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/lock_window" />
+
+                    <!-- time -->
+                    <LinearLayout
+                        android:id="@+id/timeBlock"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:orientation="vertical">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/start"
+                                style="@style/Widget.Material3.Button.TonalButton"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginEnd="6dp"
+                                android:layout_weight="1" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/end"
+                                style="@style/Widget.Material3.Button.TonalButton"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="6dp"
+                                android:layout_weight="1" />
+                        </LinearLayout>
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/hasEnd"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/has_end" />
+
+                        <TextView
+                            android:id="@+id/hasEndHint"
+                            style="@style/NMS.Hint" />
+
+                        <com.google.android.material.chip.ChipGroup
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            app:chipSpacingVertical="0dp">
+                            <com.google.android.material.chip.Chip android:id="@+id/d1" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/mon" />
+                            <com.google.android.material.chip.Chip android:id="@+id/d2" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/tue" />
+                            <com.google.android.material.chip.Chip android:id="@+id/d3" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/wed" />
+                            <com.google.android.material.chip.Chip android:id="@+id/d4" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/thu" />
+                            <com.google.android.material.chip.Chip android:id="@+id/d5" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/fri" />
+                            <com.google.android.material.chip.Chip android:id="@+id/d6" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/sat" />
+                            <com.google.android.material.chip.Chip android:id="@+id/d7" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/sun" />
+                        </com.google.android.material.chip.ChipGroup>
+
+                        <TextView
+                            android:id="@+id/daysHint"
+                            style="@style/NMS.Hint" />
+                    </LinearLayout>
+
+                    <!-- wi-fi -->
+                    <LinearLayout
+                        android:id="@+id/wifiBlock"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:orientation="vertical">
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/ssidLayout"
+                            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="@string/ssid_hint">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/ssid"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="text"
+                                android:maxLines="1" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/useCurrent"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/use_current_ssid" />
+
+                        <RadioGroup
+                            android:id="@+id/wifiMode"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content">
+
+                            <RadioButton
+                                android:id="@+id/wifiWhile"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/wifi_while" />
+
+                            <RadioButton
+                                android:id="@+id/wifiAfter"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/wifi_after" />
+                        </RadioGroup>
+
+                        <include
+                            android:id="@+id/wakeRow"
+                            layout="@layout/row_switch"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/wakeForget"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:minHeight="36dp"
+                            android:paddingStart="0dp"
+                            android:text="@string/wake_forget" />
+
+                        <LinearLayout
+                            android:id="@+id/leftEndBlock"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:paddingStart="16dp">
+
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/leftEndTimeOn"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/left_end_time" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/leftEndTime"
+                                style="@style/NMS.PickButton" />
+
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/leftEndBtOn"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/left_end_bt" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/leftEndBt"
+                                style="@style/NMS.PickButton" />
+
+                            <TextView
+                                style="@style/NMS.Hint"
+                                android:text="@string/left_end_hint" />
+                        </LinearLayout>
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/wifiOffLeaves"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="@string/wifi_off_leaves" />
+
+                        <TextView
+                            style="@style/NMS.Hint"
+                            android:text="@string/wifi_off_leaves_hint" />
+                    </LinearLayout>
+
+                    <!-- bluetooth device -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btDevice"
+                        style="@style/NMS.PickButton"
+                        android:layout_marginTop="8dp" />
+
+                    <!-- a SIM, for the network-mode and weak-signal triggers -->
+                    <LinearLayout
+                        android:id="@+id/slotRow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            style="@style/NMS.RowLabel"
+                            android:text="@string/trigger_sim" />
+
+                        <com.netmode.switcher.ChoiceView
+                            android:id="@+id/tSlot"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/modeRow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            style="@style/NMS.RowLabel"
+                            android:text="@string/trigger_in_mode" />
+
+                        <com.netmode.switcher.ChoiceView
+                            android:id="@+id/tMode"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                    </LinearLayout>
+
+                    <!-- battery %, screen-off minutes, signal bars -->
+                    <LinearLayout
+                        android:id="@+id/levelRow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/levelLabel"
+                            style="@style/NMS.RowLabel" />
+
+                        <com.netmode.switcher.ChoiceView
+                            android:id="@+id/level"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                    </LinearLayout>
+
+                    <!-- apps on screen -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/triggerApps"
+                        style="@style/NMS.PickButton"
+                        android:layout_marginTop="8dp" />
+
+                    <!-- what counts as leaving the app -->
+                    <LinearLayout
+                        android:id="@+id/appLeaveBlock"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                style="@style/NMS.RowLabel"
+                                android:text="@string/app_leave_delay" />
+
+                            <com.netmode.switcher.ChoiceView
+                                android:id="@+id/appLeaveDelay"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content" />
+                        </LinearLayout>
+
+                        <TextView
+                            style="@style/NMS.Hint"
+                            android:text="@string/app_leave_delay_hint" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/appPass"
+                            style="@style/NMS.PickButton"
+                            android:layout_marginTop="8dp" />
+
+                        <TextView
+                            style="@style/NMS.Hint"
+                            android:text="@string/app_pass_hint" />
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/appScreenStays"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="@string/app_screen_stays" />
+
+                        <TextView
+                            style="@style/NMS.Hint"
+                            android:text="@string/app_screen_stays_hint" />
+                    </LinearLayout>
+
+                    <!-- place -->
+                    <LinearLayout
+                        android:id="@+id/placeBlock"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:orientation="vertical">
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="@string/place_name_hint">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/placeName"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="textCapSentences"
+                                android:maxLength="30"
+                                android:maxLines="1" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/placeAdd"
+                            style="@style/NMS.PickButton"
+                            android:layout_marginTop="6dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/placeClear"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/place_clear" />
+                    </LinearLayout>
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/releaseOnLeave"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/release_on_leave" />
+
+                    <TextView
+                        android:id="@+id/releaseHint"
+                        style="@style/NMS.Hint"
+                        android:text="@string/release_on_leave_hint" />
+
+                    <!-- Not while the phone is in use. -->
+                    <include
+                        android:id="@+id/waitRow"
+                        layout="@layout/row_switch"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp" />
+
+                    <com.google.android.material.checkbox.MaterialCheckBox
+                        android:id="@+id/waitApps"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/wait_apps_only" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ================= DO ================= -->
+            <TextView
+                style="@style/NMS.Section"
+                android:text="@string/sec_do" />
+
+            <com.google.android.material.card.MaterialCardView style="@style/NMS.Card">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:id="@+id/actions"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+
+                    <TextView
+                        android:id="@+id/orderHint"
+                        style="@style/NMS.Hint"
+                        android:text="@string/steps_order_hint" />
+
+                    <TextView
+                        android:id="@+id/noActions"
+                        style="@style/NMS.Hint"
+                        android:text="@string/no_actions_yet" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/addAction"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/add_action"
+                            app:icon="@drawable/ic_add" />
+
+                        <!-- A wait between two actions: they then run in the order shown. -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/addPause"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/add_pause"
+                            app:icon="@drawable/ic_hourglass" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ============ UNLOCKED INSIDE THE TIME (lock rule with a time) ============ -->
+            <LinearLayout
+                android:id="@+id/unlockSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/unlockTitle"
+                    style="@style/NMS.Section" />
+
+                <com.google.android.material.card.MaterialCardView style="@style/NMS.Card">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <RadioGroup
+                            android:id="@+id/unlockMode"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content">
+
+                            <RadioButton
+                                android:id="@+id/unlockRestore"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/end_restore" />
+
+                            <RadioButton
+                                android:id="@+id/unlockCustom"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/end_custom" />
+
+                            <RadioButton
+                                android:id="@+id/unlockNothing"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/unlock_nothing" />
+                        </RadioGroup>
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/unlockKeepApps"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:minHeight="48dp"
+                            android:text="@string/unlock_keep_apps" />
+
+                        <LinearLayout
+                            android:id="@+id/unlockActions"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical" />
+
+                        <TextView
+                            android:id="@+id/unlockOrderHint"
+                            style="@style/NMS.Hint"
+                            android:text="@string/steps_order_hint" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/addUnlockAction"
+                                style="@style/Widget.Material3.Button.TextButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/add_action"
+                                app:icon="@drawable/ic_add" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/addUnlockPause"
+                                style="@style/Widget.Material3.Button.TextButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/add_pause"
+                                app:icon="@drawable/ic_hourglass" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/unlockHint"
+                            style="@style/NMS.Hint" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <!-- ================= AT THE END ================= -->
+            <LinearLayout
+                android:id="@+id/endSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/endTitle"
+                    style="@style/NMS.Section"
+                    android:text="@string/at_end" />
+
+                <com.google.android.material.card.MaterialCardView style="@style/NMS.Card">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <RadioGroup
+                            android:id="@+id/endMode"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content">
+
+                            <RadioButton
+                                android:id="@+id/endRestore"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/end_restore" />
+
+                            <RadioButton
+                                android:id="@+id/endCustom"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/end_custom" />
+                        </RadioGroup>
+
+                        <LinearLayout
+                            android:id="@+id/endActions"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical" />
+
+                        <TextView
+                            android:id="@+id/endOrderHint"
+                            style="@style/NMS.Hint"
+                            android:text="@string/steps_order_hint" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/addEndAction"
+                                style="@style/Widget.Material3.Button.TextButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/add_action"
+                                app:icon="@drawable/ic_add" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/addEndPause"
+                                style="@style/Widget.Material3.Button.TextButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/add_pause"
+                                app:icon="@drawable/ic_hourglass" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/endHint"
+                            style="@style/NMS.Hint" />
+
+                        <!-- Apps at the end: whichever way it ends. -->
+                        <LinearLayout
+                            android:id="@+id/endApps"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:orientation="vertical" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/unstop"
+                            style="@style/NMS.PickButton"
+                            android:layout_marginTop="8dp" />
+
+                        <TextView
+                            android:id="@+id/unstopHint"
+                            style="@style/NMS.Hint"
+                            android:text="@string/unstop_hint" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/save"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="12dp"
+        android:text="@string/save" />
+</LinearLayout>

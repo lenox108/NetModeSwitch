@@ -1,0 +1,9 @@
+at=1792613014305
+sessions=0
+udp_sessions=0
+tcp_up=8388608
+tcp_down=32
+udp_up=1200
+udp_down=1200
+dropped=0
+failures=0

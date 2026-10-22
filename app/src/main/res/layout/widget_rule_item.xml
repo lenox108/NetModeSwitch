@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/ri_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:minHeight="44dp"
+    android:orientation="horizontal"
+    android:paddingVertical="4dp">
+
+    <ImageView
+        android:id="@+id/ri_icon"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_marginEnd="10dp"
+        android:src="@drawable/w_ic_t_wifi"
+        android:tint="@color/w_text2" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/ri_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/w_text"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/ri_sub"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/w_text2"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/ri_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:background="@drawable/w_chip"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="2dp"
+        android:textColor="@color/w_on_chip"
+        android:textSize="11sp" />
+</LinearLayout>

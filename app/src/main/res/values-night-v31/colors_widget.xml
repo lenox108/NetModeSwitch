@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="w_bg">@android:color/system_neutral1_900</color>
+    <color name="w_bg_on">@android:color/system_accent1_800</color>
+    <color name="w_text">@android:color/system_neutral1_50</color>
+    <color name="w_text2">@android:color/system_neutral2_300</color>
+    <color name="w_accent">@android:color/system_accent1_200</color>
+    <color name="w_chip">@android:color/system_accent1_700</color>
+    <color name="w_on_chip">@android:color/system_accent1_100</color>
+    <color name="w_btn">@android:color/system_neutral2_800</color>
+    <color name="w_on_btn">@android:color/system_neutral1_100</color>
+    <color name="w_sel">@android:color/system_accent1_200</color>
+    <color name="w_on_sel">@android:color/system_accent1_800</color>
+    <color name="w_off">@android:color/system_neutral2_600</color>
+    <color name="w_line">@android:color/system_neutral2_700</color>
+</resources>

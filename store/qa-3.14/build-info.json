@@ -1,0 +1,32 @@
+{
+  "version": "3.14",
+  "versionCode": 69,
+  "date": "2026-10-22",
+  "physicalPhoneTested": false,
+  "apks": [
+    {
+      "file": "NetModeSwitch-3.14.apk",
+      "versionName": "3.14",
+      "size": 2573121,
+      "sha256": "f6897579bd9292d9398e2d2738ad8e696c4ddaf2d397b7345e286209a35b460b"
+    },
+    {
+      "file": "NetModeSwitch-3.14-a10.apk",
+      "versionName": "3.14-a10",
+      "size": 2671183,
+      "sha256": "b2e67dad627c566d61ac5c6768dd919a354b2ab02c0d8185e77b4cf152a3dcf7"
+    }
+  ],
+  "tests": {
+    "ModernDebug": {
+      "tests": 30,
+      "failures": 0,
+      "errors": 0
+    },
+    "A10Debug": {
+      "tests": 30,
+      "failures": 0,
+      "errors": 0
+    }
+  }
+}

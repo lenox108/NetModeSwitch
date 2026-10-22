@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widgets before Android 12: no wallpaper colours, a fixed palette in the same roles.
+     From Android 12 values-v31 takes over with the system's Material You colours. -->
+<resources>
+    <color name="w_bg">#F4F6FA</color>
+    <color name="w_bg_on">#D6E3FF</color>
+    <color name="w_text">#1A1C1E</color>
+    <color name="w_text2">#44474E</color>
+    <color name="w_accent">#2D5DA8</color>
+    <color name="w_chip">#D6E3FF</color>
+    <color name="w_on_chip">#001B3E</color>
+    <color name="w_btn">#E1E2EC</color>
+    <color name="w_on_btn">#1A1C1E</color>
+    <color name="w_sel">#2D5DA8</color>
+    <color name="w_on_sel">#FFFFFF</color>
+    <color name="w_off">#8E9099</color>
+    <color name="w_line">#C4C6D0</color>
+
+    <!-- No backing: light wallpaper, dark text; dark wallpaper, light text. -->
+    <color name="wl_text">#1A1C1E</color>
+    <color name="wl_text2">#44474E</color>
+    <color name="wl_accent">#1F4B8E</color>
+    <color name="wl_off">#74777F</color>
+    <color name="wl_line">#40000000</color>
+    <color name="wd_text">#FFFFFFFF</color>
+    <color name="wd_text2">#E1E2EC</color>
+    <color name="wd_accent">#A9C7FF</color>
+    <color name="wd_off">#8E9099</color>
+    <color name="wd_line">#66FFFFFF</color>
+</resources>

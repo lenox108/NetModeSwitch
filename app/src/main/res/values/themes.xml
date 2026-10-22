@@ -2,5 +2,17 @@
     <style name="Theme.NetModeSwitch" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:statusBarColor">?attr/colorSurface</item>
         <item name="android:navigationBarColor">?attr/colorSurface</item>
+        <!-- Light surface: dark status and navigation bar icons, or they vanish into it. -->
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+
+    <!-- The widget setup: only its dialog shows, over the home screen. -->
+    <style name="Theme.NetModeSwitch.Translucent">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowAnimationStyle">@null</item>
     </style>
 </resources>

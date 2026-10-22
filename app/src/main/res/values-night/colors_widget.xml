@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="w_bg">#1A1C1E</color>
+    <color name="w_bg_on">#2B4678</color>
+    <color name="w_text">#E3E2E6</color>
+    <color name="w_text2">#C4C6D0</color>
+    <color name="w_accent">#A9C7FF</color>
+    <color name="w_chip">#2B4678</color>
+    <color name="w_on_chip">#D6E3FF</color>
+    <color name="w_btn">#2F3033</color>
+    <color name="w_on_btn">#E3E2E6</color>
+    <color name="w_sel">#A9C7FF</color>
+    <color name="w_on_sel">#003063</color>
+    <color name="w_off">#74777F</color>
+    <color name="w_line">#44474E</color>
+</resources>

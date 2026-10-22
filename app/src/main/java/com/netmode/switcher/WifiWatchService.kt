@@ -32,9 +32,11 @@ class WifiWatchService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // A connect event asks for WATCH_LOSS; that must never downgrade a persistent watcher,
         // which would then stop itself at the first disconnect.
-        val requested = intent?.getStringExtra(EXTRA_MODE) ?: MODE_WATCH_LOSS
+        // A null intent is a sticky restart, and only the persistent mode is sticky.
+        val requested = if (intent == null) MODE_ALWAYS else intent.getStringExtra(EXTRA_MODE) ?: MODE_WATCH_LOSS
         if (mode != MODE_ALWAYS) mode = requested
-        startForeground(NOTIFICATION_ID, buildNotification())
+        ensureChannel()
+        startForeground(StatusNotification.ID, StatusNotification.build(this))
         if (callback == null) registerCallback()
         return if (mode == MODE_ALWAYS) START_STICKY else START_NOT_STICKY
     }
@@ -67,19 +69,13 @@ class WifiWatchService : Service() {
 
     private fun connectivity() = getSystemService(ConnectivityManager::class.java)
 
-    private fun buildNotification(): Notification {
+    private fun ensureChannel() {
         val manager = getSystemService(NotificationManager::class.java)
-        if (manager.getNotificationChannel(CHANNEL) == null) {
+        if (manager.getNotificationChannel(StatusNotification.CHANNEL) == null) {
             manager.createNotificationChannel(
-                NotificationChannel(CHANNEL, getString(R.string.channel_wifi), NotificationManager.IMPORTANCE_MIN)
+                NotificationChannel(StatusNotification.CHANNEL, getString(R.string.channel_wifi), NotificationManager.IMPORTANCE_MIN)
             )
         }
-        return Notification.Builder(this, CHANNEL)
-            .setContentTitle(getString(R.string.watching_wifi))
-            .setContentText(Prefs.lastSsid ?: getString(R.string.app_name))
-            .setSmallIcon(R.drawable.ic_tile)
-            .setOngoing(true)
-            .build()
     }
 
     companion object {
@@ -88,8 +84,6 @@ class WifiWatchService : Service() {
 
         private const val TAG = "netmode"
         private const val EXTRA_MODE = "mode"
-        private const val CHANNEL = "wifi_watch"
-        private const val NOTIFICATION_ID = 1
 
         /**
          * Returns false when Android refused the start. That happens for a background start

@@ -3,9 +3,7 @@ package com.netmode.switcher
 import android.util.Log
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
 
 /**
  * Root access is a plain `su` shell, deliberately not a bound root service.
@@ -25,16 +23,24 @@ object Root {
         runCatching { Shell.getShell().isRoot }.getOrDefault(false)
     }
 
-    /** Runs [command] as root and returns stdout+stderr. Throws on timeout or missing root. */
-    suspend fun exec(command: String): String = withContext(Dispatchers.IO) {
+    /**
+     * Runs [command] as root and returns stdout+stderr. Throws on timeout or missing root.
+     *
+     * libsu runs every command in one shared shell, and a coroutine timeout cannot interrupt a
+     * blocking exec: one hung command would stall every later one. So the job is queued and
+     * waited for with a deadline, and on timeout the shell itself is closed — the next command
+     * gets a fresh one.
+     */
+    suspend fun exec(command: String, timeoutMs: Long? = null): String = withContext(Dispatchers.IO) {
+        val limit = timeoutMs ?: TIMEOUT_MS
+        val job = Shell.cmd(command).enqueue()
         try {
-            withTimeout(TIMEOUT_MS) {
-                val result = Shell.cmd(command).exec()
-                (result.out + result.err).joinToString("\n")
-            }
-        } catch (e: TimeoutCancellationException) {
+            val result = job.get(limit, java.util.concurrent.TimeUnit.MILLISECONDS)
+            (result.out + result.err).joinToString("\n")
+        } catch (e: java.util.concurrent.TimeoutException) {
             Log.e(TAG, "root command timed out: $command")
-            throw IllegalStateException("Root не ответил за ${TIMEOUT_MS / 1000} с")
+            runCatching { Shell.getCachedShell()?.close() }
+            throw IllegalStateException("Root не ответил за ${limit / 1000} с")
         }
     }
 }

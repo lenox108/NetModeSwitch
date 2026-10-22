@@ -6,66 +6,117 @@ import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import kotlinx.coroutines.launch
 
-class NetModeTileService : TileService() {
+/**
+ * One tile per SIM slot. Tiles are identified by component name, so each slot needs its own
+ * service class; everything but the slot number lives here.
+ */
+abstract class BaseNetModeTileService : TileService() {
+
+    protected abstract val slot: Int
+
+    // Remembered for the main screen, which offers to add the tile only while it is missing.
+    override fun onTileAdded() {
+        super.onTileAdded()
+        Prefs.setTileShown(slot, true)
+    }
+
+    override fun onTileRemoved() {
+        super.onTileRemoved()
+        Prefs.setTileShown(slot, false)
+    }
 
     override fun onStartListening() {
         super.onStartListening()
-        paint(ModeController.current.value, busy = false)
+        // Listening means it is in the shade: also covers tiles added before this was recorded.
+        Prefs.setTileShown(slot, true)
+        paint(ModeController.modeOf(slot), busy = false)
         App.scope.launch {
-            ModeController.read()
-            // ВАЖНО: красим напрямую, а НЕ через requestUpdate().
+            Sims.active()
+            ModeController.read(slot)
+            // ВАЖНО: красим напрямую, а НЕ через NetModeTiles.refresh().
             //
-            // requestUpdate() зовёт requestListeningState(), то есть просит систему перевести
-            // тайл в listening — и система отвечает вызовом onStartListening(). Вызванный
-            // отсюда, он замыкает сам себя: чтение режима → запрос listening → снова
-            // onStartListening → снова чтение. Выхода из круга нет, он живёт до смерти
-            // процесса, а каждый оборот — это root-команда `cmd phone` к телефонии.
+            // refresh() зовёт requestListeningState(), то есть просит систему перевести тайл
+            // в listening — и система отвечает вызовом onStartListening(). Вызванный отсюда,
+            // он замыкает сам себя: чтение режима → запрос listening → снова onStartListening.
+            // Выхода из круга нет, он живёт до смерти процесса, а каждый оборот — это
+            // root-команда `cmd phone` к телефонии.
             //
             // На телефоне владельца (19.09.2026) это дало 32 оборота в секунду в течение
-            // шести часов: 35 % ядра в root-шелле на форки `cmd phone`, 12 % в самом
-            // приложении, плюс SystemUI и logd, обслуживающие поток «refreshState: tile not
-            // listening, ignore». Телефон ушёл в severe-троттлинг, ядра 90–99 °C, экран
-            // система сбросила со 120 на 60 Гц.
-            paint(ModeController.current.value, busy = false)
+            // шести часов и severe-троттлинг.
+            paint(ModeController.modeOf(slot), busy = false)
         }
     }
 
     override fun onClick() {
         super.onClick()
-        paint(ModeController.current.value, busy = true)
+        paint(ModeController.modeOf(slot), busy = true)
         // Deliberately not lifecycleScope: this service dies the instant the shade closes,
         // which would cancel a root rebind mid-flight.
         App.scope.launch {
-            ModeController.toggle(ModeController.Source.TILE)
-            // Тоже без requestUpdate: тайл в этот момент ЗАВЕДОМО слушает (его только что
-            // нажали), а ModeController.apply сам дёргает requestUpdate для внешних поводов.
-            paint(ModeController.current.value, busy = false)
+            ModeController.toggle(slot, ModeController.Source.TILE)
+            // Тоже без refresh(): тайл в этот момент ЗАВЕДОМО слушает, его только что нажали.
+            paint(ModeController.modeOf(slot), busy = false)
         }
     }
 
     private fun paint(mode: NetMode?, busy: Boolean) {
         val tile = qsTile ?: return
-        tile.icon = Icon.createWithResource(this, R.drawable.ic_tile)
+        tile.icon = mode?.let { NetModeTiles.glyph(it) } ?: Icon.createWithResource(this, R.drawable.ic_tile)
         // Nothing but the generation: the shade truncates anything longer, and the tile's
         // active/inactive state already carries the rest of the meaning.
         tile.label = mode?.short ?: getString(R.string.tile_label)
-        tile.subtitle = if (busy) getString(R.string.working) else null
-        tile.state = when (mode) {
-            NetMode.FULL -> Tile.STATE_ACTIVE
-            NetMode.THREE_G -> Tile.STATE_INACTIVE
-            null -> Tile.STATE_INACTIVE
+        tile.subtitle = when {
+            busy -> getString(R.string.working)
+            // With one SIM the carrier name is noise; with two it is the only way to tell
+            // the tiles apart in the shade.
+            Sims.known.size > 1 -> Sims.name(slot)
+            else -> null
         }
+        tile.state = if (mode?.high == true) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
         tile.updateTile()
     }
+}
 
-    companion object {
-        /** Pulls the tile into a listening state so a change from an alarm or Wi-Fi repaints it. */
-        fun requestUpdate() {
+class Sim1TileService : BaseNetModeTileService() {
+    override val slot = 0
+}
+
+class Sim2TileService : BaseNetModeTileService() {
+    override val slot = 1
+}
+
+object NetModeTiles {
+    /**
+     * The generation itself as the tile's icon — "4G", "2G" — so the shade shows the mode at a
+     * glance even where it cuts the label. The shade tints only the shape, so white on clear.
+     */
+    fun glyph(mode: NetMode): Icon {
+        val text = when (mode) {
+            NetMode.FIVE_G, NetMode.NR_LTE -> "5G"
+            NetMode.FULL, NetMode.LTE_ONLY -> "4G"
+            NetMode.THREE_G, NetMode.WCDMA_ONLY -> "3G"
+            NetMode.TWO_G -> "2G"
+        }
+        val size = 96
+        val bmp = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = android.graphics.Color.WHITE
+            typeface = android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.BOLD)
+            textAlign = android.graphics.Paint.Align.CENTER
+            textSize = size.toFloat()
+        }
+        // As large as fits the width, centred on the cap height.
+        paint.textSize *= size * 0.94f / paint.measureText(text)
+        val bounds = android.graphics.Rect().also { paint.getTextBounds(text, 0, text.length, it) }
+        android.graphics.Canvas(bmp).drawText(text, size / 2f, size / 2f - bounds.exactCenterY(), paint)
+        return Icon.createWithBitmap(bmp)
+    }
+
+    /** Pulls the tiles into a listening state so a change from an alarm or Wi-Fi repaints them. */
+    fun refresh() {
+        listOf(Sim1TileService::class.java, Sim2TileService::class.java).forEach { cls ->
             runCatching {
-                requestListeningState(
-                    App.ctx,
-                    ComponentName(App.ctx, NetModeTileService::class.java)
-                )
+                TileService.requestListeningState(App.ctx, ComponentName(App.ctx, cls))
             }
         }
     }

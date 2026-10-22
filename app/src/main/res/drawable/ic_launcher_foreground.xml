@@ -3,7 +3,17 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- Signal bars rising to the right, and the "switch" arrows over the short ones. -->
     <path
-        android:fillColor="#7BC8FF"
-        android:pathData="M32,70h8v-12h-8zM50,70h8v-22h-8zM68,70h8v-32h-8z" />
+        android:fillColor="#FFFFFF"
+        android:pathData="M35.5,66h4a2,2 0 0 1 2,2v6a2,2 0 0 1 -2,2h-4a2,2 0 0 1 -2,-2v-6a2,2 0 0 1 2,-2zM46.5,58h4a2,2 0 0 1 2,2v14a2,2 0 0 1 -2,2h-4a2,2 0 0 1 -2,-2v-14a2,2 0 0 1 2,-2zM57.5,49h4a2,2 0 0 1 2,2v23a2,2 0 0 1 -2,2h-4a2,2 0 0 1 -2,-2v-23a2,2 0 0 1 2,-2zM68.5,40h4a2,2 0 0 1 2,2v32a2,2 0 0 1 -2,2h-4a2,2 0 0 1 -2,-2v-32a2,2 0 0 1 2,-2z" />
+    <group
+        android:scaleX="1.1"
+        android:scaleY="1.1"
+        android:translateX="29"
+        android:translateY="28">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M6.99,11L3,15l3.99,4v-3H14v-2H6.99v-3zM21,9l-3.99,-4v3H10v2h7.01v3L21,9z" />
+    </group>
 </vector>

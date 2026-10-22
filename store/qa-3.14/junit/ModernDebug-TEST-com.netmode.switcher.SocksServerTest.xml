@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.netmode.switcher.SocksServerTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-21T20:06:35.988Z" hostname="MacBook-Pro-John.local" time="1.818">
+  <properties/>
+  <testcase name="udpLimitAndControlClosureReleaseEveryResource" classname="com.netmode.switcher.SocksServerTest" time="0.571"/>
+  <testcase name="parallelTcpSessionsReleaseTheirPermits" classname="com.netmode.switcher.SocksServerTest" time="0.071"/>
+  <testcase name="invalidLoginAndIncompleteHandshakeDoNotConsumeSlotsForever" classname="com.netmode.switcher.SocksServerTest" time="0.215"/>
+  <testcase name="activeOneWayUdpSurvivesAndIdleAssociationClosesControlConnection" classname="com.netmode.switcher.SocksServerTest" time="0.741"/>
+  <testcase name="udpDropsMalformedPacketsAndPreservesPayloadsWithoutClosingAssociation" classname="com.netmode.switcher.SocksServerTest" time="0.173"/>
+  <testcase name="udpDecoderBoundsCacheAndHeaderWrappingPreservePayload" classname="com.netmode.switcher.SocksServerTest" time="0.002"/>
+  <testcase name="tcpPreservesLargeTransfersAndHalfClose" classname="com.netmode.switcher.SocksServerTest" time="0.029"/>
+  <testcase name="shutdownClosesEstablishedConnectionsAndReleasesSlots" classname="com.netmode.switcher.SocksServerTest" time="0.002"/>
+  <testcase name="saturatedRelayStillAnswersHealthGreetingAndKeepsExistingSession" classname="com.netmode.switcher.SocksServerTest" time="0.013"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

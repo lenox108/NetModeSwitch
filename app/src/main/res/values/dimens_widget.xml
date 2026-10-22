@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The widget corner: the system's from Android 12 (values-v31), this before. -->
+    <dimen name="w_radius">20dp</dimen>
+</resources>

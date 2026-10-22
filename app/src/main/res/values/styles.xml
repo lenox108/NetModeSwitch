@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One look for the same kind of text on every screen. -->
+<resources>
+
+    <!-- Root of the dotted names below. -->
+    <style name="NMS" />
+
+    <!-- Explanations under a control. -->
+    <style name="NMS.Hint">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
+        <item name="android:layout_marginTop">2dp</item>
+    </style>
+
+    <!-- The name on the left of a "name … choice" row. -->
+    <style name="NMS.RowLabel">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <!-- A section title: "Когда", "Что сделать", "В конце". -->
+    <style name="NMS.Section">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">16dp</item>
+        <item name="android:layout_marginBottom">6dp</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">?attr/colorPrimary</item>
+    </style>
+
+    <!-- A group of controls on its own surface. -->
+    <style name="NMS.Card" parent="Widget.Material3.CardView.Filled">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="contentPaddingLeft">16dp</item>
+        <item name="contentPaddingRight">12dp</item>
+        <item name="contentPaddingTop">6dp</item>
+        <item name="contentPaddingBottom">6dp</item>
+    </style>
+
+    <!-- "Choose …" buttons: devices, apps, tiles, VPN app. -->
+    <style name="NMS.PickButton" parent="Widget.Material3.Button.TonalButton">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+    </style>
+</resources>

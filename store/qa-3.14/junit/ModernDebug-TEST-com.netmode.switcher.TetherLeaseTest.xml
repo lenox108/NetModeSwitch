@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.netmode.switcher.TetherLeaseTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-21T20:06:37.807Z" hostname="MacBook-Pro-John.local" time="0.022">
+  <properties/>
+  <testcase name="repeatedEventsAndNewAppProcessAdoptSameHealthyTunnel" classname="com.netmode.switcher.TetherLeaseTest" time="0.016"/>
+  <testcase name="changedNetworkOrBrokenRulesCannotBeAdopted" classname="com.netmode.switcher.TetherLeaseTest" time="0.001"/>
+  <testcase name="identityCoversCredentialsAndDoesNotExposeThemOrAmbiguousSeparators" classname="com.netmode.switcher.TetherLeaseTest" time="0.005"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

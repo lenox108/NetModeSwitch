@@ -36,17 +36,56 @@ object Raf {
     private const val FAMILY_GSM = GSM or GPRS or EDGE
     private const val FAMILY_WCDMA = UMTS or HSDPA or HSUPA or HSPA or HSPAP
     private const val FAMILY_LTE = LTE or LTE_CA
+    private const val FAMILY_CDMA = CDMA or RTT_1X
+    private const val FAMILY_EVDO = EVDO_0 or EVDO_A or EVDO_B
 
     /** NT_MODE 9 (LTE/WCDMA/GSM) = 0x4D387 — the value this phone shipped with. */
     const val MODE_LTE_WCDMA_GSM = FAMILY_LTE or FAMILY_WCDMA or FAMILY_GSM
 
+    /** NT_MODE 33 (NR/LTE/GSM/WCDMA) = 0xCD387 — the stock "5G" entry. */
+    const val MODE_NR_LTE_WCDMA_GSM = NR or MODE_LTE_WCDMA_GSM
+
+    /** NT_MODE 24 (NR/LTE) = 0xC1000: no fallback below 4G. */
+    const val MODE_NR_LTE = NR or FAMILY_LTE
+
+    /** NT_MODE 11 (LTE only) = 0x41000. */
+    const val MODE_LTE = FAMILY_LTE
+
+    /** NT_MODE 2 (WCDMA only) = 0x4384. */
+    const val MODE_WCDMA = FAMILY_WCDMA
+
     /** NT_MODE 3 (WCDMA/GSM) = 0xC387. */
     const val MODE_WCDMA_GSM = FAMILY_WCDMA or FAMILY_GSM
+
+    /** NT_MODE 1 (GSM only) = 0x8003, as the stock menu writes it. */
+    const val MODE_GSM = FAMILY_GSM
 
     const val CLASS_2G = FAMILY_GSM or CDMA or RTT_1X or IDEN
     const val CLASS_3G = FAMILY_WCDMA or EVDO_0 or EVDO_A or EVDO_B or EHRPD or TD_SCDMA
     const val CLASS_4G = FAMILY_LTE or IWLAN
     const val CLASS_5G = NR
+
+    /**
+     * Masks to try for [mode] in the phone check, stock one first: a firmware whose own
+     * network-type screen puts its default back over an unknown mask needs the exact value of
+     * one of its entries, and which one differs between firmwares.
+     */
+    fun variants(mode: NetMode): List<Long> = when (mode) {
+        // RIL modes 26, 33, 32 and class-wide.
+        NetMode.FIVE_G -> listOf(mode.mask, NR or MODE_LTE_WCDMA_GSM or FAMILY_CDMA or FAMILY_EVDO or TD_SCDMA,
+            NR or MODE_LTE_WCDMA_GSM or TD_SCDMA, NR or CLASS_4G or CLASS_3G or CLASS_2G)
+        NetMode.NR_LTE -> listOf(mode.mask, NR or CLASS_4G)
+        // RIL modes 9, 10 (CDMA carriers), 20 and 22 (TD-SCDMA), and class-wide.
+        NetMode.FULL -> listOf(mode.mask, MODE_LTE_WCDMA_GSM or FAMILY_CDMA or FAMILY_EVDO,
+            MODE_LTE_WCDMA_GSM or TD_SCDMA, MODE_LTE_WCDMA_GSM or TD_SCDMA or FAMILY_CDMA or FAMILY_EVDO,
+            CLASS_4G or CLASS_3G or CLASS_2G)
+        NetMode.LTE_ONLY -> listOf(mode.mask, CLASS_4G)
+        // RIL modes 3, 7, 18, 21 and class-wide.
+        NetMode.THREE_G -> listOf(mode.mask, MODE_WCDMA_GSM or FAMILY_CDMA or FAMILY_EVDO, MODE_WCDMA_GSM or TD_SCDMA,
+            MODE_WCDMA_GSM or TD_SCDMA or FAMILY_CDMA or FAMILY_EVDO, CLASS_3G or CLASS_2G)
+        NetMode.WCDMA_ONLY -> listOf(mode.mask, CLASS_3G)
+        NetMode.TWO_G -> listOf(mode.mask, CLASS_2G)
+    }.distinct()
 
     /** Human-readable generation list, e.g. "5G+4G+3G+2G". Used in diagnostics. */
     fun describe(mask: Long): String {
@@ -63,23 +102,42 @@ object Raf {
 
 /** [short] exists because a Quick Settings tile has room for about three characters. */
 enum class NetMode(val label: String, val short: String, val mask: Long) {
+    FIVE_G("5G / 4G / 3G / 2G", "5G", Raf.MODE_NR_LTE_WCDMA_GSM),
+    NR_LTE("5G / 4G", "5G/4G", Raf.MODE_NR_LTE),
     FULL("4G / 3G / 2G", "4G", Raf.MODE_LTE_WCDMA_GSM),
-    THREE_G("3G / 2G", "3G", Raf.MODE_WCDMA_GSM);
+    LTE_ONLY("Только 4G", "только 4G", Raf.MODE_LTE),
+    THREE_G("3G / 2G", "3G", Raf.MODE_WCDMA_GSM),
+    WCDMA_ONLY("Только 3G", "только 3G", Raf.MODE_WCDMA),
+    TWO_G("2G", "2G", Raf.MODE_GSM);
 
-    val other: NetMode get() = if (this == FULL) THREE_G else FULL
+
+    /** 4G or better: what the toggle and the tile treat as "high". */
+    val high: Boolean get() = mask and (Raf.CLASS_4G or Raf.CLASS_5G) != 0L
 
     companion object {
+        /** The preset whose stock mask this is, bit for bit; null for any other mask. */
+        fun exact(mask: Long): NetMode? =
+            entries.firstOrNull { it.mask == mask } ?: entries.firstOrNull { mask in Profile.masksOf(it) }
+
         /**
          * Classifies a bitmask read back from telephony by generation rather than by exact
          * equality: the modem strips bits it does not support, and the effective mask is the
          * AND across all reasons, so an exact match would report working writes as failures.
          */
-        fun of(mask: Long): NetMode? = when {
-            mask <= 0L -> null
-            mask and Raf.CLASS_5G != 0L -> null            // 5G on => neither of our presets
-            mask and Raf.CLASS_4G != 0L -> FULL
-            mask and Raf.CLASS_3G != 0L -> THREE_G
-            else -> null
+        fun of(mask: Long): NetMode? {
+            if (mask <= 0L) return null
+            exact(mask)?.let { return it }
+            val below3 = mask and (Raf.CLASS_3G or Raf.CLASS_2G) != 0L
+            return when {
+                mask and Raf.CLASS_5G != 0L -> if (below3) FIVE_G else NR_LTE
+                mask and Raf.CLASS_4G != 0L -> if (below3) FULL else LTE_ONLY
+                mask and Raf.CLASS_3G != 0L -> if (mask and Raf.CLASS_2G != 0L) THREE_G else WCDMA_ONLY
+                mask and Raf.CLASS_2G != 0L -> TWO_G
+                else -> null
+            }
         }
+
+        /** The four everyday modes that get a button of their own; the rest are in a menu. */
+        val MAIN = listOf(FIVE_G, FULL, THREE_G, TWO_G)
     }
 }

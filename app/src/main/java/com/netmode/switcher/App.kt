@@ -26,7 +26,15 @@ class App : Application() {
         // OxygenOS drops the PendingIntent network callback when it cleans the app up, so it
         // is re-registered on every process start. The call is a single binder round trip and
         // returns immediately when there is nothing to watch.
-        scope.launch { runCatching { WifiMonitor.register() } }
+        scope.launch {
+            runCatching { Migration.run() }
+            WifiMonitor.syncAll()
+            runCatching { Widgets.watch() }
+            // Also clears rules a previous mode left behind, e.g. after a crash or reinstall.
+            runCatching { TetherRoute.apply() }
+            // Catches a toggle made while the process was not running.
+            if (AppFreezer.hasDataRules()) runCatching { DataWatch.check() }
+        }
     }
 
     companion object {

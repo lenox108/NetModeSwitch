@@ -5,3 +5,5 @@ local.properties
 build/
 .DS_Store
 .kotlin/
+backup/
+store/*.apk

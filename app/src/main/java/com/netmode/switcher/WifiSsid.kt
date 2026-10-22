@@ -13,12 +13,16 @@ object WifiSsid {
     private val PATTERNS = listOf(
         Regex("""connected to\s+"([^"]*)""""),
         Regex("""SSID:\s*"([^"]*)""""),
+        // Android 10's dumpsys: "mWifiInfo SSID: Home, BSSID: …", no quotes.
+        Regex("""SSID: ([^",][^,]*), BSSID"""),
     )
 
     private val UNKNOWN = setOf("", "<unknown ssid>", "null", "none")
 
     suspend fun current(): String? = runCatching {
-        parse(Root.exec("cmd wifi status"))
+        // `cmd wifi status` exists from Android 11; before, the connection info in dumpsys.
+        if (Compat.SDK >= 30) parse(Privileged.exec("cmd wifi status"))
+        else parse(Privileged.exec("dumpsys wifi | grep -m1 'mWifiInfo'").takeIf { it.contains("state: COMPLETED") }.orEmpty())
     }.getOrNull()
 
     fun parse(output: String): String? {

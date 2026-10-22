@@ -1,0 +1,4 @@
+PASS Android detached helper: 8 MiB TCP integrity and half-close
+PASS Android detached helper: 1200-byte UDP integrity
+PASS Android hotspot screen: new diagnostics button, client-only IPv6 label, no crash
+PASS detached helper writes live TCP/UDP counters atomically

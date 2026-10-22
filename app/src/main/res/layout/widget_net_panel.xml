@@ -1,0 +1,328 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The backing is its own layer, so its opacity can change without touching the content. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:id="@+id/w_back"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/w_bg" />
+
+    <LinearLayout
+        android:id="@+id/n_root"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/n_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="● Дом"
+            android:textColor="@color/w_text"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:id="@+id/p1"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="4dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/p1l"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="SIM 1"
+                android:textColor="@color/w_text2"
+                android:textSize="11sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginTop="3dp"
+                android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/p1b0"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/w_btn"
+                android:gravity="center"
+                android:maxLines="1"
+                android:text="5G"
+                android:textColor="@color/w_on_btn"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/p1b1"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/w_btn"
+                android:gravity="center"
+                android:maxLines="1"
+                android:text="4G"
+                android:textColor="@color/w_on_btn"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/p1b2"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/w_btn"
+                android:gravity="center"
+                android:maxLines="1"
+                android:text="3G"
+                android:textColor="@color/w_on_btn"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/p1b3"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/w_btn"
+                android:gravity="center"
+                android:maxLines="1"
+                android:text="2G"
+                android:textColor="@color/w_on_btn"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/p2"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="4dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/p2l"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="SIM 2"
+                android:textColor="@color/w_text2"
+                android:textSize="11sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginTop="3dp"
+                android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/p2b0"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/w_btn"
+                android:gravity="center"
+                android:maxLines="1"
+                android:text="5G"
+                android:textColor="@color/w_on_btn"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/p2b1"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/w_btn"
+                android:gravity="center"
+                android:maxLines="1"
+                android:text="4G"
+                android:textColor="@color/w_on_btn"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/p2b2"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/w_btn"
+                android:gravity="center"
+                android:maxLines="1"
+                android:text="3G"
+                android:textColor="@color/w_on_btn"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/p2b3"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/w_btn"
+                android:gravity="center"
+                android:maxLines="1"
+                android:text="2G"
+                android:textColor="@color/w_on_btn"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/p_tg"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:id="@+id/q0"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/w_tg"
+                android:gravity="center_vertical"
+                android:orientation="vertical"
+                android:paddingHorizontal="6dp">
+
+                <ImageView
+                    android:id="@+id/q0i"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:src="@drawable/w_ic_t_wifi"
+                    android:tint="@color/w_on_btn" />
+
+                <TextView
+                    android:id="@+id/q0t"
+                    android:layout_width="match_parent"
+                    android:layout_height="16dp"
+                    android:layout_marginTop="2dp"
+                    android:autoSizeMaxTextSize="11sp"
+                    android:autoSizeMinTextSize="5sp"
+                    android:autoSizeTextType="uniform"
+                    android:maxLines="1"
+                    android:text="Wi-Fi"
+                    android:textColor="@color/w_on_btn"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/q1"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/w_tg"
+                android:gravity="center_vertical"
+                android:orientation="vertical"
+                android:paddingHorizontal="6dp">
+
+                <ImageView
+                    android:id="@+id/q1i"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:src="@drawable/w_ic_t_wifi"
+                    android:tint="@color/w_on_btn" />
+
+                <TextView
+                    android:id="@+id/q1t"
+                    android:layout_width="match_parent"
+                    android:layout_height="16dp"
+                    android:layout_marginTop="2dp"
+                    android:autoSizeMaxTextSize="11sp"
+                    android:autoSizeMinTextSize="5sp"
+                    android:autoSizeTextType="uniform"
+                    android:maxLines="1"
+                    android:text="Wi-Fi"
+                    android:textColor="@color/w_on_btn"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/q2"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/w_tg"
+                android:gravity="center_vertical"
+                android:orientation="vertical"
+                android:paddingHorizontal="6dp">
+
+                <ImageView
+                    android:id="@+id/q2i"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:src="@drawable/w_ic_t_wifi"
+                    android:tint="@color/w_on_btn" />
+
+                <TextView
+                    android:id="@+id/q2t"
+                    android:layout_width="match_parent"
+                    android:layout_height="16dp"
+                    android:layout_marginTop="2dp"
+                    android:autoSizeMaxTextSize="11sp"
+                    android:autoSizeMinTextSize="5sp"
+                    android:autoSizeTextType="uniform"
+                    android:maxLines="1"
+                    android:text="Wi-Fi"
+                    android:textColor="@color/w_on_btn"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/q3"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/w_tg"
+                android:gravity="center_vertical"
+                android:orientation="vertical"
+                android:paddingHorizontal="6dp">
+
+                <ImageView
+                    android:id="@+id/q3i"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:src="@drawable/w_ic_t_wifi"
+                    android:tint="@color/w_on_btn" />
+
+                <TextView
+                    android:id="@+id/q3t"
+                    android:layout_width="match_parent"
+                    android:layout_height="16dp"
+                    android:layout_marginTop="2dp"
+                    android:autoSizeMaxTextSize="11sp"
+                    android:autoSizeMinTextSize="5sp"
+                    android:autoSizeTextType="uniform"
+                    android:maxLines="1"
+                    android:text="Wi-Fi"
+                    android:textColor="@color/w_on_btn"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

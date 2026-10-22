@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingTop="10dp"
+    android:paddingBottom="6dp">
+
+    <TextView
+        android:id="@+id/label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="15sp" />
+
+    <TextView
+        android:id="@+id/sub"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:alpha="0.6"
+        android:textSize="11sp" />
+
+    <com.google.android.material.button.MaterialButtonToggleGroup
+        android:id="@+id/state"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        app:selectionRequired="true"
+        app:singleSelection="true">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/keep"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:minWidth="0dp"
+            android:maxLines="1"
+            android:paddingStart="2dp"
+            android:paddingEnd="2dp"
+            android:text="@string/tile_keep"
+            android:textSize="14sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/on"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:minWidth="0dp"
+            android:maxLines="1"
+            android:paddingStart="2dp"
+            android:paddingEnd="2dp"
+            android:text="@string/tile_on"
+            android:textSize="14sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/off"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:minWidth="0dp"
+            android:maxLines="1"
+            android:paddingStart="2dp"
+            android:paddingEnd="2dp"
+            android:text="@string/tile_off"
+            android:textSize="14sp" />
+    </com.google.android.material.button.MaterialButtonToggleGroup>
+</LinearLayout>

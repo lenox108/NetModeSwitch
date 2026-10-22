@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.netmode.switcher.NetworkScriptsTest" tests="17" skipped="0" failures="0" errors="0" timestamp="2026-10-21T20:06:38.197Z" hostname="MacBook-Pro-John.local" time="6.373">
+  <properties/>
+  <testcase name="unsupportedTtlNeverReportsSuccessAndCanBeCleaned" classname="com.netmode.switcher.NetworkScriptsTest" time="0.236"/>
+  <testcase name="restorationAfterAnotherBootDoesNotWriteStaleSysctls" classname="com.netmode.switcher.NetworkScriptsTest" time="0.271"/>
+  <testcase name="legacyMigrationRestoresPhoneWhileKeepingClientBlock" classname="com.netmode.switcher.NetworkScriptsTest" time="0.354"/>
+  <testcase name="restorationDoesNotOverwriteAnExternalOffloadChange" classname="com.netmode.switcher.NetworkScriptsTest" time="0.332"/>
+  <testcase name="normalVpnRequiresNatMssAndAnUpInterface" classname="com.netmode.switcher.NetworkScriptsTest" time="0.877"/>
+  <testcase name="tetherRulesRejectEmptyOrUnsafeInterfaceLists" classname="com.netmode.switcher.NetworkScriptsTest" time="0.006"/>
+  <testcase name="savedSettingValuesArePassedLiterallyToTheShell" classname="com.netmode.switcher.NetworkScriptsTest" time="0.381"/>
+  <testcase name="absentOffloadSettingsAreDeletedOnRestoration" classname="com.netmode.switcher.NetworkScriptsTest" time="0.372"/>
+  <testcase name="tetherInterfaceChangesReplaceOnlyOurForwardRules" classname="com.netmode.switcher.NetworkScriptsTest" time="0.341"/>
+  <testcase name="routeTeardownLeavesHoldAndPhoneTrafficUntouchedUntilExplicitRelease" classname="com.netmode.switcher.NetworkScriptsTest" time="0.978"/>
+  <testcase name="rejectsShellInjectionAndOutOfRangeTtl" classname="com.netmode.switcher.NetworkScriptsTest" time="0.005"/>
+  <testcase name="ttlOnlyTouchesForwardedHotspotTrafficAndIsIdempotent" classname="com.netmode.switcher.NetworkScriptsTest" time="0.268"/>
+  <testcase name="tetherIpv6LeavesPhoneSettingsAndLocalTrafficUntouched" classname="com.netmode.switcher.NetworkScriptsTest" time="0.268"/>
+  <testcase name="checkedRouteFailureKeepsSharedShellAliveAndRejectsUnsafeInputs" classname="com.netmode.switcher.NetworkScriptsTest" time="0.01"/>
+  <testcase name="proxyConfigAndMultilinePasswordRemainDataInTheShellAndYaml" classname="com.netmode.switcher.NetworkScriptsTest" time="0.016"/>
+  <testcase name="routeVerificationRejectsMissingDnsGuardAndDuplicatePolicyRules" classname="com.netmode.switcher.NetworkScriptsTest" time="1.031"/>
+  <testcase name="capabilityProbeDoesNotInstallLiveRulesAndCleansUpOnFailure" classname="com.netmode.switcher.NetworkScriptsTest" time="0.626"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

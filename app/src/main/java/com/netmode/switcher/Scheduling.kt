@@ -18,22 +18,19 @@ object AlarmScheduler {
     private const val REQUEST = 100
     private const val TAG = "netmode"
 
-    /** Slack for a late alarm — Doze can hold one back by minutes. */
-    private const val GRACE_MINUTES = 10L
 
     fun rearm() {
         val am = App.ctx.getSystemService(AlarmManager::class.java)
         val pi = pendingIntent()
         am.cancel(pi)
 
-        val enabled = Prefs.schedules.filter { it.enabled }
-        if (enabled.isEmpty()) return
-
         val now = ZonedDateTime.now()
-        val next = enabled.minOf { it.nextAfter(now) }
+        val candidates = Prefs.appRules.filter { it.enabled && it.isTime && it.hasActions }.map { it.nextEvent(now) } +
+            leftEnds(now)
+        val next = candidates.minOrNull() ?: return
         val at = next.toInstant().toEpochMilli()
 
-        if (am.canScheduleExactAlarms()) {
+        if (Compat.canExact(am)) {
             am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
         } else {
             // Degraded but still useful; the rules screen surfaces the missing permission.
@@ -42,26 +39,14 @@ object AlarmScheduler {
         Log.i(TAG, "next schedule alarm at $next")
     }
 
-    /** The rule that should be in force right now, or null if none fired recently. */
-    fun dueNow(now: ZonedDateTime = ZonedDateTime.now()): ScheduleRule? {
-        val since = now.minusMinutes(GRACE_MINUTES)
-        return Prefs.schedules
-            .filter { it.enabled }
-            .mapNotNull { rule -> rule.lastAtOrBefore(now)?.let { it to rule } }
-            .filter { it.first.isAfter(since) }
-            .maxByOrNull { it.first }      // last event wins
-            ?.second
-    }
-
-    /** The rule in force at boot, looking back a whole day rather than minutes. */
-    fun catchUpRule(now: ZonedDateTime = ZonedDateTime.now()): ScheduleRule? {
-        val since = now.minusHours(24)
-        return Prefs.schedules
-            .filter { it.enabled }
-            .mapNotNull { rule -> rule.lastAtOrBefore(now)?.let { it to rule } }
-            .filter { it.first.isAfter(since) }
-            .maxByOrNull { it.first }
-            ?.second
+    /** Pending end times of open "after leaving Wi-Fi" windows. */
+    private fun leftEnds(now: ZonedDateTime): List<ZonedDateTime> {
+        val rules = Prefs.appRules.filter { it.enabled && it.hasLeftEndTime }.associateBy { it.id }
+        // Open windows, not held entries: a window that changed nothing still has to end.
+        return Prefs.openWindows.mapNotNull { (id, opened) ->
+            val since = java.time.Instant.ofEpochMilli(opened).atZone(now.zone)
+            rules[id]?.leftEndAfter(since)?.takeIf { it.isAfter(now) }
+        }
     }
 
     private fun pendingIntent(): PendingIntent = PendingIntent.getBroadcast(
@@ -78,14 +63,8 @@ class AlarmReceiver : BroadcastReceiver() {
         val pending = goAsync()
         App.scope.launch {
             try {
-                val rule = AlarmScheduler.dueNow()
-                if (rule == null) {
-                    Prefs.log("расписание: сработало, но подходящего правила нет")
-                } else {
-                    ModeController.apply(rule.mode, ModeController.Source.SCHEDULE)
-                        .onSuccess { Prefs.log("расписание ${rule.timeLabel}: ${it.label}") }
-                        .onFailure { Prefs.log("расписание ${rule.timeLabel}: ошибка — ${it.message}") }
-                }
+                val acted = runCatching { AppFreezer.reconcile() }.getOrDefault(false)
+                if (!acted) Prefs.log("расписание: сработало, но подходящего правила нет")
             } finally {
                 AlarmScheduler.rearm()
                 pending.finish()
@@ -108,16 +87,22 @@ class BootReceiver : BroadcastReceiver() {
                 WifiMonitor.register()
                 if (Prefs.reliableWifi) WifiWatchService.start(context, WifiWatchService.MODE_ALWAYS)
 
-                if (Prefs.catchUpOnBoot && intent.action == Intent.ACTION_BOOT_COMPLETED) {
-                    val rule = AlarmScheduler.catchUpRule()
-                    if (rule != null) {
-                        ModeController.apply(rule.mode, ModeController.Source.BOOT)
-                            .onSuccess { Prefs.log("догон после загрузки: ${it.label}") }
-                            .onFailure { Prefs.log("догон после загрузки: ошибка — ${it.message}") }
-                    }
-                }
+                // Releasing a window that ended while the phone was off is always right; only a
+                // missed start is subject to the catch-up switch.
+                val boot = intent.action == Intent.ACTION_BOOT_COMPLETED
+                runCatching { AppFreezer.reconcile(boot = boot, catchUp = Prefs.catchUpOnBoot) }
+                // Pauses that ran out while the phone was off: the rest of their steps, now.
+                runCatching { StepQueue.runDue() }
+                AlarmScheduler.rearm()
             } finally {
                 pending.finish()
+            }
+            // Connections a window depended on may be gone after a reboot, with no event to
+            // say so. Checked once the car and the home network have had time to reconnect.
+            if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
+                kotlinx.coroutines.delay(90_000)
+                runCatching { AppFreezer.afterBoot() }
+                runCatching { WifiRules.recheck() }
             }
         }
     }

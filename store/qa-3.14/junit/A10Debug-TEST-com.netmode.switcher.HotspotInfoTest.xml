@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.netmode.switcher.HotspotInfoTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-21T20:06:38.179Z" hostname="MacBook-Pro-John.local" time="0.014">
+  <properties/>
+  <testcase name="widthIsDecodedFromSoftApEnumRatherThanDisplayedAsRawNumber" classname="com.netmode.switcher.HotspotInfoTest" time="0.012"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

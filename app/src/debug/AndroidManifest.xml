@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- Debug only: every widget at several sizes on one screen. -->
+        <activity
+            android:name=".WidgetLab"
+            android:exported="true"
+            android:theme="@style/Theme.NetModeSwitch" />
+        <!-- Debug only: pretend a SIM was just switched on. -->
+        <receiver
+            android:name=".SimLab"
+            android:exported="true" />
+        <receiver
+            android:name=".SocksLab"
+            android:exported="true" />
+    </application>
+</manifest>

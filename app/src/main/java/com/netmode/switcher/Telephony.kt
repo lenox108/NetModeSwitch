@@ -40,26 +40,49 @@ object Telephony {
         "NR" to (1L shl 19),
     )
 
-    @Volatile
-    private var cachedSlot: Int = -1
 
-    /** Finds the slot holding the active SIM by probing; empty slots answer with an error. */
-    suspend fun slot(): Int {
-        cachedSlot.takeIf { it >= 0 }?.let { return it }
-        for (candidate in 0..3) {
-            val out = Root.exec("$GET -s $candidate").trim()
-            if (out.contains("not a valid SLOT_ID")) break
-            if (out.isNotEmpty() && !out.contains("No valid subscription") && out.contains("|")) {
-                cachedSlot = candidate
-                return candidate
-            }
+    /** Allowed-types bitmask for [slot], or -1 when telephony had nothing to say. */
+    suspend fun readMask(slot: Int): Long = readWith(Profile.method, slot)
+
+    suspend fun readWith(method: WriteMethod, slot: Int): Long = when (method) {
+        WriteMethod.CMD -> parseMask(Privileged.exec("$GET -s $slot").trim())
+        WriteMethod.BINDER -> {
+            val sub = subOf(slot)
+            if (sub < 0) -1L
+            else Privileged.exec("${cli()} get $sub").lineSequence().firstOrNull { it.startsWith("mask=") }
+                ?.removePrefix("mask=")?.trim()?.toLongOrNull()?.takeIf { it > 0 } ?: -1L
         }
-        error("Не найден слот с активной SIM")
     }
 
-    /** Current allowed-types bitmask, or -1 when telephony had nothing to say. */
-    suspend fun readMask(): Long {
-        val out = Root.exec("$GET -s ${slot()}").trim()
+    private fun subOf(slot: Int): Int =
+        Compat.subId(slot)
+
+    private fun cli() = "CLASSPATH=${App.ctx.applicationInfo.sourceDir} app_process /system/bin com.netmode.switcher.PhoneCli"
+
+    /**
+     * Masks of every slot the device has, in one shell call: slot → mask, -1 for a slot whose
+     * read came back empty. One call instead of an existence probe plus a read per slot —
+     * each `cmd phone` costs a few hundred milliseconds, and the main screen waits for this.
+     */
+    suspend fun readAll(maxSlots: Int): Map<Int, Long> {
+        if (Profile.method == WriteMethod.BINDER) {
+            return (0 until maxSlots).associateWith { readWith(WriteMethod.BINDER, it) }.filterValues { it > 0 }
+        }
+        val script = "for s in ${(0 until maxSlots).joinToString(" ")}; do " +
+            "o=\$($GET -s \$s 2>&1 | head -1); " +
+            "case \"\$o\" in *\"not a valid SLOT_ID\"*) break;; esac; " +
+            "echo \"@S \$s \$o\"; done"
+        return Privileged.exec(script).lineSequence()
+            .filter { it.startsWith("@S ") }
+            .mapNotNull { line ->
+                val rest = line.removePrefix("@S ")
+                val slot = rest.substringBefore(' ').toIntOrNull() ?: return@mapNotNull null
+                slot to parseMask(rest.substringAfter(' ', "").trim())
+            }
+            .toMap()
+    }
+
+    private fun parseMask(out: String): Long {
         if (out.isEmpty() || out.contains("No valid subscription")) {
             Log.w(TAG, "telephony read returned: $out")
             return -1L
@@ -74,15 +97,19 @@ object Telephony {
         return if (mask == 0L) -1L else mask
     }
 
-    suspend fun writeMask(mask: Long): Boolean {
-        // The command takes the bitmask as 20 binary digits, NR first.
-        val binary = mask.toString(2).padStart(20, '0')
-        val out = Root.exec("$SET -s ${slot()} $binary")
-        Log.i(TAG, "set $binary -> $out")
-        if (!out.contains("completed", ignoreCase = true)) {
-            cachedSlot = -1      // a swapped SIM would look exactly like this
-            return false
+    suspend fun writeMask(slot: Int, mask: Long): Boolean = writeWith(Profile.method, slot, mask)
+
+    suspend fun writeWith(method: WriteMethod, slot: Int, mask: Long): Boolean = when (method) {
+        WriteMethod.CMD -> {
+            // The command takes the bitmask as 20 binary digits, NR first.
+            val binary = mask.toString(2).padStart(20, '0')
+            val out = Privileged.exec("$SET -s $slot $binary")
+            Log.i(TAG, "slot $slot set $binary -> $out")
+            out.contains("completed", ignoreCase = true)
         }
-        return true
+        WriteMethod.BINDER -> {
+            val sub = subOf(slot)
+            sub >= 0 && Privileged.exec("${cli()} set $sub $mask").lineSequence().any { it.trim() == "ok" }
+        }
     }
 }

@@ -1,143 +1,220 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
-    android:clipToPadding="false"
-    android:fitsSystemWindows="true">
+    android:fitsSystemWindows="true"
+    android:orientation="vertical">
 
-    <LinearLayout
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="20dp">
+        app:navigationIcon="?attr/homeAsUpIndicator"
+        app:title="@string/rules_title" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/section_schedule"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false">
 
         <LinearLayout
-            android:id="@+id/scheduleList"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:orientation="vertical" />
+            android:orientation="vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="24dp">
 
-        <TextView
-            android:id="@+id/scheduleEmpty"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:alpha="0.6"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp"
-            android:text="@string/no_rules"
-            android:textSize="13sp" />
+            <!-- access -->
+            <TextView
+                style="@style/NMS.Section"
+                android:layout_marginTop="4dp"
+                android:text="@string/sec_access" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/addSchedule"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/add_schedule" />
+            <com.google.android.material.card.MaterialCardView style="@style/NMS.Card">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
-            android:text="@string/section_wifi"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
 
-        <LinearLayout
-            android:id="@+id/wifiList"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:orientation="vertical" />
+                    <include
+                        android:id="@+id/permEntry"
+                        layout="@layout/row_perm" />
 
-        <TextView
-            android:id="@+id/wifiEmpty"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:alpha="0.6"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp"
-            android:text="@string/no_rules"
-            android:textSize="13sp" />
+                    <include
+                        android:id="@+id/checkEntry"
+                        layout="@layout/row_perm" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/addWifi"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/add_wifi" />
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
-            android:text="@string/section_settings"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+                        <TextView
+                            style="@style/NMS.RowLabel"
+                            android:text="@string/backend_title" />
 
-        <com.google.android.material.materialswitch.MaterialSwitch
-            android:id="@+id/catchUp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/catch_up" />
+                        <com.netmode.switcher.ChoiceView
+                            android:id="@+id/backend"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:alpha="0.5"
-            android:text="@string/catch_up_hint"
-            android:textSize="11sp" />
+            <!-- primary and secondary SIM -->
+            <TextView
+                style="@style/NMS.Section"
+                android:text="@string/dual_title" />
 
-        <com.google.android.material.materialswitch.MaterialSwitch
-            android:id="@+id/reliableWifi"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/reliable_wifi" />
+            <com.google.android.material.card.MaterialCardView style="@style/NMS.Card">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:alpha="0.5"
-            android:text="@string/reliable_wifi_hint"
-            android:textSize="11sp" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
 
-        <com.google.android.material.materialswitch.MaterialSwitch
-            android:id="@+id/ignoreWifiOff"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/ignore_wifi_off" />
+                    <include
+                        android:id="@+id/dualRow"
+                        layout="@layout/row_switch" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:alpha="0.5"
-            android:text="@string/ignore_wifi_off_hint"
-            android:textSize="11sp" />
+                    <LinearLayout
+                        android:id="@+id/dualBlock"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/exactAlarms"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/exact_alarms" />
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/batteryOpt"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/battery_opt" />
-    </LinearLayout>
-</ScrollView>
+                            <TextView
+                                style="@style/NMS.RowLabel"
+                                android:text="@string/dual_primary" />
+
+                            <com.netmode.switcher.ChoiceView
+                                android:id="@+id/dualPrimary"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                style="@style/NMS.RowLabel"
+                                android:text="@string/dual_secondary" />
+
+                            <com.netmode.switcher.ChoiceView
+                                android:id="@+id/dualSecondary"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/dualNow"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:background="?attr/colorSurfaceContainerHighest"
+                            android:lineSpacingExtra="3dp"
+                            android:paddingStart="12dp"
+                            android:paddingTop="8dp"
+                            android:paddingEnd="12dp"
+                            android:paddingBottom="8dp"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:textSize="12sp" />
+
+                    </LinearLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/dualHow"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:minHeight="36dp"
+                        android:paddingStart="0dp"
+                        android:text="@string/how_it_works" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- background work -->
+            <TextView
+                style="@style/NMS.Section"
+                android:text="@string/sec_background" />
+
+            <com.google.android.material.card.MaterialCardView style="@style/NMS.Card">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <include
+                        android:id="@+id/reliableRow"
+                        layout="@layout/row_switch" />
+
+                    <include
+                        android:id="@+id/notifyRow"
+                        layout="@layout/row_switch" />
+
+                    <include
+                        android:id="@+id/catchUpRow"
+                        layout="@layout/row_switch" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- backup -->
+            <TextView
+                style="@style/NMS.Section"
+                android:text="@string/sec_backup" />
+
+            <com.google.android.material.card.MaterialCardView style="@style/NMS.Card">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        style="@style/NMS.Hint"
+                        android:layout_marginTop="0dp"
+                        android:text="@string/backup_hint" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/exportBtn"
+                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="6dp"
+                            android:layout_weight="1"
+                            android:text="@string/backup_export" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/importBtn"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="6dp"
+                            android:layout_weight="1"
+                            android:text="@string/backup_import" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

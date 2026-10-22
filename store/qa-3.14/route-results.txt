@@ -1,0 +1,8 @@
+PASS normal VPN route, NAT, MSS, DNS and unreachable guard verified by Android
+PASS missing DNS rule is rejected
+PASS an ACCEPT ahead of the route guard is rejected
+PASS IPv4 and IPv6 hold guards survive route teardown
+PASS proxy route verifies after releasing temporary guards
+PASS quoted and multiline proxy credentials survive Android shell transfer as data
+PASS bundled native HEV parses escaped YAML and creates its test TUN
+PASS phone IPv6 sysctls and INPUT/OUTPUT rules remain unchanged

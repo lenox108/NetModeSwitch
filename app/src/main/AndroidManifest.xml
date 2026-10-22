@@ -1,19 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Its own sockets only for the fast VPN route of the hotspot (LocalSocks). -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <!-- Keeps the 45-second "is the home network here" check from dozing off halfway. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- "An app is open" trigger; granted as an app-op through the privileged shell. -->
+    <uses-permission
+        android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
+    <!-- The app picker lists every installed package; the build is not meant for Play. -->
+    <uses-permission
+        android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
 
 
     <application
         android:name=".App"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
@@ -39,11 +55,53 @@
             android:label="@string/rules_title"
             android:parentActivityName=".MainActivity" />
 
+        <!-- configChanges: a rotation or a theme switch must not throw away a rule being edited. -->
+        <activity
+            android:name=".AppRulesActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density"
+            android:parentActivityName=".MainActivity" />
+
+        <activity
+            android:name=".RuleEditActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density"
+            android:windowSoftInputMode="stateHidden|adjustResize"
+            android:parentActivityName=".AppRulesActivity" />
+
+        <activity
+            android:name=".CheckActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density"
+            android:parentActivityName=".RulesActivity" />
+
+        <activity
+            android:name=".LogActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
+
+        <activity
+            android:name=".HotspotActivity"
+            android:exported="false"
+            android:windowSoftInputMode="stateHidden|adjustResize"
+            android:parentActivityName=".MainActivity" />
+
+        <activity
+            android:name=".PermissionsActivity"
+            android:exported="false"
+            android:parentActivityName=".RulesActivity" />
+
+        <activity
+            android:name=".AppPickerActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density"
+            android:windowSoftInputMode="adjustResize" />
+
         <service
-            android:name=".NetModeTileService"
+            android:name=".Sim1TileService"
             android:exported="true"
             android:icon="@drawable/ic_tile"
-            android:label="@string/tile_label"
+            android:label="@string/tile_label_sim1"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
@@ -59,9 +117,161 @@
                 android:value="android.service.quicksettings.CATEGORY_CONNECTIVITY" />
         </service>
 
+        <service
+            android:name=".Sim2TileService"
+            android:exported="true"
+            android:icon="@drawable/ic_tile"
+            android:label="@string/tile_label_sim2"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.ACTIVE_TILE"
+                android:value="true" />
+            <meta-data
+                android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="true" />
+            <meta-data
+                android:name="android.service.quicksettings.TILE_CATEGORY"
+                android:value="android.service.quicksettings.CATEGORY_CONNECTIVITY" />
+        </service>
+
+        <service
+            android:name=".HotspotProxyTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_hotspot_tile"
+            android:label="@string/ap_tile_proxy"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.ACTIVE_TILE"
+                android:value="true" />
+            <meta-data
+                android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="true" />
+        </service>
+
+        <service
+            android:name=".HotspotVpnTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_hotspot_tile"
+            android:label="@string/ap_tile_vpn"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.ACTIVE_TILE"
+                android:value="true" />
+            <meta-data
+                android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="true" />
+        </service>
+
+        <receiver
+            android:name=".ConditionReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".WifiWakeReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".DeferReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".StepReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".ModeActionReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".ButtonWidget"
+            android:exported="false"
+            android:label="@string/w_button_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_button" />
+        </receiver>
+
+        <receiver
+            android:name=".HotspotWidget"
+            android:exported="false"
+            android:label="@string/w_hotspot_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_hotspot" />
+        </receiver>
+
+        <receiver
+            android:name=".RulesWidget"
+            android:exported="false"
+            android:label="@string/w_rules_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_rules" />
+        </receiver>
+
+        <!-- Rows of the rule list widget before Android 12. -->
+        <service
+            android:name=".RulesWidgetService"
+            android:exported="false"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
+
+        <receiver
+            android:name=".WidgetActionReceiver"
+            android:exported="false" />
+
+        <activity
+            android:name=".WidgetConfigActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.NetModeSwitch.Translucent">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
+        <receiver
+            android:name=".ModeWidget"
+            android:exported="false"
+            android:label="@string/widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_modes" />
+        </receiver>
+
         <receiver
             android:name=".AlarmReceiver"
             android:exported="false" />
+
+        <receiver
+            android:name=".BtReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.bluetooth.device.action.ACL_CONNECTED" />
+                <action android:name="android.bluetooth.device.action.ACL_DISCONNECTED" />
+            </intent-filter>
+        </receiver>
 
         <receiver
             android:name=".WifiEventReceiver"
@@ -84,7 +294,15 @@
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Switches the cellular network mode when a specific Wi-Fi network is lost" />
+                android:value="Applies the user's network rules on Wi-Fi, mobile data, network mode, hotspot and device-state changes" />
         </service>
+
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:enabled="true"
+            android:exported="true"
+            android:multiprocess="false"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
     </application>
 </manifest>

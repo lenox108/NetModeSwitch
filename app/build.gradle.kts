@@ -3,6 +3,8 @@ plugins {
 }
 
 android {
+    // hev-socks5-tunnel is run as a program by the root shell, so it has to exist as a file.
+    packaging { jniLibs { useLegacyPackaging = true } }
     namespace = "com.netmode.switcher"
     compileSdk = 37
 
@@ -10,11 +12,27 @@ android {
         applicationId = "com.netmode.switcher"
         minSdk = 34
         targetSdk = 36
-        versionCode = 10
-        versionName = "1.0"
+        versionCode = 70
+        versionName = "3.15"
+    }
+
+    // One code base, two builds: "modern" for Android 14+ as it always was, "a10" down to
+    // Android 10, where every newer API is behind a version check (see Compat).
+    flavorDimensions += "api"
+    productFlavors {
+        create("modern") {
+            dimension = "api"
+        }
+        create("a10") {
+            dimension = "api"
+            minSdk = 29
+            versionNameSuffix = "-a10"
+        }
     }
 
     buildFeatures {
+        // The Shizuku user service talks over AIDL.
+        aidl = true
         buildConfig = true
         viewBinding = true
     }
@@ -48,4 +66,7 @@ dependencies {
     implementation(libs.lifecycle.runtime.ktx)
     implementation(libs.coroutines.android)
     implementation(libs.libsu.core)
+    implementation(libs.shizuku.api)
+    implementation(libs.shizuku.provider)
+    testImplementation(libs.junit)
 }
