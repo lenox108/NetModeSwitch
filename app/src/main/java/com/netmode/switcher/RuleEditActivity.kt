@@ -55,6 +55,7 @@ class RuleEditActivity : AppCompatActivity() {
     private class TriggerInfo(val trigger: Trigger, val icon: Int, val title: Int, val hint: Int, val short: Int)
 
     private val triggerInfos = listOf(
+        TriggerInfo(Trigger.MANUAL, R.drawable.ic_t_manual, R.string.trigger_manual, R.string.trigger_manual_hint, R.string.pick_manual),
         TriggerInfo(Trigger.TIME, R.drawable.ic_t_time, R.string.trigger_time, R.string.trigger_time_hint, R.string.pick_time),
         TriggerInfo(Trigger.WIFI, R.drawable.ic_t_wifi, R.string.trigger_wifi, R.string.trigger_wifi_hint, R.string.pick_wifi),
         TriggerInfo(Trigger.BLUETOOTH, R.drawable.ic_t_bt, R.string.trigger_bt, R.string.trigger_bt_hint, R.string.pick_bt),
@@ -91,6 +92,7 @@ class RuleEditActivity : AppCompatActivity() {
     private var screenMinutes = 10
     private var lockMinutes = 0
     private var signalLevel = 1
+    private var manualMinutes = 0
     /** The wait switch follows the trigger's default until the user sets it. */
     private var waitTouched = false
 
@@ -287,6 +289,7 @@ class RuleEditActivity : AppCompatActivity() {
             Trigger.SCREEN_OFF -> screenMinutes = r.level
             Trigger.LOCKED -> lockMinutes = r.level
             Trigger.WEAK_SIGNAL -> signalLevel = r.level
+            Trigger.MANUAL -> manualMinutes = r.level
             else -> Unit
         }
         v.tSlot.setItems(simSlots.map { "SIM ${it + 1}" }, simSlots.indexOf(r?.triggerSlot ?: 0))
@@ -392,6 +395,7 @@ class RuleEditActivity : AppCompatActivity() {
                 Trigger.SCREEN_OFF -> screenMinutes = SCREEN_MINUTES[i]
                 Trigger.LOCKED -> lockMinutes = LOCK_MINUTES[i]
                 Trigger.WEAK_SIGNAL -> signalLevel = i
+                Trigger.MANUAL -> manualMinutes = MANUAL_MINUTES[i]
                 else -> Unit
             }
             paint()
@@ -405,6 +409,15 @@ class RuleEditActivity : AppCompatActivity() {
         }
         v.triggerApps.setOnClickListener { pickPlain(Pick.TRIGGER, triggerApps) }
         v.appPass.setOnClickListener { pickPlain(Pick.PASS, appPass) }
+        v.sceneShortcut.setOnClickListener {
+            val saved = existing ?: return@setOnClickListener
+            // Labelled as edited; the shortcut itself only carries the scene's id.
+            val rule = build(saved.id, saved.enabled)
+            if (!validated(rule)) return@setOnClickListener
+            if (!Scenes.pin(this, rule)) {
+                Snackbar.make(v.root, R.string.scene_shortcut_unsupported, Snackbar.LENGTH_LONG).setAnchorView(v.save).show()
+            }
+        }
         v.placeAdd.setOnClickListener {
             v.placeAdd.isEnabled = false
             lifecycleScope.launch {
@@ -518,9 +531,15 @@ class RuleEditActivity : AppCompatActivity() {
         show(v.btDevice, t == Trigger.BLUETOOTH)
         show(v.slotRow, t == Trigger.NET_MODE || t == Trigger.WEAK_SIGNAL)
         show(v.modeRow, t == Trigger.NET_MODE)
-        show(v.levelRow, t == Trigger.BATTERY || t == Trigger.SCREEN_OFF || t == Trigger.LOCKED || t == Trigger.WEAK_SIGNAL)
-        // Locked, nobody is using the phone: there is nothing to wait for.
-        show(v.waitRow.root, t != Trigger.LOCKED)
+        show(v.levelRow, t == Trigger.BATTERY || t == Trigger.SCREEN_OFF || t == Trigger.LOCKED || t == Trigger.WEAK_SIGNAL ||
+            (t == Trigger.MANUAL && v.releaseOnLeave.isChecked))
+        // Locked, nobody is using the phone: there is nothing to wait for. A scene is pressed by
+        // someone using it: waiting would only hide that it worked.
+        show(v.waitRow.root, t != Trigger.LOCKED && t != Trigger.MANUAL)
+        show(v.sceneShortcut, t == Trigger.MANUAL)
+        v.sceneShortcut.isEnabled = existing != null
+        v.sceneShortcut.text = getString(if (existing != null) R.string.scene_shortcut else R.string.scene_shortcut_save_first)
+        v.releaseOnLeave.setText(if (t == Trigger.MANUAL) R.string.manual_toggle else R.string.release_on_leave)
         show(v.triggerApps, t == Trigger.APP_OPEN)
         show(v.appLeaveBlock, t == Trigger.APP_OPEN)
         show(v.placeBlock, t == Trigger.PLACE)
@@ -549,6 +568,11 @@ class RuleEditActivity : AppCompatActivity() {
             Trigger.WEAK_SIGNAL -> {
                 v.levelLabel.setText(R.string.level_signal)
                 v.level.setItems(resources.getStringArray(R.array.signal_levels).toList(), signalLevel)
+            }
+            Trigger.MANUAL -> {
+                v.levelLabel.setText(R.string.level_manual)
+                v.level.setItems(MANUAL_MINUTES.map { if (it == 0) getString(R.string.manual_forever) else getString(R.string.after_x, Steps.words(it * 60)) },
+                    MANUAL_MINUTES.indexOf(manualMinutes).coerceAtLeast(0))
             }
             else -> Unit
         }
@@ -598,6 +622,7 @@ class RuleEditActivity : AppCompatActivity() {
             Trigger.WIFI -> getString(R.string.end_title_wifi)
             Trigger.BLUETOOTH -> getString(R.string.end_title_bt)
             Trigger.MOBILE_DATA -> getString(R.string.end_title_data)
+            Trigger.MANUAL -> getString(R.string.end_title_manual)
             Trigger.TIME -> getString(R.string.end_title_time, hm(end))
             Trigger.WIFI_LEFT -> getString(R.string.at_end)
             Trigger.LOCKED -> if (split) getString(R.string.end_title_window, hm(end)) else getString(R.string.end_title_unlock)
@@ -1312,6 +1337,7 @@ class RuleEditActivity : AppCompatActivity() {
                 Trigger.SCREEN_OFF -> screenMinutes
                 Trigger.LOCKED -> lockMinutes
                 Trigger.WEAK_SIGNAL -> signalLevel
+                Trigger.MANUAL -> manualMinutes.takeIf { v.releaseOnLeave.isChecked } ?: 0
                 else -> 0
             },
             triggerApps = triggerApps.takeIf { t == Trigger.APP_OPEN }.orEmpty(),
@@ -1337,8 +1363,8 @@ class RuleEditActivity : AppCompatActivity() {
             endPowerSave = e(Act.POWERSAVE, atEnd.powerSave),
             dataSim = dataSim.takeIf { Act.DATASIM in shown },
             endDataSim = e(Act.DATASIM, atEnd.dataSim),
-            waitLocked = v.waitRow.toggle.isChecked && t != Trigger.LOCKED,
-            waitAppsOnly = v.waitRow.toggle.isChecked && t != Trigger.LOCKED && v.waitApps.isChecked && v.waitApps.visibility == View.VISIBLE,
+            waitLocked = v.waitRow.toggle.isChecked && t != Trigger.LOCKED && t != Trigger.MANUAL,
+            waitAppsOnly = v.waitRow.toggle.isChecked && t != Trigger.LOCKED && t != Trigger.MANUAL && v.waitApps.isChecked && v.waitApps.visibility == View.VISIBLE,
             steps = Steps.toSave(steps.filter { s -> Steps.pauseOf(s) != null || shown.any { it.name == s } }, Steps.START_ORDER),
             endSteps = if (!restores) emptyList() else Steps.toSave(atEnd.steps.filter { s ->
                 Steps.pauseOf(s) != null || atEnd.shown.any { it.name == s && allowedEnd(it) && (custom || it.anyEnd) }
@@ -1382,6 +1408,7 @@ class RuleEditActivity : AppCompatActivity() {
         rule.trigger == Trigger.BLUETOOTH && rule.btAddress == null -> R.string.device_required to v.btDevice
         rule.trigger == Trigger.WIFI_LEFT && v.leftEndBtOn.isChecked && rule.endBtAddress == null -> R.string.device_required to v.leftEndBt
         rule.trigger == Trigger.APP_OPEN && rule.triggerApps.isEmpty() -> R.string.trigger_apps_required to v.triggerApps
+        rule.trigger == Trigger.MANUAL && rule.name == null -> R.string.scene_name_required to v.ruleName
         rule.trigger == Trigger.PLACE && rule.cells.isEmpty() -> R.string.place_required to v.placeAdd
         !rule.hasActions -> R.string.apps_required to v.addAction
         (rule.vpn == Toggle.ON || rule.endVpn == Toggle.ON) && rule.vpnApp == null -> R.string.vpn_app_required to v.actions
@@ -1474,5 +1501,7 @@ class RuleEditActivity : AppCompatActivity() {
         private val LOCK_MINUTES = listOf(0, 1, 5, 10, 15, 30)
         /** Seconds an app may be away before it counts as closed. */
         private val LEAVE_DELAYS = listOf(0, 5, 15, 30, 60, 300)
+        /** Minutes until a scene ends by itself; 0: until it is switched off. */
+        private val MANUAL_MINUTES = listOf(0, 15, 30, 60, 120, 240, 480)
     }
 }

@@ -63,6 +63,7 @@ class AppRulesActivity : AppCompatActivity() {
     }
 
     private fun iconOf(t: Trigger) = when (t) {
+        Trigger.MANUAL -> R.drawable.ic_t_manual
         Trigger.TIME -> R.drawable.ic_t_time
         Trigger.WIFI, Trigger.WIFI_LEFT -> R.drawable.ic_t_wifi
         Trigger.BLUETOOTH -> R.drawable.ic_t_bt
@@ -139,6 +140,7 @@ class AppRulesActivity : AppCompatActivity() {
         m.menu.add(0, 2, 1, R.string.release_now)
         m.menu.add(0, 3, 2, R.string.duplicate)
         m.menu.add(0, 4, 3, R.string.delete)
+        if (rule.trigger == Trigger.MANUAL) m.menu.add(0, 5, 4, R.string.scene_shortcut)
         m.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 1 -> lifecycleScope.launch {
@@ -160,6 +162,7 @@ class AppRulesActivity : AppCompatActivity() {
                     .setPositiveButton(R.string.delete) { _, _ -> RuleStore.delete(rule.id); render() }
                     .setNegativeButton(R.string.cancel, null)
                     .show()
+                5 -> if (!Scenes.pin(this, rule)) snack(getString(R.string.scene_shortcut_unsupported))
             }
             true
         }

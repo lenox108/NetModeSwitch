@@ -177,6 +177,7 @@ object Widgets {
     }
 
     fun iconOf(t: Trigger) = when (t) {
+        Trigger.MANUAL -> R.drawable.w_ic_t_manual
         Trigger.TIME -> R.drawable.w_ic_t_time
         Trigger.WIFI, Trigger.WIFI_LEFT -> R.drawable.w_ic_t_wifi
         Trigger.BLUETOOTH -> R.drawable.w_ic_t_bt

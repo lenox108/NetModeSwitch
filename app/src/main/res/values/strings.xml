@@ -77,6 +77,7 @@
     <string name="filter_all">Все</string>
     <string name="filter_selected">Выбранные (%d)</string>
     <string name="clear_selection">Сбросить</string>
+    <string name="trigger_manual">Сцена</string>
     <string name="trigger_time">Время</string>
     <string name="trigger_wifi">Wi-Fi</string>
     <string name="release_on_leave">Когда условие закончится — выполнить «В конце»</string>
@@ -259,6 +260,7 @@
     <string name="sec_access">Доступ</string>
     <string name="sec_background">Работа в фоне</string>
     <string name="sec_backup">Резервная копия</string>
+    <string name="trigger_manual_hint">Запуск кнопкой: ярлык на рабочем столе, меню иконки приложения, виджет правил</string>
     <string name="trigger_time_hint">По расписанию: с начала до конца, в выбранные дни</string>
     <string name="trigger_wifi_hint">Пока подключён к сети — или после ухода из неё</string>
     <string name="trigger_bt_hint">Пока подключено устройство: машина, наушники, часы</string>
@@ -309,6 +311,20 @@
     <string name="minutes_x">%d мин</string>
     <string name="level_signal">Делений не больше</string>
     <string name="trigger_apps_choose">Выбрать приложения</string>
+    <string name="manual_toggle">Переключатель: повторный запуск выключает сцену и выполняет «В конце»</string>
+    <string name="level_manual">Выключить сама</string>
+    <string name="manual_forever">не выключать</string>
+    <string name="after_x">через %1$s</string>
+    <string name="scene_shortcut">Добавить на рабочий стол</string>
+    <string name="scene_shortcut_save_first">Сохрани сцену, чтобы добавить её на рабочий стол</string>
+    <string name="scene_shortcut_unsupported">Лаунчер не умеет добавлять ярлыки</string>
+    <string name="scene_name_required">Назови сцену — это подпись ярлыка</string>
+    <string name="scene_on">«%1$s» включается</string>
+    <string name="scene_on_for">«%1$s» включается на %2$s</string>
+    <string name="scene_off">«%1$s» выключается</string>
+    <string name="scene_run">«%1$s» выполняется</string>
+    <string name="scene_disabled">«%1$s» выключена в списке правил</string>
+    <string name="scene_gone">Этой сцены больше нет</string>
     <string name="trigger_apps_required">Выбери приложение</string>
     <string name="app_leave_delay">Закрыто, если не вернулся</string>
     <string name="app_leave_now">сразу</string>
@@ -484,6 +500,7 @@
     <string name="choose">Выбрать</string>
     <string name="change">Изменить</string>
     <string name="act_data_short">Моб. интернет</string>
+    <string name="pick_manual">Вручную — сцена</string>
     <string name="pick_time">По расписанию</string>
     <string name="pick_wifi">Подключён к сети или ушёл из неё</string>
     <string name="pick_bt">Подключено устройство: машина, наушники</string>
@@ -515,6 +532,7 @@
     <string name="end_title_wifi">После ухода из этой сети</string>
     <string name="end_title_bt">После отключения устройства</string>
     <string name="end_title_data">Когда мобильный интернет выключат</string>
+    <string name="end_title_manual">Когда сцену выключат</string>
     <string name="end_title_condition">Когда условие закончится</string>
     <string name="end_title_unlock">При разблокировке</string>
     <string name="end_title_time">В конце (в %s)</string>

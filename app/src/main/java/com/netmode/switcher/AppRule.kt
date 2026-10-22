@@ -31,6 +31,12 @@ internal fun apLabel(t: Toggle, via: TetherMode?): String =
 
 /** What starts a rule's window. */
 enum class Trigger {
+    /**
+     * A scene: started by hand — a home-screen shortcut, the app icon's menu, the rules widget.
+     * With an end it is a switch, the next press ends it, or [AppRule.level] minutes do.
+     */
+    MANUAL,
+
     /** hour:minute on the chosen days, until the optional end time. */
     TIME,
 
@@ -167,7 +173,7 @@ data class AppRule(
     val appMethods: Map<String, FreezeMethod> = emptyMap(),
     val netMode: NetMode? = null,
     val netSlot: Int = SLOT_ALL,
-    /** Threshold of the trigger: battery %, minutes of screen off, signal bars. */
+    /** Threshold of the trigger: battery %, minutes of screen off, signal bars; a scene's minutes until it ends by itself. */
     val level: Int = 0,
     val triggerApps: List<String> = emptyList(),
     /** For [Trigger.PLACE]: "tac:ci" of the towers seen there, and the user's name for it. */
@@ -407,6 +413,10 @@ data class AppRule(
 
     val hasEnd: Boolean get() = isTime && endHour != null && endMinute != null
 
+    /** MANUAL: when a scene started at [since] ends by itself; null when it waits to be switched off. */
+    fun manualEndAfter(since: ZonedDateTime): ZonedDateTime? =
+        if (trigger == Trigger.MANUAL && restores && level > 0) since.plusMinutes(level.toLong()) else null
+
     /** WIFI_LEFT: the time that closes the window, if any. */
     val hasLeftEndTime: Boolean get() = trigger == Trigger.WIFI_LEFT && endHour != null && endMinute != null
 
@@ -465,6 +475,11 @@ data class AppRule(
 
     val timeLabel: String
         get() = when (trigger) {
+            Trigger.MANUAL -> "сцена" + when {
+                !restores -> ""
+                level > 0 -> " на " + Steps.words(level * 60)
+                else -> " · вкл/выкл"
+            }
             Trigger.TIME -> "%02d:%02d".format(hour, minute) +
                 if (hasEnd) "–%02d:%02d".format(endHour, endMinute) else ""
             Trigger.WIFI -> "Wi-Fi «$ssid»"

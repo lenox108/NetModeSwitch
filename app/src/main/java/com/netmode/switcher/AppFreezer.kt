@@ -197,12 +197,18 @@ object AppFreezer {
 
         for ((id, since) in Prefs.openWindows) {
             val rule = rules.find { it.id == id }
+            val timedOut = rule?.manualEndAfter(zoned(since))?.isAfter(now) == false
             val ended = rule == null || !rule.enabled ||
                 (rule.lastEnd(now)?.toInstant()?.toEpochMilli() ?: Long.MIN_VALUE) > since ||
-                rule.leftEndAfter(zoned(since))?.isAfter(now) == false
+                rule.leftEndAfter(zoned(since))?.isAfter(now) == false || timedOut
             if (ended) {
                 if (rule != null && !rule.enabled && !rule.isTime) Prefs.appHandled = Prefs.appHandled - id
-                closeLocked(rule, id, if (rule == null) "правило удалено" else if (!rule.enabled) "правило выключено" else "окончание ${rule.timeLabel}")
+                closeLocked(rule, id, when {
+                    rule == null -> "правило удалено"
+                    !rule.enabled -> "правило выключено"
+                    timedOut -> "время сцены вышло"
+                    else -> "окончание ${rule.timeLabel}"
+                })
                 acted = true
             }
         }

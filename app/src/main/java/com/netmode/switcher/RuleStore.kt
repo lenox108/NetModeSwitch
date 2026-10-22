@@ -22,7 +22,8 @@ object RuleStore {
         AppFreezer.markSaved(rule)
         if (rule.trigger == Trigger.APP_OPEN) ConditionWatch.grantUsageAccess()
         changed()
-        return rule.enabled && !rule.isTime && !batteryExempt()
+        // A scene runs on a press, and its time on an exact alarm: nothing waits in the background.
+        return rule.enabled && !rule.isTime && rule.trigger != Trigger.MANUAL && !batteryExempt()
     }
 
     fun delete(id: Long) {
@@ -40,6 +41,7 @@ object RuleStore {
      */
     fun changed() {
         AlarmScheduler.rearm()
+        runCatching { Scenes.sync(App.ctx) }
         WifiMonitor.syncAll()
         App.scope.launch {
             runCatching { AppFreezer.reconcile() }

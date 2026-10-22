@@ -314,6 +314,13 @@
                         style="@style/NMS.PickButton"
                         android:layout_marginTop="8dp" />
 
+                    <!-- a scene on the home screen -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/sceneShortcut"
+                        style="@style/NMS.PickButton"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/scene_shortcut" />
+
                     <!-- what counts as leaving the app -->
                     <LinearLayout
                         android:id="@+id/appLeaveBlock"

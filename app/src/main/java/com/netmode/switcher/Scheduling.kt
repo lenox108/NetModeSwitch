@@ -39,13 +39,13 @@ object AlarmScheduler {
         Log.i(TAG, "next schedule alarm at $next")
     }
 
-    /** Pending end times of open "after leaving Wi-Fi" windows. */
+    /** Pending end times of open windows with a clock of their own: after leaving Wi-Fi, a scene's time. */
     private fun leftEnds(now: ZonedDateTime): List<ZonedDateTime> {
-        val rules = Prefs.appRules.filter { it.enabled && it.hasLeftEndTime }.associateBy { it.id }
+        val rules = Prefs.appRules.filter { it.enabled && (it.hasLeftEndTime || it.trigger == Trigger.MANUAL) }.associateBy { it.id }
         // Open windows, not held entries: a window that changed nothing still has to end.
         return Prefs.openWindows.mapNotNull { (id, opened) ->
             val since = java.time.Instant.ofEpochMilli(opened).atZone(now.zone)
-            rules[id]?.leftEndAfter(since)?.takeIf { it.isAfter(now) }
+            rules[id]?.let { it.leftEndAfter(since) ?: it.manualEndAfter(since) }?.takeIf { it.isAfter(now) }
         }
     }
 
