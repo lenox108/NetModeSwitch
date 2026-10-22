@@ -8,10 +8,15 @@ import android.os.IBinder
  *
  *   CLASSPATH=<apk> app_process /system/bin com.netmode.switcher.VpnCli on <pkg> <user>
  *   CLASSPATH=<apk> app_process /system/bin com.netmode.switcher.VpnCli off <pkg> <user>
+ *   CLASSPATH=<apk> app_process /system/bin com.netmode.switcher.VpnCli restore <pkg|-> <user>
  *
- * "on" makes the app the always-on VPN, which has the system start its VpnService at once,
- * then restores the previous always-on setting; "off" revokes the app's VPN the way the system
- * settings do. Neither needs the app's tile, the screen, or an unlocked phone.
+ * "on" makes the app the always-on VPN, which has the system start its VpnService at once, and
+ * prints the previous always-on package as "previous=<pkg|->". The setting stays: every change
+ * of the always-on package revokes the VPN running now (Vpn.setAlwaysOnPackageInternal prepares
+ * the new package), so putting the old value back right away dropped the VPN seconds after it
+ * came up. "restore" puts that value back when the VPN is to go off, which disconnects it too.
+ * "off" revokes the app's VPN the way the system settings do. None of them needs the app's
+ * tile, the screen, or an unlocked phone.
  * Prints "ok" or "error=...".
  */
 object VpnCli {
@@ -31,34 +36,35 @@ object VpnCli {
                     .forEach { m -> println(m.name + "(" + m.parameterTypes.joinToString { it.simpleName } + ")") }
                 return
             }
-            val on = args[0] == "on"
             val pkg = args[1]
             val user = args.getOrNull(2)?.toIntOrNull() ?: 0
 
-            if (on) {
-                val get = methods.first { it.name == "getAlwaysOnVpnPackage" }
+            fun setAlwaysOn(p: String?) {
                 val set = methods.first { it.name == "setAlwaysOnVpnPackage" }
-                val previous = get.invoke(svc, user) as String?
-                fun setAlwaysOn(p: String?) {
-                    val params = set.parameterTypes.map { t ->
-                        when (t) {
-                            Int::class.javaPrimitiveType -> user
-                            String::class.java -> p
-                            Boolean::class.javaPrimitiveType -> false
-                            else -> null
-                        }
-                    }.toTypedArray()
-                    set.invoke(svc, *params)
+                val params = set.parameterTypes.map { t ->
+                    when (t) {
+                        Int::class.javaPrimitiveType -> user
+                        String::class.java -> p
+                        Boolean::class.javaPrimitiveType -> false
+                        else -> null
+                    }
+                }.toTypedArray()
+                set.invoke(svc, *params)
+            }
+
+            when (args[0]) {
+                "on" -> {
+                    val previous = methods.first { it.name == "getAlwaysOnVpnPackage" }.invoke(svc, user) as String?
+                    // Even when it is already the always-on app: setting it is what starts the VPN.
+                    setAlwaysOn(pkg)
+                    println("previous=" + (previous ?: "-"))
                 }
-                setAlwaysOn(pkg)
-                if (previous != pkg) {
-                    Thread.sleep(3000)
-                    setAlwaysOn(previous)
+                "restore" -> setAlwaysOn(pkg.takeIf { it != "-" })
+                else -> {
+                    val prepare = methods.first { it.name == "prepareVpn" }
+                    // Replacing the app with the legacy VPN placeholder is how Settings disconnects it.
+                    prepare.invoke(svc, pkg, "[Legacy VPN]", user)
                 }
-            } else {
-                val prepare = methods.first { it.name == "prepareVpn" }
-                // Replacing the app with the legacy VPN placeholder is how Settings disconnects it.
-                prepare.invoke(svc, pkg, "[Legacy VPN]", user)
             }
             println("ok")
         } catch (t: Throwable) {

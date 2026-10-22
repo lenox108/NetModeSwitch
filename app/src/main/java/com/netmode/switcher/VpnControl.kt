@@ -7,8 +7,10 @@ import kotlinx.coroutines.delay
  *
  * With root it goes through the system VPN service ([VpnCli]), which needs no tile, no screen
  * and no unlocked phone: "off" revokes whatever VPN is connected, "on" has the system start the
- * chosen app's VpnService. Shell (Shizuku) is refused both calls (measured: "does not belong to
- * uid 2000", "no CONTROL_ALWAYS_ON_VPN"), so there the app's own tile is pressed instead.
+ * chosen app's VpnService by making it the always-on VPN. That setting is kept while the VPN is
+ * on — any change of it revokes the running VPN — and put back on "off". Shell (Shizuku) is
+ * refused both calls (measured: "does not belong to uid 2000", "no CONTROL_ALWAYS_ON_VPN"), so
+ * there the app's own tile is pressed instead.
  *
  * Some apps reconnect by themselves after a revoke — AdGuard treats it as another VPN taking
  * over and recovers 5 s later — so "off" watches for that and says so in the log.
@@ -32,11 +34,29 @@ object VpnControl {
 
     private fun label(pkg: String): String = AppPickerActivity.labels(listOf(pkg)).first()
 
+    /** Always-on set by [on]: the app and the value to put back. */
+    private fun ours(): Pair<String, String>? =
+        Prefs.vpnAlwaysOn?.split(' ')?.takeIf { it.size == 2 }?.let { it[0] to it[1] }
+
+    /** Puts back the always-on VPN that [on] replaced; this also disconnects the one [on] set. */
+    private suspend fun restore(): Boolean {
+        val (_, previous) = ours() ?: return false
+        val out = Privileged.exec("${cli()} restore $previous 0")
+        if (out.contains("ok")) Prefs.vpnAlwaysOn = null
+        return out.contains("ok")
+    }
+
     /** Disconnects the current VPN. Returns a line for the log. */
     suspend fun off(): String {
-        val pkg = owner() ?: return "VPN уже выкл"
+        val pkg = owner()
+        if (pkg == null) {
+            // Switched off in the app itself: still drop the always-on setting left by [on].
+            if (ours() != null && root()) restore()
+            return "VPN уже выкл"
+        }
         if (root()) {
-            Privileged.exec("${cli()} off $pkg 0")
+            // The system refuses to revoke the always-on VPN, so the setting goes back first.
+            if (ours()?.first != pkg || !restore()) Privileged.exec("${cli()} off $pkg 0")
         } else {
             val tile = tileOf(pkg) ?: return "VPN ${label(pkg)}: без root выключается только плиткой, а её нет"
             return "VPN " + Tiles.set(mapOf(tile to false), vpn = setOf(tile)).joinToString()
@@ -58,7 +78,11 @@ object VpnControl {
     suspend fun on(pkg: String): String {
         if (owner() == pkg) return "VPN ${label(pkg)} уже вкл"
         if (root()) {
-            Privileged.exec("${cli()} on $pkg 0")
+            val out = Privileged.exec("${cli()} on $pkg 0")
+            val previous = Regex("previous=(\\S+)").find(out)?.groupValues?.get(1)
+            // Keep the value from before the first [on]: a later one sees its own app there.
+            val before = ours()?.second ?: previous
+            if (out.contains("ok")) Prefs.vpnAlwaysOn = before?.takeIf { it != pkg }?.let { "$pkg $it" }
         } else {
             val tile = tileOf(pkg) ?: return "VPN ${label(pkg)}: без root включается только плиткой, а её нет"
             return "VPN " + Tiles.set(mapOf(tile to true), vpn = setOf(tile)).joinToString()

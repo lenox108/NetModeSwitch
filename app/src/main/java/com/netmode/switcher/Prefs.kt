@@ -129,6 +129,14 @@ object Prefs {
         }.commit().let { }
 
     /** Where hotspot clients' traffic goes; see TetherRoute. */
+    /**
+     * The always-on VPN that [VpnControl.on] set, as "<pkg> <previous|->", or null. The previous
+     * value is put back when that VPN is switched off, since putting it back earlier drops it.
+     */
+    var vpnAlwaysOn: String?
+        get() = sp.getString("vpn_always_on", null)
+        set(value) = sp.edit().putString("vpn_always_on", value).commit().let { }
+
     var tetherMode: TetherMode
         get() = runCatching { TetherMode.valueOf(sp.getString("tether_mode", null) ?: "DIRECT") }
             .getOrDefault(TetherMode.DIRECT)
