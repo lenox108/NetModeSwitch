@@ -13,6 +13,22 @@ object Templates {
     )
 
     val all = listOf(
+        Template(R.string.tpl_sleep, R.string.tpl_sleep_hint) {
+            base().copy(name = it.getString(R.string.tpl_sleep), trigger = Trigger.MANUAL, waitLocked = false,
+                releaseOnLeave = true, level = 8 * 60, airplane = Toggle.ON)
+        },
+        Template(R.string.tpl_game, R.string.tpl_game_hint) {
+            base().copy(name = it.getString(R.string.tpl_game), trigger = Trigger.MANUAL, waitLocked = false,
+                releaseOnLeave = true, netMode = NetMode.LTE_ONLY, unload = true)
+        },
+        Template(R.string.tpl_app_vpn, R.string.tpl_app_vpn_hint) {
+            base().copy(name = it.getString(R.string.tpl_app_vpn), trigger = Trigger.APP_OPEN, waitLocked = false,
+                appLeaveDelay = 5, vpn = Toggle.ON)
+        },
+        Template(R.string.tpl_nonet, R.string.tpl_nonet_hint) {
+            base().copy(name = it.getString(R.string.tpl_nonet), trigger = Trigger.NO_INTERNET, waitLocked = false,
+                releaseOnLeave = false, level = 60, reconnect = true)
+        },
         Template(R.string.tpl_night, R.string.tpl_night_hint) {
             base().copy(name = it.getString(R.string.tpl_night), hour = 23, minute = 0, endHour = 7, endMinute = 0,
                 netMode = NetMode.THREE_G)

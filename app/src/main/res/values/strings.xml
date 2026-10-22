@@ -378,6 +378,14 @@
     <string name="apply_disabled">Правило выключено — включи его, чтобы применить</string>
     <string name="delete_confirm">Удалить правило «%s»?</string>
     <string name="tpl_night">Ночь</string>
+    <string name="tpl_sleep">Сон</string>
+    <string name="tpl_sleep_hint">сцена: режим полёта на 8 часов</string>
+    <string name="tpl_game">Игра</string>
+    <string name="tpl_game_hint">сцена: только 4G и выгрузить фон</string>
+    <string name="tpl_app_vpn">Приложение через VPN</string>
+    <string name="tpl_app_vpn_hint">открыл — VPN вкл, закрыл — как было</string>
+    <string name="tpl_nonet">Пропал интернет</string>
+    <string name="tpl_nonet_hint">нет интернета минуту — переподключить сеть</string>
     <string name="tpl_night_hint">3G с 23 до 7</string>
     <string name="tpl_smart">Умная сеть</string>
     <string name="tpl_smart_hint">интернет вкл → 4G, выкл → 3G</string>
