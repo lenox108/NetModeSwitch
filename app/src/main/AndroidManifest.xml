@@ -279,6 +279,35 @@
             android:name=".RunNoticeReceiver"
             android:exported="false" />
 
+        <!-- Outside calls (Tasker, an NFC tag): each carries the owner's key. Not BROWSABLE, so no
+             web page can open the link. -->
+        <activity
+            android:name=".RunActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="netmode" android:host="run" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="netmode" android:host="run" />
+            </intent-filter>
+        </activity>
+
+        <receiver
+            android:name=".ApiReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.netmode.switcher.RUN" />
+            </intent-filter>
+        </receiver>
+
         <!-- "Мгновенно": which app is on screen; no window content is read. -->
         <service
             android:name=".AppWatchService"

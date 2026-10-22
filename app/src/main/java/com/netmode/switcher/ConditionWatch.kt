@@ -766,6 +766,7 @@ object ConditionWatch {
         if (pkg == foreground && passes == foregroundPasses) return
         foreground = pkg
         foregroundPasses = passes
+        Log.i(TAG, "on screen (instant): $pkg")
         evaluate(Trigger.APP_OPEN)
     }
 

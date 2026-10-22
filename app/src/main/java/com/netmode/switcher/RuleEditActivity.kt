@@ -278,11 +278,13 @@ class RuleEditActivity : AppCompatActivity() {
                 .setIcon(R.drawable.ic_t_manual).setShowAsAction(android.view.MenuItem.SHOW_AS_ACTION_IF_ROOM)
             v.toolbar.menu.add(0, MENU_RELEASE, 1, R.string.release_now)
             v.toolbar.menu.add(0, MENU_DELETE, 2, R.string.delete)
+            v.toolbar.menu.add(0, MENU_API, 3, R.string.api_menu)
             v.toolbar.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     MENU_APPLY -> applyNow()
                     MENU_RELEASE -> releaseNow()
                     MENU_DELETE -> confirmDelete()
+                    MENU_API -> showApi()
                 }
                 true
             }
@@ -1869,6 +1871,30 @@ class RuleEditActivity : AppCompatActivity() {
         }
     }
 
+    /** The link and the broadcast that run this rule from outside, with the key to copy. */
+    private fun showApi() {
+        val id = existing?.id ?: return
+        fun text() = getString(R.string.api_text, Api.link(id), id, Prefs.apiKey)
+        val view = TextView(this).apply {
+            setTextIsSelectable(true)
+            setPadding(dp(24), dp(8), dp(24), 0)
+            text = text()
+        }
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.api_menu)
+            .setView(view)
+            .setPositiveButton(R.string.api_copy) { _, _ ->
+                getSystemService(android.content.ClipboardManager::class.java)
+                    .setPrimaryClip(android.content.ClipData.newPlainText("NetModeSwitch", Api.link(id)))
+            }
+            .setNeutralButton(R.string.api_new_key) { _, _ ->
+                Prefs.newApiKey()
+                Snackbar.make(v.root, R.string.api_key_changed, Snackbar.LENGTH_LONG).setAnchorView(v.save).show()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
     private fun confirmDelete() {
         MaterialAlertDialogBuilder(this)
             .setMessage(getString(R.string.delete_confirm, existing?.name ?: existing?.timeLabel.orEmpty()))
@@ -1887,6 +1913,7 @@ class RuleEditActivity : AppCompatActivity() {
         private const val MENU_APPLY = 1
         private const val MENU_RELEASE = 2
         private const val MENU_DELETE = 3
+        private const val MENU_API = 4
         private val BATTERY_LEVELS = listOf(0, 10, 15, 20, 30, 50)
         private val SCREEN_MINUTES = listOf(1, 5, 10, 15, 30, 60)
         private val LOCK_MINUTES = listOf(0, 1, 5, 10, 15, 30)

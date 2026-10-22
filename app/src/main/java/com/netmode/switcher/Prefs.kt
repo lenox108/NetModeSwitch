@@ -311,6 +311,17 @@ object Prefs {
         ).commit().let { }
 
     /** Keep a notification with the SIM modes and a switch button. */
+    /** The key that outside calls must carry (see [Api]); made on first use. */
+    val apiKey: String
+        get() = sp.getString("api_key", null) ?: newApiKey()
+
+    fun newApiKey(): String {
+        val bytes = ByteArray(12).also { java.security.SecureRandom().nextBytes(it) }
+        val key = bytes.joinToString("") { "%02x".format(it) }
+        sp.edit().putString("api_key", key).commit()
+        return key
+    }
+
     /** "Мгновенно": the app on screen from the accessibility service (see [AppWatchService]). */
     var instantApps: Boolean
         get() = sp.getBoolean("instant_apps", false)

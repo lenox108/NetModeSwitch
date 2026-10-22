@@ -402,6 +402,13 @@
     <string name="app_instant_failed">Не удалось включить: нужен root или Shizuku</string>
     <string name="app_watch_label">NetModeSwitch: приложение на экране</string>
     <string name="app_watch_description">Сообщает NetModeSwitch, какое приложение открыто, чтобы правила «Приложение» срабатывали сразу. Содержимое экрана не читается</string>
+    <string name="api_menu">Запуск извне (Tasker, NFC)</string>
+    <string name="api_text">Ссылка — для NFC-метки (записать как URL/URI) или Tasker «Открыть ссылку»:\n%1$s\n\ndo=toggle — переключить, on — включить, off — выключить.\n\nTasker «Отправить намерение»: действие com.netmode.switcher.RUN, цель — приёмник (Broadcast Receiver), дополнительно id:%2$d, key:%3$s, do:toggle.\n\nКлюч знает только этот телефон; если ссылка попала не туда — смени ключ, старые ссылки перестанут работать.</string>
+    <string name="api_copy">Копировать ссылку</string>
+    <string name="api_new_key">Сменить ключ</string>
+    <string name="api_key_changed">Ключ сменён: старые ссылки и метки больше не работают</string>
+    <string name="api_bad_key">NetModeSwitch: неверный ключ</string>
+    <string name="api_already">«%1$s» уже в нужном состоянии</string>
     <string name="trigger_apps_required">Выбери приложение</string>
     <string name="app_leave_delay">Закрыто, если не вернулся</string>
     <string name="app_leave_now">сразу</string>
