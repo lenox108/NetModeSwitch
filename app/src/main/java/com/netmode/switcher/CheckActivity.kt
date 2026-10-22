@@ -19,22 +19,26 @@ class CheckActivity : AppCompatActivity() {
 
     private lateinit var ui: ActivityCheckBinding
     private val rows = linkedMapOf<String, Pair<View, (CheckState?, String) -> Unit>>()
+    /**
+     * While modes are being switched, back must not leave half way: the SIM would stay in a test
+     * mode. A callback, not onBackPressed — that is never called for the back gesture.
+     */
+    private val holdBack = object : androidx.activity.OnBackPressedCallback(false) {
+        override fun handleOnBackPressed() = Unit
+    }
     private var running = false
+        set(value) { field = value; holdBack.isEnabled = value }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ui = ActivityCheckBinding.inflate(layoutInflater)
         setContentView(ui.root)
+        onBackPressedDispatcher.addCallback(this, holdBack)
         ui.toolbar.setNavigationOnClickListener { if (!running) finish() }
         ui.start.setOnClickListener { confirm() }
         ui.share.setOnClickListener { share() }
         showSaved()
         if (intent.getBooleanExtra(EXTRA_START, false) && savedInstanceState == null) confirm()
-    }
-
-    @Deprecated("Back is blocked while modes are being switched")
-    override fun onBackPressed() {
-        if (!running) super.onBackPressed()
     }
 
     private fun dp(x: Int) = (x * resources.displayMetrics.density).toInt()
