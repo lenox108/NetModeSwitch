@@ -397,6 +397,11 @@
     <string name="known_ssids_add_current">Добавить текущую</string>
     <string name="extra_dark">Темно</string>
     <string name="extra_light">Светло</string>
+    <string name="app_instant">Мгновенно (спецвозможности)</string>
+    <string name="app_instant_hint">Приложение замечается сразу, а не раз в 2 секунды. Включается через root/Shizuku, для всех правил «Приложение». Читается только какое приложение на экране</string>
+    <string name="app_instant_failed">Не удалось включить: нужен root или Shizuku</string>
+    <string name="app_watch_label">NetModeSwitch: приложение на экране</string>
+    <string name="app_watch_description">Сообщает NetModeSwitch, какое приложение открыто, чтобы правила «Приложение» срабатывали сразу. Содержимое экрана не читается</string>
     <string name="trigger_apps_required">Выбери приложение</string>
     <string name="app_leave_delay">Закрыто, если не вернулся</string>
     <string name="app_leave_now">сразу</string>

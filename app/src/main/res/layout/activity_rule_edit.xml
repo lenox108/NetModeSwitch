@@ -371,6 +371,17 @@
                             android:text="@string/app_pass_hint" />
 
                         <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/appInstant"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="@string/app_instant" />
+
+                        <TextView
+                            style="@style/NMS.Hint"
+                            android:text="@string/app_instant_hint" />
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
                             android:id="@+id/appScreenStays"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"

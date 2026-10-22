@@ -759,10 +759,22 @@ object ConditionWatch {
         }.toSet()
     }
 
+    /** From [AppWatchService]: an app came to the front, at once. */
+    fun onForeground(pkg: String, cls: String?) {
+        if (Trigger.APP_OPEN !in registered || !screenOn) return
+        val passes = AppPresence.passes(pkg, cls)
+        if (pkg == foreground && passes == foregroundPasses) return
+        foreground = pkg
+        foregroundPasses = passes
+        evaluate(Trigger.APP_OPEN)
+    }
+
     private fun startAppPoll() {
         appPoll?.cancel()
         appPoll = App.scope.launch {
             while (screenOn) {
+                // The service reports each change itself; looking as well would only cost.
+                if (AppWatchService.connected) { delay(2_000); continue }
                 val fg = runCatching { foregroundApp() }.getOrNull()
                 if (fg != null && (fg.first != foreground || fg.second != foregroundPasses)) {
                     foreground = fg.first

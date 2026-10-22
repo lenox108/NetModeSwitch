@@ -473,6 +473,16 @@ class RuleEditActivity : AppCompatActivity() {
         }
         v.triggerApps.setOnClickListener { pickPlain(Pick.TRIGGER, triggerApps) }
         v.appPass.setOnClickListener { pickPlain(Pick.PASS, appPass) }
+        // One switch for every app rule: the service is the app's, not the rule's.
+        v.appInstant.isChecked = Prefs.instantApps
+        v.appInstant.setOnCheckedChangeListener { _, on ->
+            Prefs.instantApps = on
+            lifecycleScope.launch {
+                runCatching { AppWatchService.enable(on) }.onFailure {
+                    Snackbar.make(v.root, R.string.app_instant_failed, Snackbar.LENGTH_LONG).setAnchorView(v.save).show()
+                }
+            }
+        }
         v.addExtra.setOnClickListener { addExtra() }
         v.sunPlace.setOnClickListener { askSunPlace { paint() } }
         v.knownSsids.setOnClickListener { askKnownSsids() }

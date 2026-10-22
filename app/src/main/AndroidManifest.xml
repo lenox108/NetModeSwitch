@@ -279,6 +279,20 @@
             android:name=".RunNoticeReceiver"
             android:exported="false" />
 
+        <!-- "Мгновенно": which app is on screen; no window content is read. -->
+        <service
+            android:name=".AppWatchService"
+            android:exported="false"
+            android:label="@string/app_watch_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/app_watch" />
+        </service>
+
         <!-- "Уведомление от приложения": only package names and "ongoing" are looked at. -->
         <service
             android:name=".NotifListener"

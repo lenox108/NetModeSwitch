@@ -311,6 +311,11 @@ object Prefs {
         ).commit().let { }
 
     /** Keep a notification with the SIM modes and a switch button. */
+    /** "Мгновенно": the app on screen from the accessibility service (see [AppWatchService]). */
+    var instantApps: Boolean
+        get() = sp.getBoolean("instant_apps", false)
+        set(value) = sp.edit().putBoolean("instant_apps", value).apply()
+
     var statusNotification: Boolean
         get() = sp.getBoolean("status_notification", false)
         set(value) = sp.edit().putBoolean("status_notification", value).apply()
