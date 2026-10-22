@@ -39,6 +39,7 @@ class RuleEditActivity : AppCompatActivity() {
         HOTSPOT(R.drawable.ic_hotspot, R.string.act_hotspot),
         VPN(R.drawable.ic_a_vpn, R.string.act_vpn),
         DATASIM(R.drawable.ic_a_sim, R.string.act_datasim),
+        RECONNECT(R.drawable.ic_a_airplane, R.string.act_reconnect),
         AIRPLANE(R.drawable.ic_a_airplane, R.string.act_airplane),
         POWERSAVE(R.drawable.ic_t_battery, R.string.act_powersave),
         BT(R.drawable.ic_t_bt, R.string.bluetooth),
@@ -50,6 +51,9 @@ class RuleEditActivity : AppCompatActivity() {
 
         /** Works under both endings and is not mirrored into a custom end: the app actions. */
         val anyEnd: Boolean get() = this == APPS || this == LAUNCH || this == UNLOAD
+
+        /** Only at the start: something done once, with nothing to put back or set at the end. */
+        val startOnly: Boolean get() = this == RECONNECT
     }
 
     private class TriggerInfo(val trigger: Trigger, val icon: Int, val title: Int, val hint: Int, val short: Int)
@@ -153,7 +157,7 @@ class RuleEditActivity : AppCompatActivity() {
                 Act.LOC -> loc = null; Act.TILES -> tiles = emptyMap()
                 Act.APPS -> { stopApps = emptyList(); appMethods = emptyMap() }
                 Act.LAUNCH -> launchApps = emptyList()
-                Act.UNLOAD -> Unit
+                Act.UNLOAD, Act.RECONNECT -> Unit
             }
         }
 
@@ -328,6 +332,7 @@ class RuleEditActivity : AppCompatActivity() {
         atEnd.bt = r.endBt; atEnd.loc = r.endLoc; atEnd.tiles = r.endTiles
         atEnd.shown += shown.filter { !it.anyEnd }
         if (r.unload) shown += Act.UNLOAD
+        if (r.reconnect) shown += Act.RECONNECT
         if (r.endUnload) atEnd.shown += Act.UNLOAD
         unloadAll = r.unloadAll; atEnd.unloadAll = r.endUnloadAll
         if (atEnd.net != null) atEnd.shown += Act.NET
@@ -496,6 +501,7 @@ class RuleEditActivity : AppCompatActivity() {
      */
     private fun allowedEnd(a: Act): Boolean {
         val t = effectiveTrigger
+        if (a.startOnly) return false
         return allowed(a) || (t == Trigger.WIFI && (a == Act.WIFI || a == Act.HOTSPOT)) ||
             (a == Act.BT && (t == Trigger.BLUETOOTH || t == Trigger.HEADPHONES))
     }
@@ -508,6 +514,10 @@ class RuleEditActivity : AppCompatActivity() {
             Act.BT -> t != Trigger.BLUETOOTH && t != Trigger.HEADPHONES && !(t == Trigger.WIFI_LEFT && v.leftEndBtOn.isChecked)
             Act.AIRPLANE -> t !in setOf(Trigger.WIFI, Trigger.WIFI_LEFT, Trigger.BLUETOOTH, Trigger.MOBILE_DATA,
                 Trigger.PLACE, Trigger.ROAMING, Trigger.WEAK_SIGNAL, Trigger.CALL, Trigger.NET_MODE, Trigger.NO_INTERNET)
+            // Airplane mode for a moment drops Wi-Fi, Bluetooth and the SIMs, which these watch;
+            // a lost internet is what it is for.
+            Act.RECONNECT -> t !in setOf(Trigger.WIFI, Trigger.WIFI_LEFT, Trigger.BLUETOOTH, Trigger.MOBILE_DATA,
+                Trigger.PLACE, Trigger.ROAMING, Trigger.WEAK_SIGNAL, Trigger.CALL, Trigger.NET_MODE)
             Act.POWERSAVE -> !(t == Trigger.BATTERY && batteryLevel == 0)
             Act.DATASIM -> simSlots.size > 1
             else -> true
@@ -826,6 +836,10 @@ class RuleEditActivity : AppCompatActivity() {
                 }
                 Act.BT -> { btOff = true; row(box, a, getString(R.string.bt_off), null, remove) }
                 Act.LOC -> { locOff = true; row(box, a, getString(R.string.loc_off), null, remove) }
+                Act.RECONNECT -> {
+                    row(box, a, getString(a.title), null, remove)
+                    sub(box, hint(getString(R.string.act_reconnect_hint)))
+                }
                 Act.TILES -> {
                     val b = MaterialButton(this, null, android.R.attr.borderlessButtonStyle).apply {
                         isAllCaps = false
@@ -982,6 +996,8 @@ class RuleEditActivity : AppCompatActivity() {
                     row(box, a, getString(a.title), b, remove)
                     if (st.launchApps.isNotEmpty()) sub(box, hint(AppPickerActivity.labels(st.launchApps).joinToString(", ")))
                 }
+                // Never offered at the end (see allowedEnd).
+                Act.RECONNECT -> Unit
             }
         }
     }
@@ -1135,7 +1151,7 @@ class RuleEditActivity : AppCompatActivity() {
             Act.AIRPLANE -> airplane = null; Act.POWERSAVE -> powerSave = null; Act.BT -> btOff = false
             Act.LOC -> locOff = false; Act.TILES -> tiles = emptyMap(); Act.APPS -> packages = emptyList()
             Act.LAUNCH -> launchApps = emptyList()
-            Act.UNLOAD -> Unit
+            Act.UNLOAD, Act.RECONNECT -> Unit
         }
         paint()
     }
@@ -1165,7 +1181,7 @@ class RuleEditActivity : AppCompatActivity() {
                 }
                 shown += a
                 // A new action at the start is also offered in a custom end, set to "leave".
-                if (!a.anyEnd) {
+                if (!a.anyEnd && !a.startOnly) {
                     atEnd.shown += a
                     unlock.shown += a
                 }
@@ -1364,6 +1380,7 @@ class RuleEditActivity : AppCompatActivity() {
             endLaunchApps = atEnd.launchApps.takeIf { restores && Act.LAUNCH in atEnd.shown }.orEmpty(),
             lockWindow = t == Trigger.LOCKED && v.lockWindow.isChecked,
             unload = Act.UNLOAD in shown,
+            reconnect = Act.RECONNECT in shown,
             endUnload = restores && Act.UNLOAD in atEnd.shown,
             unloadAll = unloadAll && Act.UNLOAD in shown,
             endUnloadAll = atEnd.unloadAll && restores && Act.UNLOAD in atEnd.shown,

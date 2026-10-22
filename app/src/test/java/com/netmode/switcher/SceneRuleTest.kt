@@ -37,6 +37,13 @@ class SceneRuleTest {
         assertEquals("сцена", scene(toggle = false).timeLabel)
     }
 
+    @Test fun reconnectAloneIsAnActionAndListedInOrder() {
+        val r = scene(toggle = false).copy(vpn = null, reconnect = true)
+        assertTrue(r.hasActions)
+        assertEquals("переподключить моб. сеть", r.actionLabel)
+        assertTrue("RECONNECT" in Steps.START_ORDER)
+    }
+
     @Test fun sceneOfOnlyAnEndIsARule() {
         val endOnly = scene().copy(vpn = null, endCustom = true, endVpn = Toggle.OFF)
         assertTrue(endOnly.hasActions)

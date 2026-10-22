@@ -52,6 +52,9 @@ object AppFreezer {
     const val DATA_OFF = "svc data disable >/dev/null 2>&1 || cmd phone data disable >/dev/null 2>&1"
     const val DATA_ON = "svc data enable >/dev/null 2>&1 || cmd phone data enable >/dev/null 2>&1"
     const val WIFI_ON = "cmd wifi set-wifi-enabled enabled >/dev/null 2>&1 || svc wifi enable >/dev/null 2>&1"
+    /** "Переподключить моб. сеть": how long airplane mode stays on, and how often at most. */
+    private const val RECONNECT_PAUSE_MS = 3_000L
+    private const val RECONNECT_EVERY_MS = 5 * 60_000L
     // Android 10 has no airplane-mode command: the setting plus the system's own broadcast (root).
     const val AIR_ON = "cmd connectivity airplane-mode enable >/dev/null 2>&1 || " +
         "{ settings put global airplane_mode_on 1; am broadcast -a android.intent.action.AIRPLANE_MODE --ez state true >/dev/null 2>&1; }"
@@ -313,6 +316,7 @@ object AppFreezer {
             }
             if (what == PENDING_ALL) {
                 sideActions(rule, why)
+                if (rule.reconnect) reconnect(why)
                 if (rule.unload) unloadBackground(why, keep = rule.launchApps, all = rule.unloadAll)
                 launchApps(rule.launchApps, why)
             } else if (rule.unload) {
@@ -1021,11 +1025,49 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
         else -> emptySet()
     }
 
+    /** When the mobile network was last reconnected (elapsed realtime). */
+    @Volatile private var reconnectedAt = 0L
+
+    /**
+     * Airplane mode for [RECONNECT_PAUSE_MS] and back: the modem drops the network and
+     * registers afresh. Wi-Fi and Bluetooth come back as they were by themselves.
+     *
+     * At most once per [RECONNECT_EVERY_MS]: airplane mode ends "no internet" for a moment, so
+     * on a network that stays dead its rule would come round again half a minute later — and
+     * reconnect, and come round, for as long as the network is dead.
+     */
+    private suspend fun reconnect(why: String) {
+        val ctx = App.ctx
+        if (android.provider.Settings.Global.getInt(ctx.contentResolver, android.provider.Settings.Global.AIRPLANE_MODE_ON, 0) == 1) {
+            Prefs.log("($why): режим полёта уже включён — не переподключаю")
+            return
+        }
+        val since = android.os.SystemClock.elapsedRealtime() - reconnectedAt
+        if (reconnectedAt != 0L && since < RECONNECT_EVERY_MS) {
+            Prefs.log("($why): моб. сеть переподключалась ${Steps.words((since / 1000).toInt())} назад — не чаще раза в 5 мин")
+            return
+        }
+        reconnectedAt = android.os.SystemClock.elapsedRealtime()
+        // Airplane mode takes Wi-Fi and Bluetooth down: that is not leaving.
+        Prefs.selfWifiAt = System.currentTimeMillis()
+        Prefs.selfBtAt = System.currentTimeMillis()
+        try {
+            Privileged.exec(AIR_ON)
+            kotlinx.coroutines.delay(RECONNECT_PAUSE_MS)
+        } finally {
+            Prefs.selfWifiAt = System.currentTimeMillis()
+            Prefs.selfBtAt = System.currentTimeMillis()
+            Privileged.exec(AIR_OFF)
+        }
+        Prefs.log("($why): моб. сеть переподключена")
+    }
+
     private suspend fun startStep(rule: AppRule, step: String, why: String) {
         when (step) {
             "APPS" -> freezeApps(rule, why)
             "LAUNCH" -> launchApps(rule.launchApps, why)
             "UNLOAD" -> if (rule.unload) unloadBackground(why, keep = rule.launchApps, all = rule.unloadAll)
+            "RECONNECT" -> if (rule.reconnect) reconnect(why)
             else -> keysOf(step, rule.tiles.keys).takeIf { it.isNotEmpty() }?.let { sideActions(rule, why, only = it) }
         }
     }
@@ -1127,6 +1169,7 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
                 return
             }
             sideActions(rule, why)
+            if (rule.reconnect) reconnect(why)
             // Unloading is as much in the way of someone using the phone as stopping apps: it
             // waits with them. Before the launches, or it would take the apps just opened.
             val unloadNow = rule.unload && !(defer && rule.packages.isNotEmpty())

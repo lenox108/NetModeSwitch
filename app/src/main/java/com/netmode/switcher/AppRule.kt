@@ -250,6 +250,11 @@ data class AppRule(
     val appPassThrough: List<String> = emptyList(),
     /** APP_OPEN: the screen going off does not count as leaving — a navigator, a video. */
     val appScreenOffStays: Boolean = false,
+    /**
+     * At the start: airplane mode for a moment and back, so the modem registers with the
+     * network afresh — what brings a stuck mobile connection back. Nothing to put back.
+     */
+    val reconnect: Boolean = false,
 ) {
     /** The end fields, as one ending. */
     val endSpec: EndSpec
@@ -281,7 +286,7 @@ data class AppRule(
         get() = packages.isNotEmpty() || bluetoothOff || locationOff ||
             wifi != null || hotspot != null || netMode != null || mobileData != null ||
             tiles.isNotEmpty() || vpn != null || airplane != null || powerSave != null || dataSim != null ||
-            launchApps.isNotEmpty() || unload ||
+            launchApps.isNotEmpty() || unload || reconnect ||
             (restores && (endStopApps.isNotEmpty() || endLaunchApps.isNotEmpty() || endUnload || endSets))
 
     /**
@@ -327,6 +332,7 @@ data class AppRule(
             "AIRPLANE" to airplane?.let { if (it == Toggle.ON) "полёт вкл" else "полёт выкл" },
             "POWERSAVE" to powerSave?.let { if (it == Toggle.ON) "энергосбережение вкл" else "энергосбережение выкл" },
             "DATASIM" to dataSim?.let { "интернет через SIM ${it + 1}" },
+            "RECONNECT" to "переподключить моб. сеть".takeIf { reconnect },
             "UNLOAD" to (if (unloadAll) "выгрузить всё" else "выгрузить фон").takeIf { unload },
             "LAUNCH" to launchApps.takeIf { it.isNotEmpty() }?.let { "открыть: " + AppPickerActivity.labels(it).joinToString(", ") },
         ))
@@ -553,6 +559,7 @@ data class AppRule(
         .put("steps", JSONArray(steps)).put("eSteps", JSONArray(endSteps))
         .put("unlock", unlockEnd?.toJson() ?: JSONObject.NULL)
         .put("eMethods", JSONObject().apply { endAppMethods.forEach { (p, m) -> put(p, m.name) } })
+        .put("recon", reconnect)
         .put("leaveS", appLeaveDelay).put("tPass", JSONArray(appPassThrough)).put("screenStay", appScreenOffStays)
 
     companion object {
@@ -649,6 +656,7 @@ data class AppRule(
                     unlockEnd = o.optJSONObject("unlock")?.let { runCatching { EndSpec.fromJson(it) }.getOrNull() },
                     appLeaveDelay = o.optInt("leaveS", 0), appPassThrough = o.strings("tPass"),
                     appScreenOffStays = o.optBoolean("screenStay", false),
+                    reconnect = o.optBoolean("recon", false),
                     endAppMethods = o.optJSONObject("eMethods")?.let { m ->
                         m.keys().asSequence().mapNotNull { p ->
                             runCatching { FreezeMethod.valueOf(m.getString(p)) }.getOrNull()?.let { p to it }

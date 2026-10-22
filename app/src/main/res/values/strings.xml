@@ -327,6 +327,8 @@
     <string name="scene_run">«%1$s» выполняется</string>
     <string name="scene_disabled">«%1$s» выключена в списке правил</string>
     <string name="scene_gone">Этой сцены больше нет</string>
+    <string name="act_reconnect">Переподключить моб. сеть</string>
+    <string name="act_reconnect_hint">Режим полёта на 3 секунды и обратно. Не чаще раза в 5 минут</string>
     <string name="trigger_apps_required">Выбери приложение</string>
     <string name="app_leave_delay">Закрыто, если не вернулся</string>
     <string name="app_leave_now">сразу</string>

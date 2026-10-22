@@ -40,7 +40,7 @@ object Steps {
      * order, with no pause, keeps no steps and runs as before: radios in one go, the tiles and
      * the VPN side by side.
      */
-    val START_ORDER = listOf("NET", "WIFI", "DATA", "HOTSPOT", "BT", "LOC", "AIRPLANE", "POWERSAVE", "DATASIM", "TILES", "VPN", "UNLOAD", "LAUNCH", "APPS")
+    val START_ORDER = listOf("NET", "WIFI", "DATA", "HOTSPOT", "BT", "LOC", "AIRPLANE", "POWERSAVE", "DATASIM", "RECONNECT", "TILES", "VPN", "UNLOAD", "LAUNCH", "APPS")
     val END_ORDER = listOf("NET", "DATA", "HOTSPOT", "WIFI", "BT", "LOC", "AIRPLANE", "POWERSAVE", "DATASIM", "TILES", "VPN", "APPS", "UNLOAD", "LAUNCH")
 
     /** What is worth saving of [steps]: nothing when they add nothing to the old fixed order. */
