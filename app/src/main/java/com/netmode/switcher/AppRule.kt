@@ -98,6 +98,17 @@ enum class Trigger {
     val isCondition: Boolean get() = this != TIME && this != WIFI_LEFT
 }
 
+/** What the user hears of a rule starting by itself; never asked when started by hand. */
+enum class RunNotice {
+    SILENT,
+
+    /** A notification of what was done, with a button to undo it. */
+    NOTIFY,
+
+    /** A notification asking first: the start waits for "Выполнить". */
+    ASK,
+}
+
 /** Turn something on or off for the window; null in a rule means "leave it alone". */
 enum class Toggle { ON, OFF }
 
@@ -255,6 +266,7 @@ data class AppRule(
      * network afresh — what brings a stuck mobile connection back. Nothing to put back.
      */
     val reconnect: Boolean = false,
+    val notice: RunNotice = RunNotice.SILENT,
 ) {
     /** The end fields, as one ending. */
     val endSpec: EndSpec
@@ -559,7 +571,7 @@ data class AppRule(
         .put("steps", JSONArray(steps)).put("eSteps", JSONArray(endSteps))
         .put("unlock", unlockEnd?.toJson() ?: JSONObject.NULL)
         .put("eMethods", JSONObject().apply { endAppMethods.forEach { (p, m) -> put(p, m.name) } })
-        .put("recon", reconnect)
+        .put("recon", reconnect).put("notice", notice.name)
         .put("leaveS", appLeaveDelay).put("tPass", JSONArray(appPassThrough)).put("screenStay", appScreenOffStays)
 
     companion object {
@@ -657,6 +669,7 @@ data class AppRule(
                     appLeaveDelay = o.optInt("leaveS", 0), appPassThrough = o.strings("tPass"),
                     appScreenOffStays = o.optBoolean("screenStay", false),
                     reconnect = o.optBoolean("recon", false),
+                    notice = runCatching { RunNotice.valueOf(o.getString("notice")) }.getOrDefault(RunNotice.SILENT),
                     endAppMethods = o.optJSONObject("eMethods")?.let { m ->
                         m.keys().asSequence().mapNotNull { p ->
                             runCatching { FreezeMethod.valueOf(m.getString(p)) }.getOrNull()?.let { p to it }

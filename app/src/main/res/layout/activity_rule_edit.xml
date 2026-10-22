@@ -431,6 +431,29 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="@string/wait_apps_only" />
+
+                    <!-- silent / notify / ask -->
+                    <LinearLayout
+                        android:id="@+id/noticeRow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            style="@style/NMS.RowLabel"
+                            android:text="@string/notice_label" />
+
+                        <com.netmode.switcher.ChoiceView
+                            android:id="@+id/notice"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/noticeHint"
+                        style="@style/NMS.Hint" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

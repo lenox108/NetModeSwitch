@@ -268,6 +268,11 @@ object Prefs {
      * Lock rules unlocked inside their time ([AppRule.splitEnd]): their unlock block has run,
      * the night goes on until the time is over or the phone is locked again.
      */
+    /** Rules whose start waits for an answer to "Выполнить?" (see [RunNotices]). */
+    var askedStarts: Set<Long>
+        get() = sp.getStringSet("asked_starts", emptySet())!!.mapNotNull { it.toLongOrNull() }.toSet()
+        set(value) = sp.edit().putStringSet("asked_starts", value.map { it.toString() }.toSet()).commit().let { }
+
     var lockPaused: Set<Long>
         get() = sp.getStringSet("lock_paused", emptySet())!!.mapNotNull { it.toLongOrNull() }.toSet()
         set(value) = sp.edit().putStringSet("lock_paused", value.map { it.toString() }.toSet()).commit().let { }

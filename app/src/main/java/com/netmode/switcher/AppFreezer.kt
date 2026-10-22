@@ -327,6 +327,31 @@ object AppFreezer {
         DeferWatch.sync()
     }
 
+    private fun dropAsked(id: Long) {
+        Prefs.askedStarts = Prefs.askedStarts - id
+        Prefs.openWindows = Prefs.openWindows - id
+    }
+
+    /** "Выполнить" on the question: the start that waited for it, if it still waits. */
+    suspend fun runAsked(ruleId: Long) = lock.withLock {
+        val rule = Prefs.appRules.find { it.id == ruleId }
+        if (ruleId !in Prefs.askedStarts || rule == null || !rule.enabled) {
+            Prefs.askedStarts = Prefs.askedStarts - ruleId
+            return@withLock
+        }
+        eventState = 0
+        freezeLocked(rule, "подтверждено", manual = true)
+    }
+
+    /** "Пропустить": the window closes as if it never opened; the condition must begin anew. */
+    suspend fun skipAsked(ruleId: Long) = lock.withLock {
+        if (ruleId !in Prefs.askedStarts) return@withLock
+        dropAsked(ruleId)
+        val rule = Prefs.appRules.find { it.id == ruleId }
+        Prefs.log("(${rule?.logPrefix.orEmpty()}${rule?.timeLabel.orEmpty()}): пропущено")
+        AlarmScheduler.rearm()
+    }
+
     /** Ends a rule's window right now, the way the rule says to end it. */
     suspend fun releaseNow(ruleId: Long): Int = lock.withLock {
         val n = Prefs.frozen.count { it.ruleId == ruleId }
@@ -477,6 +502,11 @@ object AppFreezer {
         if (leaving.isEmpty() && entering.isEmpty()) return@withLock
         beginEvent()
         Prefs.appHandled = Prefs.appHandled - leaving.map { it.id }.toSet()
+        // A rule with no end has no window to close: its unanswered question goes here.
+        for (rule in leaving.filter { !it.releaseOnLeave && it.id in Prefs.askedStarts }) {
+            RunNotices.cancel(rule.id)
+            dropAsked(rule.id)
+        }
         // From one app straight into another: the new app's rule starts first, so whatever both
         // set — the VPN on — is handed over at the old one's end instead of put back and set
         // again a moment later.
@@ -509,7 +539,7 @@ object AppFreezer {
         val paused = Prefs.lockPaused
         val (rule, mode) = Prefs.openWindows.entries.sortedByDescending { it.value }
             .mapNotNull { rules[it.key] }
-            .filter { it.enabled && it.restores && (it.netSlot == SLOT_ALL || it.netSlot == slot) }
+            .filter { it.enabled && it.restores && it.id !in Prefs.askedStarts && (it.netSlot == SLOT_ALL || it.netSlot == slot) }
             .firstNotNullOfOrNull { r ->
                 val spec = r.unlockEnd?.takeIf { r.id in paused }
                 // Unlocked inside the time: the network is what the unlock block left it.
@@ -559,6 +589,14 @@ object AppFreezer {
      */
     private suspend fun closeLocked(rule: AppRule?, id: Long, reason: String) {
         val why = rule?.logPrefix.orEmpty() + reason
+        RunNotices.cancel(id)
+        // Never confirmed: nothing was done, so nothing is put back and no end is run.
+        if (id in Prefs.askedStarts) {
+            dropAsked(id)
+            Prefs.log("($why): не подтверждено — ничего не менялось")
+            AlarmScheduler.rearm()
+            return
+        }
         if (!Privileged.available()) {
             // Nothing can be put back now; the window stays on record and reconcile retries.
             Prefs.pendingClose = Prefs.pendingClose + id
@@ -982,8 +1020,10 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
      */
     private fun heirs(except: Long? = null): (String) -> AppRule? {
         val rulesById = Prefs.appRules.associateBy { it.id }
+        // A rule still waiting for "Выполнить" has done nothing yet: it inherits nothing.
+        val asked = Prefs.askedStarts
         val openOthers = Prefs.openWindows.entries.sortedByDescending { it.value }
-            .mapNotNull { rulesById[it.key] }.filter { it.enabled && it.restores && it.id != except }
+            .mapNotNull { rulesById[it.key] }.filter { it.enabled && it.restores && it.id != except && it.id !in asked }
         return { key -> openOthers.firstOrNull { it.covers(key) } }
     }
 
@@ -1145,6 +1185,18 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
         // Locked again inside the time: the night picks up where the unlock left it.
         Prefs.lockPaused = Prefs.lockPaused - rule.id
         if (rule.restores) Prefs.openWindows = Prefs.openWindows + (rule.id to System.currentTimeMillis())
+        Prefs.askedStarts = Prefs.askedStarts - rule.id
+        // "Спросить": the window opens, what it does waits for the answer (see runAsked).
+        if (!manual && rule.notice == RunNotice.ASK) {
+            if (RunNotices.ask(rule)) {
+                Prefs.askedStarts = Prefs.askedStarts + rule.id
+                Prefs.log("($why): жду ответа в уведомлении")
+                AlarmScheduler.rearm()
+                return
+            }
+            Prefs.log("($why): уведомления выключены — выполняю без вопроса")
+        }
+        if (!manual && rule.notice == RunNotice.NOTIFY) RunNotices.ran(rule)
         // In use right now: the window opens, but what it does waits for the lock.
         val defer = !manual && rule.waitLocked && inUse()
         // Apps its last end held come back now: the window they were held outside of opens.

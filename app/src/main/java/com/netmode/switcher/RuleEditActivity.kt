@@ -99,6 +99,7 @@ class RuleEditActivity : AppCompatActivity() {
     private var signalLevel = 1
     private var manualMinutes = 0
     private var netLostSeconds = 60
+    private var notice = RunNotice.SILENT
     /** The wait switch follows the trigger's default until the user sets it. */
     private var waitTouched = false
 
@@ -242,6 +243,7 @@ class RuleEditActivity : AppCompatActivity() {
         v.toolbar.setNavigationOnClickListener { finish() }
         if (existing != null) {
             v.toolbar.menu.add(0, MENU_APPLY, 0, R.string.apply_now)
+                .setIcon(R.drawable.ic_t_manual).setShowAsAction(android.view.MenuItem.SHOW_AS_ACTION_IF_ROOM)
             v.toolbar.menu.add(0, MENU_RELEASE, 1, R.string.release_now)
             v.toolbar.menu.add(0, MENU_DELETE, 2, R.string.delete)
             v.toolbar.setOnMenuItemClickListener { item ->
@@ -285,6 +287,7 @@ class RuleEditActivity : AppCompatActivity() {
         waitTouched = existing != null
         triggerApps = r?.triggerApps.orEmpty()
         appPass = r?.appPassThrough.orEmpty()
+        notice = r?.notice ?: RunNotice.SILENT
         // A new rule waits a little: leaving for a moment is the common case, not the exception.
         appLeaveDelay = r?.appLeaveDelay ?: 5
         v.appScreenStays.isChecked = r?.appScreenOffStays ?: false
@@ -418,6 +421,14 @@ class RuleEditActivity : AppCompatActivity() {
         }
         v.triggerApps.setOnClickListener { pickPlain(Pick.TRIGGER, triggerApps) }
         v.appPass.setOnClickListener { pickPlain(Pick.PASS, appPass) }
+        v.notice.onChange = { i ->
+            notice = RunNotice.entries[i]
+            // Without notifications a question cannot be seen; the rule would run unasked.
+            if (notice != RunNotice.SILENT && !Compat.granted(this, android.Manifest.permission.POST_NOTIFICATIONS)) {
+                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 8)
+            }
+            paint()
+        }
         v.sceneShortcut.setOnClickListener {
             val saved = existing ?: return@setOnClickListener
             // Labelled as edited; the shortcut itself only carries the scene's id.
@@ -551,6 +562,11 @@ class RuleEditActivity : AppCompatActivity() {
         // someone using it: waiting would only hide that it worked.
         show(v.waitRow.root, t != Trigger.LOCKED && t != Trigger.MANUAL)
         show(v.sceneShortcut, t == Trigger.MANUAL)
+        // A scene is pressed by hand: there is nothing to ask or tell.
+        show(v.noticeRow, t != Trigger.MANUAL)
+        show(v.noticeHint, t != Trigger.MANUAL && notice != RunNotice.SILENT)
+        v.notice.setItems(listOf(R.string.notice_silent, R.string.notice_notify, R.string.notice_ask).map { getString(it) }, notice.ordinal)
+        v.noticeHint.setText(if (notice == RunNotice.ASK) R.string.notice_ask_hint else R.string.notice_notify_hint)
         v.sceneShortcut.isEnabled = existing != null
         v.sceneShortcut.text = getString(if (existing != null) R.string.scene_shortcut else R.string.scene_shortcut_save_first)
         v.releaseOnLeave.setText(if (t == Trigger.MANUAL) R.string.manual_toggle else R.string.release_on_leave)
@@ -1381,6 +1397,7 @@ class RuleEditActivity : AppCompatActivity() {
             lockWindow = t == Trigger.LOCKED && v.lockWindow.isChecked,
             unload = Act.UNLOAD in shown,
             reconnect = Act.RECONNECT in shown,
+            notice = notice.takeIf { t != Trigger.MANUAL } ?: RunNotice.SILENT,
             endUnload = restores && Act.UNLOAD in atEnd.shown,
             unloadAll = unloadAll && Act.UNLOAD in shown,
             endUnloadAll = atEnd.unloadAll && restores && Act.UNLOAD in atEnd.shown,

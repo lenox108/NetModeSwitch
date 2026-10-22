@@ -111,11 +111,13 @@ class AppRulesActivity : AppCompatActivity() {
             val active = AppFreezer.isActive(rule)
             val waiting = rule.id in pendingStarts
             val unlocked = rule.id in Prefs.lockPaused
-            row.status.visibility = if (active || held > 0 || waiting) View.VISIBLE else View.GONE
+            val asked = rule.id in Prefs.askedStarts
+            row.status.visibility = if (active || held > 0 || waiting || asked) View.VISIBLE else View.GONE
             row.status.text = listOfNotNull(
+                getString(R.string.waiting_answer).takeIf { asked },
                 getString(R.string.waiting_lock).takeIf { waiting },
                 getString(R.string.unlocked_until, "%02d:%02d".format(rule.endHour ?: 0, rule.endMinute ?: 0)).takeIf { unlocked },
-                getString(R.string.active_now).takeIf { active && !waiting && !unlocked },
+                getString(R.string.active_now).takeIf { active && !waiting && !unlocked && !asked },
                 getString(R.string.held_now, held).takeIf { held > 0 },
             ).joinToString(" · ")
             row.root.alpha = if (rule.enabled) 1f else 0.55f

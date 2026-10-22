@@ -275,6 +275,10 @@
             android:exported="false" />
 
         <receiver
+            android:name=".RunNoticeReceiver"
+            android:exported="false" />
+
+        <receiver
             android:name=".BtReceiver"
             android:exported="true">
             <intent-filter>
