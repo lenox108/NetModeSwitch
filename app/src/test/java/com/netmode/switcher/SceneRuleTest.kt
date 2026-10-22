@@ -50,3 +50,18 @@ class SceneRuleTest {
         assertFalse(endOnly.copy(endCustom = false).hasActions)
     }
 }
+
+class ConflictTest {
+    private fun rule(id: Long, net: NetMode?, wifi: Toggle? = null) = AppRule(
+        id = id, enabled = true, hour = 0, minute = 0, endHour = null, endMinute = null, days = 0,
+        packages = emptyList(), method = FreezeMethod.STOP, netMode = net, wifi = wifi,
+    )
+
+    @Test fun differentValuesClashSameValuesDoNot() {
+        val a = rule(1, NetMode.THREE_G, Toggle.OFF)
+        val c = a.conflicts(listOf(rule(2, NetMode.FULL, Toggle.OFF), rule(3, NetMode.THREE_G)))
+        assertEquals(1, c.size)
+        assertEquals(2L, c[0].first.id)
+        assertEquals(listOf("режим сети"), c[0].second)
+    }
+}

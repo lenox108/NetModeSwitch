@@ -353,6 +353,7 @@
     <string name="extra_wifi_out">Не в сети Wi-Fi…</string>
     <string name="extra_wifi_name">Название сети</string>
     <string name="extra_battery">Заряд ≤ …</string>
+    <string name="conflict_hint">Может спорить с: %1$s</string>
     <string name="trigger_apps_required">Выбери приложение</string>
     <string name="app_leave_delay">Закрыто, если не вернулся</string>
     <string name="app_leave_now">сразу</string>

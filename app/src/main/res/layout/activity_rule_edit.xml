@@ -513,6 +513,10 @@
                         style="@style/NMS.Hint"
                         android:text="@string/no_actions_yet" />
 
+                    <TextView
+                        android:id="@+id/conflictHint"
+                        style="@style/NMS.Hint" />
+
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

@@ -109,6 +109,12 @@ enum class RunNotice {
     ASK,
 }
 
+private val CONFLICT_NAMES = mapOf(
+    "NET" to "режим сети", "DATA" to "моб. интернет", "WIFI" to "Wi-Fi", "HOTSPOT" to "точка доступа",
+    "VPN" to "VPN", "AIRPLANE" to "режим полёта", "POWERSAVE" to "энергосбережение",
+    "DATASIM" to "SIM для интернета", "BT" to "Bluetooth", "LOC" to "геолокация", "TILE" to "плитки",
+)
+
 /** Turn something on or off for the window; null in a rule means "leave it alone". */
 enum class Toggle { ON, OFF }
 
@@ -270,6 +276,34 @@ data class AppRule(
     /** "И ещё если": states the rule needs besides its trigger (see [Extra]). */
     val extras: List<Extra> = emptyList(),
 ) {
+    /** What the start sets, key → value, to tell rules that pull the same thing different ways. */
+    val sets: Map<String, String>
+        get() = buildMap {
+            netMode?.let { m -> (if (netSlot == SLOT_ALL) listOf(0, 1) else listOf(netSlot)).forEach { put("NET$it", m.name) } }
+            mobileData?.let { put("DATA", it.name) }
+            wifi?.let { put("WIFI", it.name) }
+            hotspot?.let { put("HOTSPOT", it.name) }
+            vpn?.let { put("VPN", it.name) }
+            airplane?.let { put("AIRPLANE", it.name) }
+            powerSave?.let { put("POWERSAVE", it.name) }
+            dataSim?.let { put("DATASIM", it.toString()) }
+            if (bluetoothOff) put("BT", "OFF")
+            if (locationOff) put("LOC", "OFF")
+            tiles.forEach { (c, t) -> put("TILE:$c", t.name) }
+        }
+
+    /** Other enabled rules that set something this one sets, to another value: rule → what. */
+    fun conflicts(others: List<AppRule>): List<Pair<AppRule, List<String>>> {
+        val mine = sets
+        return others.filter { it.enabled && it.id != id }.mapNotNull { o ->
+            val theirs = o.sets
+            val clash = mine.filter { (k, v) -> theirs[k] != null && theirs[k] != v }.keys
+                .map { CONFLICT_NAMES[it.removePrefix("TILE:").let { k -> if (it.startsWith("TILE:")) "TILE" else k.trimEnd('0', '1') }] ?: it }
+                .distinct()
+            if (clash.isEmpty()) null else o to clash
+        }
+    }
+
     /** The end fields, as one ending. */
     val endSpec: EndSpec
         get() = EndSpec(

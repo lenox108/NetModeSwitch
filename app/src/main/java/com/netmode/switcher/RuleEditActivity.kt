@@ -566,6 +566,11 @@ class RuleEditActivity : AppCompatActivity() {
         // someone using it: waiting would only hide that it worked.
         show(v.waitRow.root, t != Trigger.LOCKED && t != Trigger.MANUAL)
         show(v.sceneShortcut, t == Trigger.MANUAL)
+        // Another rule pulling the same thing another way: whichever comes last wins.
+        val clashes = runCatching { build(existing?.id ?: -1L, true).conflicts(Prefs.appRules) }.getOrDefault(emptyList())
+        show(v.conflictHint, clashes.isNotEmpty())
+        v.conflictHint.text = getString(R.string.conflict_hint,
+            clashes.joinToString("; ") { (r, what) -> "«${r.name ?: r.timeLabel}» — ${what.joinToString(", ")}" })
         // A scene is pressed when wanted; "after leaving" has no state to wait on.
         show(v.extrasBlock, t != Trigger.MANUAL && !wifiLeft)
         show(v.extrasHint, extras.isNotEmpty())

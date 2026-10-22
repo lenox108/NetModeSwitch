@@ -12,8 +12,8 @@ android {
         applicationId = "com.netmode.switcher"
         minSdk = 34
         targetSdk = 36
-        versionCode = 73
-        versionName = "3.18"
+        versionCode = 74
+        versionName = "3.19"
     }
 
     // One code base, two builds: "modern" for Android 14+ as it always was, "a10" down to
