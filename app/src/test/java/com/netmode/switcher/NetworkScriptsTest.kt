@@ -29,13 +29,14 @@ class NetworkScriptsTest {
 
     @After fun clean() { dir.deleteRecursively() }
 
-    private fun run(script: String, failTtl: Boolean = false): String {
+    private fun run(script: String, failTtl: Boolean = false, failHl: Boolean = false): String {
         // Never let these tests touch the host's /proc, even when run on Linux as root.
         val safe = script.replace("/proc/sys/net/ipv6/conf", proc.absolutePath)
         val process = ProcessBuilder("/bin/sh", "-c", safe).apply {
             environment()["PATH"] = "${bin.absolutePath}:${System.getenv("PATH")}"
             environment()["NMS_STATE"] = state.absolutePath
             environment()["NMS_FAIL_TTL"] = if (failTtl) "1" else "0"
+            environment()["NMS_FAIL_HL"] = if (failHl) "1" else "0"
             redirectErrorStream(true)
         }.start()
         val output = process.inputStream.bufferedReader().readText()
@@ -64,6 +65,31 @@ class NetworkScriptsTest {
         assertTrue(run(NetworkScripts.clearTtl()).contains("@TTL_CLEARED"))
         assertEquals("-A FORWARD -j OTHER_APP\n", foreign.readText())
         assertFalse(File(state, "iptables_mangle_NMS_TTL").exists())
+    }
+
+    @Test fun hopLimitMirrorsTtlForIpv6Only() {
+        val script = NetworkScripts.hl("wlan2", listOf("rmnet_data0", "v4-rmnet_data0"), 64)
+        assertTrue(run(script).contains("@HL_OK"))
+        val rules = chain("ip6tables_mangle_NMS_HL")
+        assertTrue(rules.contains("-i wlan2 -o rmnet_data0 -j HL --hl-set 64"))
+        assertEquals(1, chain("ip6tables_mangle_FORWARD").lines().count { it.endsWith("-j NMS_HL") })
+        // IPv4 and the phone's own traffic stay as they were.
+        assertEquals("", chain("iptables_mangle_FORWARD"))
+        assertEquals("", chain("ip6tables_mangle_OUTPUT"))
+        assertTrue(run(script).contains("@HL_OK"))
+        assertEquals(rules, chain("ip6tables_mangle_NMS_HL"))
+        assertTrue(run(NetworkScripts.clearHl()).contains("@HL_CLEARED"))
+        assertFalse(File(state, "ip6tables_mangle_NMS_HL").exists())
+        assertEquals("", chain("ip6tables_mangle_FORWARD"))
+    }
+
+    @Test fun unsupportedHopLimitFailsCleanly() {
+        assertFalse(run(NetworkScripts.hl("wlan2", listOf("rmnet_data0"), 64), failHl = true).contains("@HL_OK"))
+        assertTrue(run(NetworkScripts.probeHl()).contains("@HL_SUPPORTED"))
+        assertFalse(run(NetworkScripts.probeHl(), failHl = true).contains("@HL_SUPPORTED"))
+        assertFalse(File(state, "ip6tables_mangle_NMS_HL_TEST").exists())
+        assertTrue(run(NetworkScripts.clearHl()).contains("@HL_CLEARED"))
+        assertEquals("", chain("ip6tables_mangle_FORWARD"))
     }
 
     @Test fun unsupportedTtlNeverReportsSuccessAndCanBeCleaned() {
@@ -325,6 +351,7 @@ class NetworkScriptsTest {
               -A|-I)
                 [ -f "${'$'}file" ] || exit 1
                 case "${'$'}*" in *'--ttl-set'*) [ "${'$'}NMS_FAIL_TTL" != 1 ] || { echo 'TTL target unavailable'; exit 2; };; esac
+                case "${'$'}*" in *'--hl-set'*) [ "${'$'}NMS_FAIL_HL" != 1 ] || { echo 'HL target unavailable'; exit 2; };; esac
                 if [ "${'$'}op" = -I ]; then
                   shift
                   { echo "-A ${'$'}name ${'$'}*"; cat "${'$'}file"; } > "${'$'}file.tmp"

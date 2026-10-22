@@ -325,17 +325,10 @@ class HotspotActivity : AppCompatActivity() {
 
     private fun setupTweaks() {
         ui.fixTtl.isChecked = Prefs.tetherTtlEnabled
-        ui.disableIpv6.isChecked = Prefs.disableTetherIpv6
         fillTtlValues()
         ui.fixTtl.setOnCheckedChangeListener { _, on ->
             if (!programmatic) {
                 Prefs.tetherTtlEnabled = on
-                applyTweaks()
-            }
-        }
-        ui.disableIpv6.setOnCheckedChangeListener { _, on ->
-            if (!programmatic) {
-                Prefs.disableTetherIpv6 = on
                 applyTweaks()
             }
         }
@@ -397,12 +390,11 @@ class HotspotActivity : AppCompatActivity() {
     private fun paintTweakControls(root: Boolean) {
         val ready = root && !tweaksBusy && !tetherBusy
         ui.fixTtl.isEnabled = ready
-        ui.disableIpv6.isEnabled = ready
         ui.ttlValue.isEnabled = ready && Prefs.tetherTtlEnabled
         ui.checkTweaks.isEnabled = ready
         ui.checkTether.isEnabled = ready
         ui.ttlRow.visibility = if (Prefs.tetherTtlEnabled) View.VISIBLE else View.GONE
-        ui.tweaksOffloadHint.visibility = if (Prefs.tetherTtlEnabled || Prefs.disableTetherIpv6) View.VISIBLE else View.GONE
+        ui.tweaksOffloadHint.visibility = if (Prefs.tetherTtlEnabled) View.VISIBLE else View.GONE
         ui.viaVpn.isEnabled = ready
         ui.viaProxy.isEnabled = ready
         ui.vpnFast.isEnabled = ready

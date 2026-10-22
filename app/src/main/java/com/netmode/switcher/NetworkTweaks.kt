@@ -7,13 +7,20 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
 
-/** IPv4 TTL for direct cellular tethering and IPv6 blocking only for tethered clients. */
+/**
+ * TTL for direct cellular tethering, IPv4 and IPv6 alike: an operator that tells tethering by a
+ * client's TTL can tell it by its IPv6 hop limit just as well, so fixing only the TTL gave the
+ * game away over IPv6. Where the kernel cannot set the hop limit, the tethered clients' IPv6 is
+ * blocked instead, so they fall back to IPv4 with its fixed TTL. Nothing else of IPv6 is touched:
+ * not the phone's own, not AdGuard's, not a VPN's.
+ */
 object NetworkTweaks {
     private val lock = Mutex()
     @Volatile var status: String = ""
         private set
 
-    fun needed(): Boolean = Prefs.tetherTtlEnabled || Prefs.disableTetherIpv6 || Prefs.networkTweaksState != null
+    /** The old separate IPv6 switch only leaves rules behind to remove, kept on record in [Prefs.networkTweaksState]. */
+    fun needed(): Boolean = Prefs.tetherTtlEnabled || Prefs.networkTweaksState != null
 
     private suspend fun checked(script: String, marker: String): String {
         val out = Root.exec(script, 30_000)
@@ -49,7 +56,7 @@ object NetworkTweaks {
         val ttl = Prefs.tetherTtlEnabled && Prefs.tetherMode == TetherMode.DIRECT
         var offloadReady = false
         attempt("Ускорение раздачи") {
-            if (ttl || Prefs.disableTetherIpv6) {
+            if (ttl) {
                 if (!saved.has("offload")) {
                     val out = Root.exec("echo @HW \$(settings get global tether_offload_disabled)\necho @BPF \$(device_config get connectivity override_tether_enable_bpf_offload)")
                     fun value(tag: String) = out.lineSequence().firstOrNull { it.startsWith("$tag ") }
@@ -64,22 +71,6 @@ object NetworkTweaks {
                 checked(NetworkScripts.restoreOffload(old.getString("hardware"), old.getString("bpf")), "@OFFLOAD_RESTORED")
                 saved.remove("offload")
                 save()
-            }
-        }
-
-        attempt("IPv6") {
-            val interfaces = if (Prefs.disableTetherIpv6) TetherRoute.tetherInterfaces() else emptyList()
-            if (interfaces.isNotEmpty()) {
-                saved.put("tetherIpv6", true)
-                save()
-                checked(NetworkScripts.tetherIpv6(interfaces), "@TETHER6_BLOCKED")
-                lines += "IPv6: заблокирован у устройств на раздаче (${interfaces.joinToString()})"
-                if (!offloadReady) lines += "IPv6 раздачи: ускорение не отключилось — перезапусти точку доступа и проверь блокировку"
-            } else {
-                checked(NetworkScripts.clearTetherIpv6(), "@TETHER6_CLEARED")
-                saved.remove("tetherIpv6")
-                save()
-                if (Prefs.disableTetherIpv6) lines += "IPv6: блокировка включится вместе с раздачей"
             }
         }
 
@@ -101,6 +92,8 @@ object NetworkTweaks {
             }
         }
 
+        // What the IPv6 step needs from the TTL one: where the rules went, and with what value.
+        var placed: Triple<String, List<String>, Int>? = null
         attempt("TTL") {
             if (!ttl) {
                 checked(NetworkScripts.clearTtl(), "@TTL_CLEARED")
@@ -131,7 +124,38 @@ object NetworkTweaks {
                         throw IllegalStateException(ttlFailure(e), e)
                     }
                     lines += "TTL: $value · правила установлены"
+                    placed = Triple(ap, upstreams, value)
                 }
+            }
+        }
+
+        attempt("IPv6") {
+            val (ap, upstreams, ttlValue) = placed ?: run {
+                checked(NetworkScripts.clearHl(), "@HL_CLEARED")
+                checked(NetworkScripts.clearTetherIpv6(), "@TETHER6_CLEARED")
+                saved.remove("hl"); saved.remove("tetherIpv6")
+                save()
+                return@attempt
+            }
+            // The phone's own hop limit for "Автоматически", as the TTL takes the phone's TTL.
+            val value = if (Prefs.tetherTtlValue != 0) ttlValue
+            else Root.exec("cat /proc/sys/net/ipv6/conf/default/hop_limit").trim().toIntOrNull()?.takeIf { it in 1..255 } ?: ttlValue
+            saved.put("hl", true)
+            save()
+            val hl = runCatching { checked(NetworkScripts.hl(ap, upstreams, value), "@HL_OK") }
+            if (hl.isSuccess) {
+                checked(NetworkScripts.clearTetherIpv6(), "@TETHER6_CLEARED")
+                saved.remove("tetherIpv6")
+                save()
+                lines += "IPv6: Hop Limit $value · IPv6 у устройств работает"
+            } else {
+                Root.exec(NetworkScripts.clearHl())
+                saved.remove("hl")
+                val interfaces = TetherRoute.tetherInterfaces()
+                saved.put("tetherIpv6", true)
+                save()
+                checked(NetworkScripts.tetherIpv6(interfaces.ifEmpty { listOf(ap) }), "@TETHER6_BLOCKED")
+                lines += "IPv6: ядро не умеет менять Hop Limit — IPv6 у устройств на раздаче заблокирован, иначе по нему видна раздача"
             }
         }
         status = lines.joinToString("\n")
@@ -173,16 +197,21 @@ object NetworkTweaks {
                 add(if (packets > 0) "Через правило TTL прошло пакетов: $packets"
                     else "Пакетов через правило TTL пока нет. Создай трафик на подключённом устройстве; если счётчик не растёт, перезапусти раздачу.")
             }
-            if (Prefs.disableTetherIpv6) {
-                val interfaces = TetherRoute.tetherInterfaces()
-                if (interfaces.isEmpty()) add("Проверка IPv6: включи раздачу для проверки блокировки устройств.")
-                else {
-                    val out = Root.exec(NetworkScripts.inspectTetherIpv6(interfaces))
-                    val blocked = out.lineSequence().any { it.trim() == "@TETHER6_OK" }
-                    add(if (blocked) "Проверка IPv6: трафик устройств на раздаче заблокирован в обоих направлениях. IPv6 телефона не отключается."
-                        else "Проверка IPv6: блокировка раздачи неполная — смотри ошибку выше.")
+            if (Prefs.tetherTtlEnabled && Prefs.tetherMode == TetherMode.DIRECT) {
+                val hl = runCatching { checked(NetworkScripts.probeHl(), "@HL_SUPPORTED") }.isSuccess
+                if (hl) {
+                    val out = Root.exec("ip6tables -w 5 -t mangle -L NMS_HL -nvx 2>/dev/null")
+                    val packets = Regex("(?m)^\\s*(\\d+)\\s+\\d+\\s+HL\\b").findAll(out)
+                        .sumOf { it.groupValues[1].toLongOrNull() ?: 0 }
+                    add("Проверка IPv6: ядро меняет Hop Limit, IPv6 у устройств работает. Пакетов через правило: $packets")
+                } else {
+                    val interfaces = TetherRoute.tetherInterfaces()
+                    val blocked = interfaces.isNotEmpty() &&
+                        Root.exec(NetworkScripts.inspectTetherIpv6(interfaces)).lineSequence().any { it.trim() == "@TETHER6_OK" }
+                    add(if (blocked) "Проверка IPv6: ядро не меняет Hop Limit — IPv6 у устройств на раздаче заблокирован. IPv6 телефона не отключается."
+                        else "Проверка IPv6: ядро не меняет Hop Limit; блокировка включится вместе с раздачей.")
                 }
             }
-        }.joinToString("\n\n").ifBlank { "Фиксация TTL и отключение IPv6 выключены" }
+        }.joinToString("\n\n").ifBlank { "Фиксация TTL выключена" }
     }
 }

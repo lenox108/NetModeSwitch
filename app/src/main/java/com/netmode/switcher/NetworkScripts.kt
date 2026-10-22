@@ -9,54 +9,73 @@ internal object NetworkScripts {
 
     fun quote(value: String): String = "'" + value.replace("'", "'\\''") + "'"
 
-    fun clearTtl(): String = """
+    fun clearTtl(): String = clearMangle("iptables", "NMS_TTL", "@TTL_CLEARED")
+
+    /** The same for IPv6: the hop limit is IPv6's TTL, and a tethered client's gives it away too. */
+    fun clearHl(): String = clearMangle("ip6tables", "NMS_HL", "@HL_CLEARED")
+
+    private fun clearMangle(tool: String, chain: String, marker: String): String = """
         (
           set -e
-          if iptables -w 5 -t mangle -S NMS_TTL >/dev/null 2>&1; then
-            while iptables -w 5 -t mangle -C FORWARD -j NMS_TTL 2>/dev/null; do
-              iptables -w 5 -t mangle -D FORWARD -j NMS_TTL
+          if $tool -w 5 -t mangle -S $chain >/dev/null 2>&1; then
+            while $tool -w 5 -t mangle -C FORWARD -j $chain 2>/dev/null; do
+              $tool -w 5 -t mangle -D FORWARD -j $chain
             done
-            iptables -w 5 -t mangle -F NMS_TTL
-            iptables -w 5 -t mangle -X NMS_TTL
+            $tool -w 5 -t mangle -F $chain
+            $tool -w 5 -t mangle -X $chain
           fi
-          echo @TTL_CLEARED
+          echo $marker
         )
     """.trimIndent()
 
     /** An unreferenced chain tests both the userspace extension and the kernel target. */
-    fun probeTtl(): String = """
+    fun probeTtl(): String = probe("iptables", "NMS_TTL_TEST", "TTL --ttl-set 64", "@TTL_SUPPORTED")
+
+    fun probeHl(): String = probe("ip6tables", "NMS_HL_TEST", "HL --hl-set 64", "@HL_SUPPORTED")
+
+    private fun probe(tool: String, chain: String, target: String, marker: String): String = """
         (
           set -e
-          iptables -w 5 -t mangle -N NMS_TTL_TEST 2>/dev/null || iptables -w 5 -t mangle -F NMS_TTL_TEST
-          iptables -w 5 -t mangle -A NMS_TTL_TEST -j TTL --ttl-set 64
-          echo @TTL_SUPPORTED
+          $tool -w 5 -t mangle -N $chain 2>/dev/null || $tool -w 5 -t mangle -F $chain
+          $tool -w 5 -t mangle -A $chain -j $target
+          echo $marker
         )
         (
-          iptables -w 5 -t mangle -F NMS_TTL_TEST 2>/dev/null
-          iptables -w 5 -t mangle -X NMS_TTL_TEST 2>/dev/null
+          $tool -w 5 -t mangle -F $chain 2>/dev/null
+          $tool -w 5 -t mangle -X $chain 2>/dev/null
         )
     """.trimIndent()
 
-    fun ttl(ap: String, upstreams: List<String>, value: Int): String {
+    fun ttl(ap: String, upstreams: List<String>, value: Int): String =
+        mangle("iptables", "NMS_TTL", "TTL --ttl-set", ap, upstreams, value, "@TTL_OK", clearTtl())
+
+    /** IPv6 hop limit of tethered traffic, set like the IPv4 TTL (same xt_HL module in the kernel). */
+    fun hl(ap: String, upstreams: List<String>, value: Int): String =
+        mangle("ip6tables", "NMS_HL", "HL --hl-set", ap, upstreams, value, "@HL_OK", clearHl())
+
+    private fun mangle(
+        tool: String, chain: String, target: String, ap: String, upstreams: List<String>, value: Int,
+        marker: String, clear: String,
+    ): String {
         require(validInterface(ap) && upstreams.isNotEmpty() && upstreams.all(::validInterface))
         require(value in 1..255)
-        val rules = upstreams.distinct().map { "-i $ap -o $it -j TTL --ttl-set $value" }
-        val checks = rules.joinToString(" &&\n") { "iptables -w 5 -t mangle -C NMS_TTL $it 2>/dev/null" }
-        val append = rules.joinToString("\n") { "iptables -w 5 -t mangle -A NMS_TTL $it" }
+        val rules = upstreams.distinct().map { "-i $ap -o $it -j $target $value" }
+        val checks = rules.joinToString(" &&\n") { "$tool -w 5 -t mangle -C $chain $it 2>/dev/null" }
+        val append = rules.joinToString("\n") { "$tool -w 5 -t mangle -A $chain $it" }
         return """
             (
               set -e
-              if iptables -w 5 -t mangle -C FORWARD -j NMS_TTL 2>/dev/null &&
+              if $tool -w 5 -t mangle -C FORWARD -j $chain 2>/dev/null &&
                  $checks &&
-                 [ "${'$'}(iptables -w 5 -t mangle -S NMS_TTL | wc -l)" -eq ${rules.size + 1} ]; then
-                echo @TTL_OK
+                 [ "${'$'}($tool -w 5 -t mangle -S $chain | wc -l)" -eq ${rules.size + 1} ]; then
+                echo $marker
                 exit 0
               fi
-              ${clearTtl()}
-              iptables -w 5 -t mangle -N NMS_TTL
+              $clear
+              $tool -w 5 -t mangle -N $chain
               $append
-              iptables -w 5 -t mangle -I FORWARD 1 -j NMS_TTL
-              echo @TTL_OK
+              $tool -w 5 -t mangle -I FORWARD 1 -j $chain
+              echo $marker
             )
         """.trimIndent()
     }

@@ -371,12 +371,6 @@
                     android:enabled="false" />
             </LinearLayout>
 
-            <com.google.android.material.materialswitch.MaterialSwitch
-                android:id="@+id/disableIpv6"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:enabled="false"
-                android:text="@string/tether_ipv6_disabled" />
 
             <TextView
                 android:id="@+id/tweaksOffloadHint"
