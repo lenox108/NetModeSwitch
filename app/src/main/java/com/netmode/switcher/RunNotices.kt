@@ -89,6 +89,18 @@ object RunNotices {
         nm(ctx).notify(tag(rule.id), ID, b.build())
     }
 
+    /** "Показать уведомление": a rule's own text, each one a notification of its own. */
+    fun message(text: String) {
+        val ctx = App.ctx
+        if (!visible(ctx, CHANNEL_DONE)) return
+        val n = Notification.Builder(ctx, CHANNEL_DONE)
+            .setSmallIcon(R.drawable.ic_tile)
+            .setContentTitle(text)
+            .setAutoCancel(true)
+            .build()
+        nm(ctx).notify("note:${System.currentTimeMillis()}", ID, n)
+    }
+
     fun cancel(ruleId: Long) {
         runCatching { nm(App.ctx).cancel(tag(ruleId), ID) }
     }

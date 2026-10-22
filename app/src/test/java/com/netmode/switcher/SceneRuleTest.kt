@@ -65,3 +65,18 @@ class ConflictTest {
         assertEquals(listOf("режим сети"), c[0].second)
     }
 }
+
+class SysSettingsTest {
+    @Test fun labelsAndSummary() {
+        assertEquals("вибрация", SysKey.RINGER.optionLabel("vibrate"))
+        assertEquals("2 мин", SysKey.TIMEOUT.optionLabel("120"))
+        assertEquals("как было", SysKey.BRIGHT.optionLabel("m:120"))
+        assertEquals("звонок: без звука, яркость: авто", SysKey.summary(linkedMapOf("RINGER" to "silent", "BRIGHT" to "auto")))
+    }
+
+    @Test fun settingsClashByName() {
+        fun r(id: Long, v: String) = AppRule(id = id, enabled = true, hour = 0, minute = 0, endHour = null, endMinute = null,
+            days = 0, packages = emptyList(), method = FreezeMethod.STOP, sys = mapOf("BRIGHT" to v))
+        assertEquals(listOf("яркость"), r(1, "auto").conflicts(listOf(r(2, "50")))[0].second)
+    }
+}

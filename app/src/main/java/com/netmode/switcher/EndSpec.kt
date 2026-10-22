@@ -39,6 +39,10 @@ data class EndSpec(
     val unload: Boolean = false,
     val unloadAll: Boolean = false,
     val steps: List<String> = emptyList(),
+    val sys: Map<String, String> = emptyMap(),
+    val note: String? = null,
+    val http: String? = null,
+    val shell: String? = null,
 ) {
     fun toJson(): JSONObject = JSONObject()
         .put("mode", mode.name).put("keepApps", keepApps)
@@ -54,6 +58,8 @@ data class EndSpec(
         .put("launch", JSONArray(launchApps))
         .put("unl", unload).put("unlAll", unloadAll)
         .put("steps", JSONArray(steps))
+        .put("sys", JSONObject(sys as Map<*, *>))
+        .put("note", note ?: JSONObject.NULL).put("http", http ?: JSONObject.NULL).put("shell", shell ?: JSONObject.NULL)
 
     companion object {
         private inline fun <reified T : Enum<T>> JSONObject.enum(key: String): T? =
@@ -80,6 +86,10 @@ data class EndSpec(
             launchApps = o.strings("launch"),
             unload = o.optBoolean("unl", false), unloadAll = o.optBoolean("unlAll", false),
             steps = o.strings("steps"),
+            sys = o.optJSONObject("sys")?.let { m -> m.keys().asSequence().associateWith { m.getString(it) } }.orEmpty(),
+            note = o.optString("note").takeIf { !o.isNull("note") && it.isNotEmpty() },
+            http = o.optString("http").takeIf { !o.isNull("http") && it.isNotEmpty() },
+            shell = o.optString("shell").takeIf { !o.isNull("shell") && it.isNotEmpty() },
         )
     }
 }

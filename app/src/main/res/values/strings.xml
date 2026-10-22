@@ -354,6 +354,15 @@
     <string name="extra_wifi_name">Название сети</string>
     <string name="extra_battery">Заряд ≤ …</string>
     <string name="conflict_hint">Может спорить с: %1$s</string>
+    <string name="act_sys">Системные настройки</string>
+    <string name="act_note">Показать уведомление</string>
+    <string name="act_http">HTTP-запрос</string>
+    <string name="act_shell">Shell-команда</string>
+    <string name="sys_leave">не менять</string>
+    <string name="text_note">Текст уведомления</string>
+    <string name="text_http">Адрес; для POST начни с «POST »</string>
+    <string name="text_shell">Команда (root или Shizuku)</string>
+    <string name="sys_refresh_hint">Частота экрана меняется не на всех прошивках</string>
     <string name="trigger_apps_required">Выбери приложение</string>
     <string name="app_leave_delay">Закрыто, если не вернулся</string>
     <string name="app_leave_now">сразу</string>

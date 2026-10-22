@@ -319,6 +319,7 @@ object AppFreezer {
                 if (rule.reconnect) reconnect(why)
                 if (rule.unload) unloadBackground(why, keep = rule.launchApps, all = rule.unloadAll)
                 launchApps(rule.launchApps, why)
+                OneShots.run(rule.note, rule.http, rule.shell, why)
             } else if (rule.unload) {
                 unloadBackground(why, keep = rule.launchApps, all = rule.unloadAll)
             }
@@ -705,6 +706,7 @@ object AppFreezer {
                 owner = endOwner(rule.id), message = App.ctx.getString(R.string.suspend_message, ""))
             if (rule.endUnload) unloadBackground(why, keep = rule.endLaunchApps, all = rule.endUnloadAll)
             launchApps(rule.endLaunchApps, why)
+            OneShots.run(rule.endNote, rule.endHttp, rule.endShell, why)
         }
         AlarmScheduler.rearm()
     }
@@ -984,6 +986,14 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
                 Toggle.OFF -> done += VpnControl.off()
                 null -> Unit
             }
+            for ((name, value) in rule.endSys) {
+                val key = SysKey.of(name) ?: continue
+                if (skip(FrozenApp.SYS + name)) continue
+                SysSettings.read(key)?.let { note(FrozenApp.SYS + name, it) }
+                runCatching { SysSettings.apply(key, value) }
+                    .onSuccess { done += key.title.lowercase() + ": " + key.optionLabel(value) }
+                    .onFailure { done += key.title.lowercase() + ": ошибка ${it.message}" }
+            }
             if (noted.isNotEmpty() || taken.isNotEmpty()) {
                 Prefs.frozen = Prefs.frozen.map { if (it.pkg in taken) it.copy(ruleId = rule.id) else it } + noted
             }
@@ -1039,6 +1049,7 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
                     owner = endOwner(rule.id), message = App.ctx.getString(R.string.suspend_message, ""))
                 if (r.endUnload) unloadBackground(why, keep = r.endLaunchApps, all = r.endUnloadAll)
                 launchApps(r.endLaunchApps, why)
+                OneShots.run(r.endNote, r.endHttp, r.endShell, why)
             }
         }
         // The end of the time is due even with the phone unlocked: its alarm.
@@ -1113,6 +1124,7 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
         "BT" -> setOf(FrozenApp.BLUETOOTH)
         "LOC" -> setOf(FrozenApp.LOCATION)
         "TILES" -> tiles.map { FrozenApp.TILE + it }.toSet()
+        "SYS" -> SysKey.entries.map { FrozenApp.SYS + it.name }.toSet()
         else -> emptySet()
     }
 
@@ -1157,6 +1169,9 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
         when (step) {
             "APPS" -> freezeApps(rule, why)
             "LAUNCH" -> launchApps(rule.launchApps, why)
+            "NOTE" -> OneShots.run(rule.note, null, null, why)
+            "HTTP" -> OneShots.run(null, rule.http, null, why)
+            "SHELL" -> OneShots.run(null, null, rule.shell, why)
             "UNLOAD" -> if (rule.unload) unloadBackground(why, keep = rule.launchApps, all = rule.unloadAll)
             "RECONNECT" -> if (rule.reconnect) reconnect(why)
             else -> keysOf(step, rule.tiles.keys).takeIf { it.isNotEmpty() }?.let { sideActions(rule, why, only = it) }
@@ -1169,6 +1184,9 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
             "APPS" -> freezeApps(rule, why, keys = rule.endStopApps.filter { heir(it) == null }, methodOf = rule::endMethodOf,
                 owner = endOwner(rule.id), message = App.ctx.getString(R.string.suspend_message, ""))
             "LAUNCH" -> launchApps(rule.endLaunchApps, why)
+            "NOTE" -> OneShots.run(rule.endNote, null, null, why)
+            "HTTP" -> OneShots.run(null, rule.endHttp, null, why)
+            "SHELL" -> OneShots.run(null, null, rule.endShell, why)
             "UNLOAD" -> if (rule.endUnload) unloadBackground(why, keep = rule.endLaunchApps, all = rule.endUnloadAll)
             // States to set exist only in a custom end; "as it was" has put them back already.
             else -> if (rule.endCustom) {
@@ -1289,6 +1307,7 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
             val unloadNow = rule.unload && !(defer && rule.packages.isNotEmpty())
             if (unloadNow) unloadBackground(why, keep = rule.launchApps, all = rule.unloadAll)
             launchApps(rule.launchApps, why)
+            OneShots.run(rule.note, rule.http, rule.shell, why)
             if (defer && rule.packages.isNotEmpty()) {
                 Prefs.pendingStarts = Prefs.pendingStarts + (rule.id to PENDING_APPS)
                 Prefs.log("($why): приложения остановятся через минуту после того, как погасишь экран")
@@ -1592,6 +1611,16 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
                 vpnJob?.await()?.let { done += it }
             }
 
+            for ((name, value) in rule.sys) {
+                val key = SysKey.of(name) ?: continue
+                if (!wants(FrozenApp.SYS + name)) continue
+                val before = SysSettings.read(key)
+                val ok = runCatching { SysSettings.apply(key, value) }
+                    .onFailure { done += key.title.lowercase() + ": ошибка ${it.message}" }.isSuccess
+                if (!ok) continue
+                done += key.title.lowercase() + ": " + key.optionLabel(value)
+                if (before != null) record(FrozenApp.SYS + name, before)
+            }
             Prefs.frozen = Prefs.frozen.filterNot { e -> e.pkg in dropped || added.any { it.pkg == e.pkg } } + added
             if (done.isNotEmpty()) Prefs.log("($why): ${done.joinToString(", ")}")
         } catch (e: Exception) {
@@ -1736,6 +1765,12 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
             val line = runCatching { if (prev == "off") VpnControl.off() else VpnControl.on(prev) }
                 .getOrElse { "VPN: ошибка ${it.message}" }
             Prefs.log("возврат: $line")
+        }
+        for (e in entries.filter { it.pkg.startsWith(FrozenApp.SYS) && it.prev != null }) {
+            val key = SysKey.of(e.pkg.removePrefix(FrozenApp.SYS)) ?: continue
+            runCatching { SysSettings.apply(key, e.prev!!) }
+                .onSuccess { Prefs.log("возврат: ${key.title.lowercase()} — как было") }
+                .onFailure { netFailed++ }
         }
         if (tileBack.isNotEmpty() || vpnBack.isNotEmpty()) {
             val lines = runCatching { Tiles.set(tileBack + vpnBack, vpn = vpnBack.keys) }.getOrDefault(emptyList())

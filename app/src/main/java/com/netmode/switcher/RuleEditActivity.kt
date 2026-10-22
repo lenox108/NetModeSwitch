@@ -45,12 +45,19 @@ class RuleEditActivity : AppCompatActivity() {
         BT(R.drawable.ic_t_bt, R.string.bluetooth),
         LOC(R.drawable.ic_a_locoff, R.string.location_short),
         TILES(R.drawable.ic_a_tiles, R.string.act_tiles),
+        SYS(R.drawable.ic_settings, R.string.act_sys),
         APPS(R.drawable.ic_apps, R.string.act_apps),
         LAUNCH(R.drawable.ic_t_app, R.string.act_launch),
-        UNLOAD(R.drawable.ic_a_clean, R.string.act_unload);
+        UNLOAD(R.drawable.ic_a_clean, R.string.act_unload),
+        NOTE(R.drawable.ic_log, R.string.act_note),
+        HTTP(R.drawable.ic_t_net, R.string.act_http),
+        SHELL(R.drawable.ic_edit, R.string.act_shell);
 
         /** Works under both endings and is not mirrored into a custom end: the app actions. */
-        val anyEnd: Boolean get() = this == APPS || this == LAUNCH || this == UNLOAD
+        val anyEnd: Boolean get() = this == APPS || this == LAUNCH || this == UNLOAD || isText
+
+        /** A one-off with a text of its own: a notification, a request, a command. */
+        val isText: Boolean get() = this == NOTE || this == HTTP || this == SHELL
 
         /** Only at the start: something done once, with nothing to put back or set at the end. */
         val startOnly: Boolean get() = this == RECONNECT
@@ -129,6 +136,9 @@ class RuleEditActivity : AppCompatActivity() {
     private var keepStopped = setOf<String>()
     private var launchApps = listOf<String>()
     private var unloadAll = false
+    private var sys = mapOf<String, String>()
+    /** The one-offs' texts: [Act.NOTE], [Act.HTTP], [Act.SHELL]. */
+    private val texts = mutableMapOf<Act, String>()
 
     // --- "at the end" ---
     /** One ending's actions: the rule's end, or the unlock of a lock rule with a time. */
@@ -150,6 +160,8 @@ class RuleEditActivity : AppCompatActivity() {
         var appMethods = mapOf<String, FreezeMethod>()
         var launchApps = listOf<String>()
         var unloadAll = false
+        var sys = mapOf<String, String>()
+        val texts = mutableMapOf<Act, String>()
 
         fun clear(a: Act) {
             when (a) {
@@ -159,6 +171,8 @@ class RuleEditActivity : AppCompatActivity() {
                 Act.LOC -> loc = null; Act.TILES -> tiles = emptyMap()
                 Act.APPS -> { stopApps = emptyList(); appMethods = emptyMap() }
                 Act.LAUNCH -> launchApps = emptyList()
+                Act.SYS -> sys = emptyMap()
+                Act.NOTE, Act.HTTP, Act.SHELL -> texts -= a
                 Act.UNLOAD, Act.RECONNECT -> Unit
             }
         }
@@ -184,6 +198,11 @@ class RuleEditActivity : AppCompatActivity() {
             if (bt != null) shown += Act.BT
             if (loc != null) shown += Act.LOC
             if (tiles.isNotEmpty()) shown += Act.TILES
+            sys = e.sys
+            if (sys.isNotEmpty()) shown += Act.SYS
+            e.note?.let { texts[Act.NOTE] = it; shown += Act.NOTE }
+            e.http?.let { texts[Act.HTTP] = it; shown += Act.HTTP }
+            e.shell?.let { texts[Act.SHELL] = it; shown += Act.SHELL }
         }
     }
 
@@ -331,11 +350,19 @@ class RuleEditActivity : AppCompatActivity() {
         if (locOff) shown += Act.LOC
         if (tiles.isNotEmpty()) shown += Act.TILES
         if (packages.isNotEmpty()) shown += Act.APPS
+        sys = r.sys
+        if (sys.isNotEmpty()) shown += Act.SYS
+        r.note?.let { texts[Act.NOTE] = it; shown += Act.NOTE }
+        r.http?.let { texts[Act.HTTP] = it; shown += Act.HTTP }
+        r.shell?.let { texts[Act.SHELL] = it; shown += Act.SHELL }
+        r.endNote?.let { atEnd.texts[Act.NOTE] = it; atEnd.shown += Act.NOTE }
+        r.endHttp?.let { atEnd.texts[Act.HTTP] = it; atEnd.shown += Act.HTTP }
+        r.endShell?.let { atEnd.texts[Act.SHELL] = it; atEnd.shown += Act.SHELL }
 
         (if (r.endCustom) v.endCustom else v.endRestore).isChecked = true
         atEnd.net = r.endNet; atEnd.data = r.endData; atEnd.wifi = r.endWifi; atEnd.hotspot = r.endHotspot to r.endHotspotVia
         atEnd.vpn = r.endVpn; atEnd.dataSim = r.endDataSim; atEnd.airplane = r.endAirplane; atEnd.powerSave = r.endPowerSave
-        atEnd.bt = r.endBt; atEnd.loc = r.endLoc; atEnd.tiles = r.endTiles
+        atEnd.bt = r.endBt; atEnd.loc = r.endLoc; atEnd.tiles = r.endTiles; atEnd.sys = r.endSys
         atEnd.shown += shown.filter { !it.anyEnd }
         if (r.unload) shown += Act.UNLOAD
         if (r.reconnect) shown += Act.RECONNECT
@@ -352,6 +379,7 @@ class RuleEditActivity : AppCompatActivity() {
         if (atEnd.bt != null) atEnd.shown += Act.BT
         if (atEnd.loc != null) atEnd.shown += Act.LOC
         if (atEnd.tiles.isNotEmpty()) atEnd.shown += Act.TILES
+        if (atEnd.sys.isNotEmpty()) atEnd.shown += Act.SYS
         // The unlock block: its own, or — for a rule from before it — the same as the end,
         // which saves back as none: unlocking then ends the night, as it always did.
         val u = r.unlockEnd ?: r.endSpec
@@ -869,6 +897,19 @@ class RuleEditActivity : AppCompatActivity() {
                     row(box, a, getString(a.title), null, remove)
                     sub(box, hint(getString(R.string.act_reconnect_hint)))
                 }
+                Act.SYS -> {
+                    row(box, a, getString(a.title), changeButton(sys.isEmpty()) {
+                        pickSys(sys) { sys = it; if (sys.isEmpty()) shown -= Act.SYS; paint() }
+                    }, remove)
+                    if (sys.isNotEmpty()) sub(box, hint(SysKey.summary(sys)))
+                    if (SysKey.REFRESH.name in sys) sub(box, hint(getString(R.string.sys_refresh_hint)))
+                }
+                Act.NOTE, Act.HTTP, Act.SHELL -> {
+                    row(box, a, getString(a.title), changeButton(texts[a] == null) {
+                        askText(a, texts[a]) { t -> if (t == null) { texts -= a; shown -= a } else texts[a] = t; paint() }
+                    }, remove)
+                    texts[a]?.let { sub(box, hint(it)) }
+                }
                 Act.TILES -> {
                     val b = MaterialButton(this, null, android.R.attr.borderlessButtonStyle).apply {
                         isAllCaps = false
@@ -1025,6 +1066,16 @@ class RuleEditActivity : AppCompatActivity() {
                     row(box, a, getString(a.title), b, remove)
                     if (st.launchApps.isNotEmpty()) sub(box, hint(AppPickerActivity.labels(st.launchApps).joinToString(", ")))
                 }
+                Act.SYS -> {
+                    row(box, a, getString(a.title), changeButton(st.sys.isEmpty()) { pickSys(st.sys) { st.sys = it; paint() } }, remove)
+                    if (st.sys.isNotEmpty()) sub(box, hint(SysKey.summary(st.sys)))
+                }
+                Act.NOTE, Act.HTTP, Act.SHELL -> {
+                    row(box, a, getString(a.title), changeButton(st.texts[a] == null) {
+                        askText(a, st.texts[a]) { t -> if (t == null) { st.texts -= a; st.shown -= a } else st.texts[a] = t; paint() }
+                    }, remove)
+                    st.texts[a]?.let { sub(box, hint(it)) }
+                }
                 // Never offered at the end (see allowedEnd).
                 Act.RECONNECT -> Unit
             }
@@ -1180,6 +1231,8 @@ class RuleEditActivity : AppCompatActivity() {
             Act.AIRPLANE -> airplane = null; Act.POWERSAVE -> powerSave = null; Act.BT -> btOff = false
             Act.LOC -> locOff = false; Act.TILES -> tiles = emptyMap(); Act.APPS -> packages = emptyList()
             Act.LAUNCH -> launchApps = emptyList()
+            Act.SYS -> sys = emptyMap()
+            Act.NOTE, Act.HTTP, Act.SHELL -> texts -= a
             Act.UNLOAD, Act.RECONNECT -> Unit
         }
         paint()
@@ -1203,6 +1256,10 @@ class RuleEditActivity : AppCompatActivity() {
                     when (a) {
                         Act.APPS -> pickWithMethods(if (forUnlock) Pick.UNLOCK_STOP else Pick.END_STOP, target.stopApps, target.appMethods)
                         Act.LAUNCH -> pickPlain(if (forUnlock) Pick.UNLOCK_LAUNCH else Pick.END_LAUNCH, target.launchApps)
+                        Act.SYS -> pickSys(target.sys) { target.sys = it; paint() }
+                        Act.NOTE, Act.HTTP, Act.SHELL -> askText(a, null) { t ->
+                            if (t == null) target.shown -= a else target.texts[a] = t; paint()
+                        }
                         else -> Unit
                     }
                     paint()
@@ -1218,6 +1275,8 @@ class RuleEditActivity : AppCompatActivity() {
                     Act.TILES -> pickTiles(tiles) { tiles = it; if (tiles.isEmpty()) shown -= Act.TILES; paint() }
                     Act.APPS -> pickApps()
                     Act.LAUNCH -> pickPlain(Pick.LAUNCH, launchApps)
+                    Act.SYS -> pickSys(sys) { sys = it; if (sys.isEmpty()) shown -= Act.SYS; paint() }
+                    Act.NOTE, Act.HTTP, Act.SHELL -> askText(a, null) { t -> if (t == null) shown -= a else texts[a] = t; paint() }
                     else -> Unit
                 }
                 paint()
@@ -1225,6 +1284,50 @@ class RuleEditActivity : AppCompatActivity() {
                 v.actions.post { rowChoices[a]?.performClick() }
             }
             .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun changeButton(empty: Boolean, onClick: () -> Unit) =
+        MaterialButton(this, null, android.R.attr.borderlessButtonStyle).apply {
+            isAllCaps = false
+            text = getString(if (empty) R.string.choose else R.string.change)
+            setOnClickListener { onClick() }
+        }
+
+    /** Each setting, then its value; "не менять" takes it out. */
+    private fun pickSys(current: Map<String, String>, done: (Map<String, String>) -> Unit) {
+        val keys = SysKey.entries
+        val labels = keys.map { k -> k.title + (current[k.name]?.let { " — " + k.optionLabel(it) } ?: "") }
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.act_sys)
+            .setItems(labels.toTypedArray()) { _, i ->
+                val k = keys[i]
+                MaterialAlertDialogBuilder(this)
+                    .setTitle(k.title)
+                    .setItems((listOf(getString(R.string.sys_leave)) + k.options.map { k.optionLabel(it) }).toTypedArray()) { _, j ->
+                        done(if (j == 0) current - k.name else current + (k.name to k.options[j - 1]))
+                    }
+                    .show()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    /** The text of a one-off; blank or cancelled hands back null for a new one. */
+    private fun askText(a: Act, current: String?, done: (String?) -> Unit) {
+        val input = com.google.android.material.textfield.TextInputEditText(this).apply {
+            setText(current.orEmpty())
+            if (a != Act.NOTE) typeface = android.graphics.Typeface.MONOSPACE
+        }
+        val box = android.widget.FrameLayout(this).apply {
+            setPadding(dp(24), dp(8), dp(24), 0)
+            addView(input)
+        }
+        MaterialAlertDialogBuilder(this)
+            .setTitle(when (a) { Act.NOTE -> R.string.text_note; Act.HTTP -> R.string.text_http; else -> R.string.text_shell })
+            .setView(box)
+            .setPositiveButton(android.R.string.ok) { _, _ -> done(input.text?.toString()?.trim()?.ifEmpty { null }) }
+            .setNegativeButton(R.string.cancel) { _, _ -> if (current == null) done(null) }
             .show()
     }
 
@@ -1502,6 +1605,14 @@ class RuleEditActivity : AppCompatActivity() {
             lockWindow = t == Trigger.LOCKED && v.lockWindow.isChecked,
             unload = Act.UNLOAD in shown,
             reconnect = Act.RECONNECT in shown,
+            sys = sys.takeIf { Act.SYS in shown }.orEmpty(),
+            endSys = e(Act.SYS, atEnd.sys).orEmpty(),
+            note = texts[Act.NOTE].takeIf { Act.NOTE in shown },
+            http = texts[Act.HTTP].takeIf { Act.HTTP in shown },
+            shell = texts[Act.SHELL].takeIf { Act.SHELL in shown },
+            endNote = atEnd.texts[Act.NOTE].takeIf { restores && Act.NOTE in atEnd.shown },
+            endHttp = atEnd.texts[Act.HTTP].takeIf { restores && Act.HTTP in atEnd.shown },
+            endShell = atEnd.texts[Act.SHELL].takeIf { restores && Act.SHELL in atEnd.shown },
             notice = notice.takeIf { t != Trigger.MANUAL } ?: RunNotice.SILENT,
             extras = extras.toList().takeIf { t != Trigger.MANUAL && t != Trigger.WIFI_LEFT }.orEmpty(),
             endUnload = restores && Act.UNLOAD in atEnd.shown,
@@ -1544,6 +1655,9 @@ class RuleEditActivity : AppCompatActivity() {
             stopApps = stop, appMethods = u.appMethods.filterKeys { it in stop },
             launchApps = u.launchApps.takeIf { Act.LAUNCH in u.shown }.orEmpty(),
             unload = Act.UNLOAD in u.shown, unloadAll = u.unloadAll && Act.UNLOAD in u.shown,
+            sys = e(Act.SYS, u.sys).orEmpty(),
+            note = u.texts[Act.NOTE].takeIf { Act.NOTE in u.shown }, http = u.texts[Act.HTTP].takeIf { Act.HTTP in u.shown },
+            shell = u.texts[Act.SHELL].takeIf { Act.SHELL in u.shown },
             steps = Steps.toSave(u.steps.filter { s ->
                 Steps.pauseOf(s) != null || u.shown.any { it.name == s && allowedEnd(it) && (custom || it.anyEnd) }
             }, Steps.END_ORDER),

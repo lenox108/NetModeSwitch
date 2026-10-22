@@ -275,6 +275,16 @@ data class AppRule(
     val notice: RunNotice = RunNotice.SILENT,
     /** "И ещё если": states the rule needs besides its trigger (see [Extra]). */
     val extras: List<Extra> = emptyList(),
+    /** "Системные настройки": [SysKey] name → option code, at the start and in a custom end. */
+    val sys: Map<String, String> = emptyMap(),
+    val endSys: Map<String, String> = emptyMap(),
+    /** One-offs at the start and at the end, whichever way it ends: a notification, a request, a command. */
+    val note: String? = null,
+    val endNote: String? = null,
+    val http: String? = null,
+    val endHttp: String? = null,
+    val shell: String? = null,
+    val endShell: String? = null,
 ) {
     /** What the start sets, key → value, to tell rules that pull the same thing different ways. */
     val sets: Map<String, String>
@@ -290,6 +300,7 @@ data class AppRule(
             if (bluetoothOff) put("BT", "OFF")
             if (locationOff) put("LOC", "OFF")
             tiles.forEach { (c, t) -> put("TILE:$c", t.name) }
+            sys.forEach { (k, v) -> put("SYS:$k", v) }
         }
 
     /** Other enabled rules that set something this one sets, to another value: rule → what. */
@@ -298,7 +309,8 @@ data class AppRule(
         return others.filter { it.enabled && it.id != id }.mapNotNull { o ->
             val theirs = o.sets
             val clash = mine.filter { (k, v) -> theirs[k] != null && theirs[k] != v }.keys
-                .map { CONFLICT_NAMES[it.removePrefix("TILE:").let { k -> if (it.startsWith("TILE:")) "TILE" else k.trimEnd('0', '1') }] ?: it }
+                .map { k -> SysKey.of(k.removePrefix("SYS:"))?.title?.lowercase()?.takeIf { k.startsWith("SYS:") }
+                    ?: CONFLICT_NAMES[k.substringBefore(':').trimEnd('0', '1')] ?: k }
                 .distinct()
             if (clash.isEmpty()) null else o to clash
         }
@@ -312,6 +324,7 @@ data class AppRule(
             bt = endBt, loc = endLoc, vpn = endVpn, airplane = endAirplane, powerSave = endPowerSave,
             dataSim = endDataSim, tiles = endTiles, stopApps = endStopApps, appMethods = endAppMethods,
             launchApps = endLaunchApps, unload = endUnload, unloadAll = endUnloadAll, steps = endSteps,
+            sys = endSys, note = endNote, http = endHttp, shell = endShell,
         )
 
     /** This rule with [e] as its end: the unlock block runs through the end's own code. */
@@ -321,6 +334,7 @@ data class AppRule(
         endBt = e.bt, endLoc = e.loc, endVpn = e.vpn, endAirplane = e.airplane, endPowerSave = e.powerSave,
         endDataSim = e.dataSim, endTiles = e.tiles, endStopApps = e.stopApps, endAppMethods = e.appMethods,
         endLaunchApps = e.launchApps, endUnload = e.unload, endUnloadAll = e.unloadAll, endSteps = e.steps,
+        endSys = e.sys, endNote = e.note, endHttp = e.http, endShell = e.shell,
     )
 
     /** Unlocking inside the time has its own block: the night goes on until the time is over. */
@@ -334,8 +348,9 @@ data class AppRule(
         get() = packages.isNotEmpty() || bluetoothOff || locationOff ||
             wifi != null || hotspot != null || netMode != null || mobileData != null ||
             tiles.isNotEmpty() || vpn != null || airplane != null || powerSave != null || dataSim != null ||
-            launchApps.isNotEmpty() || unload || reconnect ||
-            (restores && (endStopApps.isNotEmpty() || endLaunchApps.isNotEmpty() || endUnload || endSets))
+            launchApps.isNotEmpty() || unload || reconnect || sys.isNotEmpty() || note != null || http != null || shell != null ||
+            (restores && (endStopApps.isNotEmpty() || endLaunchApps.isNotEmpty() || endUnload || endSets ||
+                endNote != null || endHttp != null || endShell != null))
 
     /**
      * The end sets something of its own ("Задать вручную"), which is enough for a rule: "when
@@ -344,7 +359,7 @@ data class AppRule(
     private val endSets: Boolean
         get() = endCustom && (endNet != null || endData != null || endWifi != null || endHotspot != null ||
             endBt != null || endLoc != null || endVpn != null || endAirplane != null || endPowerSave != null ||
-            endDataSim != null || endTiles.isNotEmpty())
+            endDataSim != null || endTiles.isNotEmpty() || endSys.isNotEmpty())
 
     /** Whether an entry in the frozen list still belongs to this rule as it now stands. */
     fun covers(entry: String): Boolean = when {
@@ -361,6 +376,7 @@ data class AppRule(
         entry == FrozenApp.AIRPLANE -> airplane != null
         entry == FrozenApp.POWERSAVE -> powerSave != null
         entry == FrozenApp.DATASIM -> dataSim != null
+        entry.startsWith(FrozenApp.SYS) -> entry.removePrefix(FrozenApp.SYS) in sys
         entry.startsWith(FrozenApp.VPN_BACK) -> entry.removePrefix(FrozenApp.VPN_BACK) in packages
         else -> entry in packages
     }
@@ -381,6 +397,10 @@ data class AppRule(
             "POWERSAVE" to powerSave?.let { if (it == Toggle.ON) "энергосбережение вкл" else "энергосбережение выкл" },
             "DATASIM" to dataSim?.let { "интернет через SIM ${it + 1}" },
             "RECONNECT" to "переподключить моб. сеть".takeIf { reconnect },
+            "SYS" to sys.takeIf { it.isNotEmpty() }?.let { SysKey.summary(it) },
+            "NOTE" to note?.let { "уведомление «$it»" },
+            "HTTP" to http?.let { "HTTP-запрос" },
+            "SHELL" to shell?.let { "команда" },
             "UNLOAD" to (if (unloadAll) "выгрузить всё" else "выгрузить фон").takeIf { unload },
             "LAUNCH" to launchApps.takeIf { it.isNotEmpty() }?.let { "открыть: " + AppPickerActivity.labels(it).joinToString(", ") },
         ))
@@ -431,6 +451,9 @@ data class AppRule(
                 },
                 "UNLOAD" to (if (endUnloadAll) "выгрузить всё" else "выгрузить фон").takeIf { endUnload },
                 "LAUNCH" to endLaunchApps.takeIf { it.isNotEmpty() }?.let { "открыть: " + AppPickerActivity.labels(it).joinToString(", ") },
+                "NOTE" to endNote?.let { "уведомление «$it»" },
+                "HTTP" to endHttp?.let { "HTTP-запрос" },
+                "SHELL" to endShell?.let { "команда" },
             )
             if (!endCustom) {
                 val text = ordered(endSteps, apps)
@@ -445,6 +468,7 @@ data class AppRule(
                 "VPN" to t("VPN", endVpn), "AIRPLANE" to t("полёт", endAirplane), "POWERSAVE" to t("энергосбережение", endPowerSave),
                 "DATASIM" to endDataSim?.let { "интернет через SIM ${it + 1}" },
                 "TILES" to endTiles.size.takeIf { it > 0 }?.let { "плитки: $it" },
+                "SYS" to endSys.takeIf { it.isNotEmpty() }?.let { SysKey.summary(it) },
             )
             return "в конце: " + ordered(endSteps, LinkedHashMap(parts)).ifEmpty { "ничего не менять" }
         }
@@ -613,6 +637,10 @@ data class AppRule(
         .put("eMethods", JSONObject().apply { endAppMethods.forEach { (p, m) -> put(p, m.name) } })
         .put("recon", reconnect).put("notice", notice.name)
         .put("extras", JSONArray().apply { extras.forEach { put(it.toJson()) } })
+        .put("sys", JSONObject(sys as Map<*, *>)).put("eSys", JSONObject(endSys as Map<*, *>))
+        .put("note", note ?: JSONObject.NULL).put("eNote", endNote ?: JSONObject.NULL)
+        .put("http", http ?: JSONObject.NULL).put("eHttp", endHttp ?: JSONObject.NULL)
+        .put("shell", shell ?: JSONObject.NULL).put("eShell", endShell ?: JSONObject.NULL)
         .put("leaveS", appLeaveDelay).put("tPass", JSONArray(appPassThrough)).put("screenStay", appScreenOffStays)
 
     companion object {
@@ -712,6 +740,10 @@ data class AppRule(
                     reconnect = o.optBoolean("recon", false),
                     notice = runCatching { RunNotice.valueOf(o.getString("notice")) }.getOrDefault(RunNotice.SILENT),
                     extras = Extra.listFromJson(o.optJSONArray("extras")),
+                    sys = o.optJSONObject("sys")?.let { m -> m.keys().asSequence().associateWith { m.getString(it) } }.orEmpty(),
+                    endSys = o.optJSONObject("eSys")?.let { m -> m.keys().asSequence().associateWith { m.getString(it) } }.orEmpty(),
+                    note = o.str("note"), endNote = o.str("eNote"), http = o.str("http"), endHttp = o.str("eHttp"),
+                    shell = o.str("shell"), endShell = o.str("eShell"),
                     endAppMethods = o.optJSONObject("eMethods")?.let { m ->
                         m.keys().asSequence().mapNotNull { p ->
                             runCatching { FreezeMethod.valueOf(m.getString(p)) }.getOrNull()?.let { p to it }
@@ -766,6 +798,8 @@ data class FrozenApp(
         const val NET = "#net"
         const val AIRPLANE = "#airplane"
         const val POWERSAVE = "#powersave"
+        /** Followed by a [SysKey] name: "#sys:BRIGHT"; prev is [SysSettings.read]'s raw form. */
+        const val SYS = "#sys:"
         /** The SIM used for mobile data; prev is its slot. */
         const val DATASIM = "#datasim"
 
