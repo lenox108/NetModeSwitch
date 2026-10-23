@@ -49,6 +49,28 @@ object AppPresence {
         pkg in SYSTEM || (cls != null && BROWSER_TAB.containsMatchIn(cls))
 
     /**
+     * Apps still on screen behind the one in front: a video in a picture-in-picture window, the
+     * other half of a split screen. Their activity is paused, not stopped — pressing Home stops
+     * it, going to a small window only pauses it — so from activity events: resumed and paused
+     * count as on screen until stopped or destroyed.
+     */
+    class Behind {
+        /** "pkg/cls" of each activity resumed or paused and not stopped since. */
+        private val shown = LinkedHashMap<String, String>()
+
+        /** An activity event: [visible] for resumed or paused, false for stopped or destroyed. */
+        fun onEvent(pkg: String, cls: String?, visible: Boolean) {
+            val key = "$pkg/$cls"
+            if (visible) shown[key] = pkg else shown.remove(key)
+        }
+
+        fun clear() = shown.clear()
+
+        /** Packages on screen apart from [front]. */
+        fun packages(front: String?): Set<String> = shown.values.filterTo(HashSet()) { it != front }
+    }
+
+    /**
      * One rule, one look. [open]: the rule's window is open. [awaySince]: when its app was last
      * seen leaving, while the delay runs. Leaving starts the delay; a pass-through screen or,
      * with [screenOffStays], the screen going off keep the rule as it is — unless the app has

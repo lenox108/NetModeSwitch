@@ -67,6 +67,9 @@ object ConditionWatch {
     private const val CAR_CONNECTION_UPDATED = "androidx.car.app.connection.action.CAR_CONNECTION_UPDATED"
     private val CAR_CONNECTION_URI: android.net.Uri = android.net.Uri.parse("content://androidx.car.app.connection")
     private const val CAR_CONNECTION_STATE = "CarConnectionState"
+
+    /** UsageEvents.Event.ACTIVITY_DESTROYED: a system API, though the events carry it. */
+    private const val ACTIVITY_DESTROYED = 24
     private const val TRAFFIC_EVERY_MS = 10 * 60_000L
 
     /**
@@ -99,6 +102,11 @@ object ConditionWatch {
     @Volatile private var foreground: String? = null
     /** The app on screen is only on top of another for a moment (see [AppPresence.passes]). */
     @Volatile private var foregroundPasses = false
+    /** Apps still on screen behind [foreground]: picture-in-picture, split screen (see [AppPresence.Behind]). */
+    @Volatile private var behind = emptySet<String>()
+    private val behindTracker = AppPresence.Behind()
+    /** Up to when usage events have been read for [behindTracker] (wall clock); 0: not yet. */
+    private var behindReadTo = 0L
     /** APP_OPEN rules whose app has left, while their delay runs: since when. */
     private val awaySince = mutableMapOf<Long, Long>()
     @Volatile private var cells: Set<String>? = null
@@ -194,6 +202,8 @@ object ConditionWatch {
         val seen = when {
             fg != null && rule.triggerApps.any { AppKey.pkg(it) == fg } -> AppPresence.Seen.APP
             !screenOn -> AppPresence.Seen.SCREEN_OFF
+            // Shrunk to a small window over the desktop or another app: still watched.
+            rule.triggerApps.any { AppKey.pkg(it) in behind } -> AppPresence.Seen.APP
             fg == null -> AppPresence.Seen.UNKNOWN
             foregroundPasses || rule.appPassThrough.any { AppKey.pkg(it) == fg } -> AppPresence.Seen.PASS
             else -> AppPresence.Seen.OTHER
@@ -369,6 +379,7 @@ object ConditionWatch {
                     if (!locked) { locked = true; lockedAt = screenOffAt }
                     foreground = null
                     foregroundPasses = false
+                    behind = emptySet()
                     appPoll?.cancel()
                     netProbe?.cancel()
                     scheduleScreenAlarm(context)
@@ -818,6 +829,8 @@ object ConditionWatch {
         if (pkg == foreground && passes == foregroundPasses) return
         foreground = pkg
         foregroundPasses = passes
+        // The app left for a small window is still on screen: know it before the rule looks.
+        refreshBehind()
         Log.i(TAG, "on screen (instant): $pkg")
         evaluate(Trigger.APP_OPEN)
     }
@@ -826,17 +839,54 @@ object ConditionWatch {
         appPoll?.cancel()
         appPoll = App.scope.launch {
             while (screenOn) {
-                // The service reports each change itself; looking as well would only cost.
-                if (AppWatchService.connected) { delay(2_000); continue }
-                val fg = runCatching { foregroundApp() }.getOrNull()
-                if (fg != null && (fg.first != foreground || fg.second != foregroundPasses)) {
-                    foreground = fg.first
-                    foregroundPasses = fg.second
-                    evaluate(Trigger.APP_OPEN)
+                var changed = false
+                // The service reports each change of the front app itself; looking as well would only cost.
+                if (!AppWatchService.connected) {
+                    val fg = runCatching { foregroundApp() }.getOrNull()
+                    if (fg != null && (fg.first != foreground || fg.second != foregroundPasses)) {
+                        foreground = fg.first
+                        foregroundPasses = fg.second
+                        changed = true
+                    }
                 }
+                // A small window closing raises no window event: this look is needed either way.
+                if (refreshBehind()) changed = true
+                if (changed) evaluate(Trigger.APP_OPEN)
                 delay(2_000)
             }
         }
+    }
+
+    /** Reads [behind] afresh; whether it changed. */
+    private fun refreshBehind(): Boolean {
+        val now = runCatching { synchronized(behindTracker) { readBehind() } }.getOrNull() ?: return false
+        if (now == behind) return false
+        behind = now
+        Log.i(TAG, "on screen behind: ${now.joinToString().ifEmpty { "-" }}")
+        return true
+    }
+
+    /**
+     * Apps on screen apart from the one in front, from the usage events since the last read —
+     * the first read goes back an hour, for a small window opened before the rule was.
+     */
+    private fun readBehind(): Set<String> {
+        val usm = App.ctx.getSystemService(UsageStatsManager::class.java)
+        val end = System.currentTimeMillis()
+        val start = if (behindReadTo == 0L) end - 3_600_000L else behindReadTo
+        val events = usm.queryEvents(start, end)
+        val e = UsageEvents.Event()
+        while (events.hasNextEvent()) {
+            events.getNextEvent(e)
+            when (e.eventType) {
+                UsageEvents.Event.ACTIVITY_RESUMED, UsageEvents.Event.ACTIVITY_PAUSED ->
+                    behindTracker.onEvent(e.packageName, e.className, true)
+                UsageEvents.Event.ACTIVITY_STOPPED, ACTIVITY_DESTROYED ->
+                    behindTracker.onEvent(e.packageName, e.className, false)
+            }
+        }
+        behindReadTo = end
+        return behindTracker.packages(foreground)
     }
 
     /**

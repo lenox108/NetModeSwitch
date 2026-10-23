@@ -58,4 +58,21 @@ class AppPresenceTest {
         assertFalse(AppPresence.passes("com.android.chrome", "com.google.android.apps.chrome.Main"))
         assertFalse(AppPresence.passes("org.telegram.messenger", null))
     }
+
+    @Test fun smallWindowStaysOnScreenUntilStopped() {
+        val b = AppPresence.Behind()
+        b.onEvent("com.google.android.youtube", "WatchWhileActivity", true)
+        b.onEvent("com.android.launcher", "Launcher", true)
+        assertEquals(setOf("com.google.android.youtube"), b.packages("com.android.launcher"))
+        assertEquals(setOf("com.android.launcher"), b.packages("com.google.android.youtube"))
+        b.onEvent("com.google.android.youtube", "WatchWhileActivity", false)
+        assertEquals(emptySet<String>(), b.packages("com.android.launcher"))
+    }
+
+    @Test fun anotherActivityOfTheAppStoppingKeepsIt() {
+        val b = AppPresence.Behind()
+        b.onEvent("com.google.android.youtube", "WatchWhileActivity", true)
+        b.onEvent("com.google.android.youtube", "SettingsActivity", false)
+        assertEquals(setOf("com.google.android.youtube"), b.packages("com.android.launcher"))
+    }
 }
