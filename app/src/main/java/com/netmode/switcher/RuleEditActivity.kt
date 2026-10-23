@@ -106,6 +106,7 @@ class RuleEditActivity : AppCompatActivity() {
     private var triggerApps = listOf<String>()
     private var appPass = listOf<String>()
     private var appLeaveDelay = 0
+    private var carLeaveDelay = 0
     private var cells = setOf<String>()
     private var batteryLevel = 20
     private var screenMinutes = 10
@@ -326,6 +327,8 @@ class RuleEditActivity : AppCompatActivity() {
         extras += r?.extras.orEmpty()
         // A new rule waits a little: leaving for a moment is the common case, not the exception.
         appLeaveDelay = r?.appLeaveDelay ?: 5
+        // Wireless Android Auto drops for a few seconds now and then: a new rule rides them out.
+        carLeaveDelay = if (r == null) 30 else r.appLeaveDelay.takeIf { r.trigger == Trigger.CAR } ?: 30
         v.appScreenStays.isChecked = r?.appScreenOffStays ?: false
         cells = r?.cells.orEmpty()
         v.placeName.setText(r?.placeName.orEmpty())
@@ -655,6 +658,7 @@ class RuleEditActivity : AppCompatActivity() {
         v.releaseOnLeave.setText(if (t == Trigger.MANUAL) R.string.manual_toggle else R.string.release_on_leave)
         show(v.triggerApps, t == Trigger.APP_OPEN || t == Trigger.NOTIFY_APP)
         show(v.appLeaveBlock, t == Trigger.APP_OPEN)
+        show(v.carLeaveBlock, t == Trigger.CAR)
         show(v.placeBlock, t == Trigger.PLACE)
         val condition = t.isCondition && !wifiLeft
         show(v.releaseOnLeave, condition)
@@ -740,6 +744,9 @@ class RuleEditActivity : AppCompatActivity() {
         val delays = (LEAVE_DELAYS + appLeaveDelay).distinct().sorted()
         v.appLeaveDelay.setItems(delays.map { leaveLabel(it) }, delays.indexOf(appLeaveDelay))
         v.appLeaveDelay.onChange = { i -> appLeaveDelay = delays[i]; paint() }
+        val carDelays = (LEAVE_DELAYS + carLeaveDelay).distinct().sorted()
+        v.carLeaveDelay.setItems(carDelays.map { leaveLabel(it) }, carDelays.indexOf(carLeaveDelay))
+        v.carLeaveDelay.onChange = { i -> carLeaveDelay = carDelays[i]; paint() }
         v.placeAdd.text = getString(R.string.place_add, cells.size)
         v.placeClear.visibility = if (cells.isEmpty()) View.GONE else View.VISIBLE
 
@@ -1716,7 +1723,11 @@ class RuleEditActivity : AppCompatActivity() {
             trafficMonth = t == Trigger.TRAFFIC && TRAFFIC_OPTS[trafficIdx].second,
             knownSsids = knownSsids.takeIf { t == Trigger.WIFI_OTHER }.orEmpty(),
             triggerApps = triggerApps.takeIf { t == Trigger.APP_OPEN || t == Trigger.NOTIFY_APP }.orEmpty(),
-            appLeaveDelay = appLeaveDelay.takeIf { t == Trigger.APP_OPEN } ?: 0,
+            appLeaveDelay = when (t) {
+                Trigger.APP_OPEN -> appLeaveDelay
+                Trigger.CAR -> carLeaveDelay
+                else -> 0
+            },
             appPassThrough = appPass.takeIf { t == Trigger.APP_OPEN }.orEmpty(),
             appScreenOffStays = t == Trigger.APP_OPEN && v.appScreenStays.isChecked,
             // A Wi-Fi rule keeps the towers it learned (see WifiWake).

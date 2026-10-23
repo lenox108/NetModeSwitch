@@ -162,7 +162,7 @@ object ConditionWatch {
             NotifWatch.active[AppKey.pkg(k)]?.let { ongoing -> rule.level != 1 || ongoing } == true
         }
         Trigger.USB -> usbConnected
-        Trigger.CAR -> carMode()
+        Trigger.CAR -> carHolds(rule, openSince)
         Trigger.ALARM -> nextAlarm()?.let { at -> val now = System.currentTimeMillis(); now >= at - rule.level * 60_000L && now < at } ?: false
         Trigger.SUN -> Prefs.sunPlace?.let { (la, lo) -> Sun.dark(java.time.ZonedDateTime.now(), la, lo) != (rule.level == 1) }
         Trigger.TRAFFIC -> (if (rule.trafficMonth) trafficMonth else trafficDay)?.let { it >= rule.level * 1024L * 1024L }
@@ -224,6 +224,34 @@ object ConditionWatch {
             }
         }
     }
+
+    /**
+     * In the car, or out of it for less than the rule's delay: wireless Android Auto drops for
+     * a few seconds now and then, and each drop would otherwise run the end — Wi-Fi off, and
+     * with it no way back for the projection.
+     */
+    private fun carHolds(rule: AppRule, openSince: Long): Boolean {
+        if (carMode()) {
+            carGoneSince.remove(rule.id)
+            return true
+        }
+        if (openSince == 0L || rule.appLeaveDelay <= 0) {
+            carGoneSince.remove(rule.id)
+            return false
+        }
+        val now = SystemClock.elapsedRealtime()
+        val since = carGoneSince[rule.id]
+        if (since == null) {
+            carGoneSince[rule.id] = now
+            recheck(Trigger.CAR, rule.appLeaveDelay * 1000L)
+            return true
+        }
+        if (now - since < rule.appLeaveDelay * 1000L) return true
+        carGoneSince.remove(rule.id)
+        return false
+    }
+
+    private val carGoneSince = mutableMapOf<Long, Long>()
 
     private val placeSeenAt = mutableMapOf<Long, Long>()
     private const val PLACE_GRACE_MS = 10 * 60_000L

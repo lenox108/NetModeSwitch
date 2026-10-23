@@ -283,7 +283,8 @@ data class AppRule(
     /**
      * APP_OPEN: leaving counts once the app has been away this many seconds — a link opened in
      * a browser, a glance at a message — so a short trip out does not end the rule and start it
-     * again a moment later. Zero: at once, as before this existed.
+     * again a moment later. Zero: at once, as before this existed. CAR: the same for the car
+     * going — a wireless Android Auto drop of a few seconds is not leaving it.
      */
     val appLeaveDelay: Int = 0,
     /**
@@ -627,7 +628,8 @@ data class AppRule(
             Trigger.NOTIFY_APP -> (if (level == 1) "работает в фоне: " else "уведомление: ") +
                 AppPickerActivity.labels(triggerApps).joinToString(", ").ifEmpty { "?" }
             Trigger.USB -> "USB подключён к компьютеру"
-            Trigger.CAR -> "в машине (Android Auto)"
+            Trigger.CAR -> "в машине (Android Auto)" +
+                (if (appLeaveDelay > 0) " · выход через " + Steps.words(appLeaveDelay) else "")
             Trigger.ALARM -> "за " + Steps.words(level * 60) + " до будильника"
             Trigger.SUN -> if (level == 1) "светло (от восхода до заката)" else "темно (от заката до восхода)"
             Trigger.TRAFFIC -> "моб. трафик за ${if (trafficMonth) "месяц" else "день"} ≥ " + trafficLabel(level)

@@ -411,6 +411,8 @@
     <string name="trigger_apps_required">Выбери приложение</string>
     <string name="app_leave_delay">Закрыто, если не вернулся</string>
     <string name="app_leave_now">сразу</string>
+    <string name="car_leave_delay">Отключено, если не вернулось</string>
+    <string name="car_leave_delay_hint">Беспроводной Android Auto иногда пропадает на несколько секунд. Короткий обрыв не считается отключением, и «В конце» не выполняется</string>
     <string name="app_leave_seconds">через %1$d с</string>
     <string name="app_leave_delay_hint">Короткая отлучка не считается закрытием: ответил в другом мессенджере и вернулся — правило не перезапускается и VPN не дёргается</string>
     <string name="app_pass_choose">Не считать выходом: только системные окна</string>
