@@ -29,6 +29,7 @@ object RuleStore {
     fun delete(id: Long) {
         Prefs.appRules = Prefs.appRules.filterNot { it.id == id }
         Prefs.appHandled = Prefs.appHandled - id
+        RuleTiles.forget(id)
         changed()
     }
 

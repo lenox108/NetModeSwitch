@@ -675,4 +675,20 @@
     <string name="check_offer_later">Позже</string>
     <string name="check_entry_hint">Режимы сети и функции на этом телефоне</string>
     <string name="check_not_yet">не проверялся</string>
+    <string name="rule_tile_label_1">Правило 1</string>
+    <string name="rule_tile_label_2">Правило 2</string>
+    <string name="rule_tile_label_3">Правило 3</string>
+    <string name="rule_tile_label_4">Правило 4</string>
+    <string name="rule_tile_label_5">Правило 5</string>
+    <string name="rule_tile_n">Правило %d</string>
+    <string name="rule_tile_unbound">нажми, чтобы выбрать</string>
+    <string name="rule_tile_pick">Плитка «Правило %d»: какое правило?</string>
+    <string name="rule_tile_no_rules">Правил пока нет — создай правило в NetModeSwitch</string>
+    <string name="rule_tile_on">работает</string>
+    <string name="rule_tile_off">выкл</string>
+    <string name="rule_tile_run">выполнить</string>
+    <string name="rule_tile_disabled">выключено в списке</string>
+    <string name="rule_tile_menu">Кнопка в шторке</string>
+    <string name="rule_tile_full">Все %d плиток правил уже заняты. Убери одну из шторки — она освободится.</string>
+    <string name="rule_tile_by_hand">Правило привязано к плитке «Правило %d». На этой версии Android её добавляют вручную: опусти шторку полностью, нажми «карандаш» (изменить) и перетащи плитку «Правило %d» наверх.</string>
 </resources>
