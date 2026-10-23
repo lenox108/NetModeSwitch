@@ -282,12 +282,14 @@ class RuleEditActivity : AppCompatActivity() {
             v.toolbar.menu.add(0, MENU_RELEASE, 1, R.string.release_now)
             v.toolbar.menu.add(0, MENU_DELETE, 2, R.string.delete)
             v.toolbar.menu.add(0, MENU_API, 3, R.string.api_menu)
+            v.toolbar.menu.add(0, MENU_TILE, 4, R.string.rule_tile_menu)
             v.toolbar.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     MENU_APPLY -> applyNow()
                     MENU_RELEASE -> releaseNow()
                     MENU_DELETE -> confirmDelete()
                     MENU_API -> showApi()
+                    MENU_TILE -> addTile()
                 }
                 true
             }
@@ -1927,6 +1929,40 @@ class RuleEditActivity : AppCompatActivity() {
             .show()
     }
 
+    /**
+     * Binds the rule to a shade tile of its own and asks the system to add it. A tile the user
+     * declines frees its slot again; one already bound keeps its slot.
+     */
+    private fun addTile() {
+        val rule = existing ?: return
+        val had = RuleTiles.slotOf(rule.id)
+        val slot = had ?: RuleTiles.assign(rule.id)
+        if (slot == null) {
+            Snackbar.make(v.root, getString(R.string.rule_tile_full, RuleTiles.classes.size), Snackbar.LENGTH_LONG).setAnchorView(v.save).show()
+            return
+        }
+        // Compat.canRequestTile, spelled out for lint.
+        if (android.os.Build.VERSION.SDK_INT < 33) {
+            MaterialAlertDialogBuilder(this)
+                .setMessage(getString(R.string.rule_tile_by_hand, slot + 1, slot + 1))
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+            return
+        }
+        val label = RuleTiles.label(rule)
+        getSystemService(android.app.StatusBarManager::class.java).requestAddTileService(
+            RuleTiles.component(this, slot), label,
+            android.graphics.drawable.Icon.createWithResource(this, RuleTiles.icon(rule.trigger)), mainExecutor,
+        ) { result ->
+            when (result) {
+                android.app.StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ADDED -> Unit
+                android.app.StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ALREADY_ADDED ->
+                    Toast.makeText(this, getString(R.string.tile_already, label), Toast.LENGTH_SHORT).show()
+                else -> if (had == null) RuleTiles.release(slot)
+            }
+        }
+    }
+
     private fun confirmDelete() {
         MaterialAlertDialogBuilder(this)
             .setMessage(getString(R.string.delete_confirm, existing?.name ?: existing?.timeLabel.orEmpty()))
@@ -1946,6 +1982,7 @@ class RuleEditActivity : AppCompatActivity() {
         private const val MENU_RELEASE = 2
         private const val MENU_DELETE = 3
         private const val MENU_API = 4
+        private const val MENU_TILE = 5
         private val BATTERY_LEVELS = listOf(0, 10, 15, 20, 30, 50)
         private val SCREEN_MINUTES = listOf(1, 5, 10, 15, 30, 60)
         private val LOCK_MINUTES = listOf(0, 1, 5, 10, 15, 30)

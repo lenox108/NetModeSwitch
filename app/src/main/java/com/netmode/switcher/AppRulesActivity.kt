@@ -65,34 +65,7 @@ class AppRulesActivity : AppCompatActivity() {
         }
     }
 
-    private fun iconOf(t: Trigger) = when (t) {
-        Trigger.MANUAL -> R.drawable.ic_t_manual
-        Trigger.NOTIFY_APP -> R.drawable.ic_t_notify
-        Trigger.USB -> R.drawable.ic_t_usb
-        Trigger.CAR -> R.drawable.ic_t_car
-        Trigger.VPN -> R.drawable.ic_a_vpn
-        Trigger.ALARM -> R.drawable.ic_t_alarm
-        Trigger.SUN -> R.drawable.ic_t_sun
-        Trigger.TRAFFIC -> R.drawable.ic_t_traffic
-        Trigger.WIFI_OTHER -> R.drawable.ic_t_wifi
-        Trigger.TIME -> R.drawable.ic_t_time
-        Trigger.WIFI, Trigger.WIFI_LEFT -> R.drawable.ic_t_wifi
-        Trigger.BLUETOOTH -> R.drawable.ic_t_bt
-        Trigger.MOBILE_DATA -> R.drawable.ic_t_data
-        Trigger.NET_MODE -> R.drawable.ic_t_net
-        Trigger.BATTERY -> R.drawable.ic_t_battery
-        Trigger.CHARGING -> R.drawable.ic_t_charging
-        Trigger.SCREEN_OFF -> R.drawable.ic_t_screen
-        Trigger.APP_OPEN -> R.drawable.ic_t_app
-        Trigger.PLACE -> R.drawable.ic_t_place
-        Trigger.ROAMING -> R.drawable.ic_t_roaming
-        Trigger.WEAK_SIGNAL -> R.drawable.ic_t_signal
-        Trigger.CALL -> R.drawable.ic_t_call
-        Trigger.HEADPHONES -> R.drawable.ic_t_headphones
-        Trigger.DND -> R.drawable.ic_t_dnd
-        Trigger.NO_INTERNET -> R.drawable.ic_t_nonet
-        Trigger.LOCKED -> R.drawable.ic_t_lock
-    }
+    private fun iconOf(t: Trigger) = RuleTiles.icon(t)
 
     private fun render() {
         val rules = sorted()
