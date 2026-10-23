@@ -58,6 +58,15 @@ object ConditionWatch {
     private val TIMED = setOf(Trigger.SCREEN_OFF, Trigger.LOCKED, Trigger.ALARM, Trigger.SUN)
 
     private const val USB_STATE = "android.hardware.usb.action.USB_STATE"
+
+    /**
+     * Android Auto tells of the car through the androidx.car.app "CarConnection" provider and
+     * this broadcast. Car mode alone is not enough: newer Android Auto often projects without
+     * switching the phone into it, and then neither the connect nor the disconnect was seen.
+     */
+    private const val CAR_CONNECTION_UPDATED = "androidx.car.app.connection.action.CAR_CONNECTION_UPDATED"
+    private val CAR_CONNECTION_URI: android.net.Uri = android.net.Uri.parse("content://androidx.car.app.connection")
+    private const val CAR_CONNECTION_STATE = "CarConnectionState"
     private const val TRAFFIC_EVERY_MS = 10 * 60_000L
 
     /**
@@ -355,7 +364,12 @@ object ConditionWatch {
                     val now = intent.getBooleanExtra("connected", false)
                     if (now != usbConnected) { usbConnected = now; evaluate(Trigger.USB) }
                 }
-                android.app.UiModeManager.ACTION_ENTER_CAR_MODE, android.app.UiModeManager.ACTION_EXIT_CAR_MODE -> evaluate(Trigger.CAR)
+                android.app.UiModeManager.ACTION_ENTER_CAR_MODE, android.app.UiModeManager.ACTION_EXIT_CAR_MODE,
+                CAR_CONNECTION_UPDATED -> {
+                    evaluate(Trigger.CAR)
+                    // Android Auto may announce the change before its provider says so: once more later.
+                    recheck(Trigger.CAR, 5_000L)
+                }
                 AlarmManager.ACTION_NEXT_ALARM_CLOCK_CHANGED -> {
                     evaluate(Trigger.ALARM)
                     scheduleScreenAlarm(context)
@@ -408,6 +422,7 @@ object ConditionWatch {
         if (Trigger.CAR in want) {
             filter.addAction(android.app.UiModeManager.ACTION_ENTER_CAR_MODE)
             filter.addAction(android.app.UiModeManager.ACTION_EXIT_CAR_MODE)
+            filter.addAction(CAR_CONNECTION_UPDATED)
         }
         if (Trigger.ALARM in want) filter.addAction(AlarmManager.ACTION_NEXT_ALARM_CLOCK_CHANGED)
         if (Trigger.LOCKED in want) filter.addAction(Intent.ACTION_USER_PRESENT)
@@ -664,9 +679,18 @@ object ConditionWatch {
         try { c.responseCode == 204 } finally { c.disconnect() }
     }.getOrDefault(false)
 
+    /** In car mode, or Android Auto (projection or Automotive) reports a car connected. */
     private fun carMode(): Boolean = runCatching {
         App.ctx.getSystemService(android.app.UiModeManager::class.java).currentModeType ==
             android.content.res.Configuration.UI_MODE_TYPE_CAR
+    }.getOrDefault(false) || carConnected()
+
+    /** CarConnection's state: 0 — no car, 1 — Android Automotive, 2 — Android Auto projection. */
+    private fun carConnected(): Boolean = runCatching {
+        App.ctx.contentResolver.query(CAR_CONNECTION_URI, arrayOf(CAR_CONNECTION_STATE), null, null, null)?.use { c ->
+            val col = c.getColumnIndex(CAR_CONNECTION_STATE)
+            col >= 0 && c.moveToNext() && c.getInt(col) != 0
+        } ?: false
     }.getOrDefault(false)
 
     /** When the next alarm clock rings (wall time), or null with none set. */
