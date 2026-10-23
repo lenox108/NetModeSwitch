@@ -71,6 +71,17 @@ object AppPresence {
     }
 
     /**
+     * Whether a VPN rule's VPN is up: [connected] at all, by [owner] (null: could not be read)
+     * among [apps] — empty, any VPN counts. Null when a VPN is up but whose cannot be told.
+     */
+    fun vpnHolds(connected: Boolean, owner: String?, apps: List<String>): Boolean? = when {
+        !connected -> false
+        apps.isEmpty() -> true
+        owner == null -> null
+        else -> apps.any { AppKey.pkg(it) == owner }
+    }
+
+    /**
      * One rule, one look. [open]: the rule's window is open. [awaySince]: when its app was last
      * seen leaving, while the delay runs. Leaving starts the delay; a pass-through screen or,
      * with [screenOffStays], the screen going off keep the rule as it is — unless the app has

@@ -87,5 +87,24 @@ fun AppCompatActivity.pickVpnApp(done: (String) -> Unit) {
         .show()
 }
 
+/** VPN apps for the "VPN подключён" condition; none ticked — any VPN. */
+fun AppCompatActivity.pickVpnApps(chosen: List<String>, done: (List<String>) -> Unit) {
+    // Apps chosen once and gone since stay on the list, to be unticked.
+    val installed = VpnControl.apps()
+    val gone = chosen.map { AppKey.pkg(it) }.filter { p -> installed.none { it.first == p } }
+    val apps = installed + gone.map { it to AppPickerActivity.labels(listOf(it)).first() }
+    if (apps.isEmpty()) {
+        Toast.makeText(this, R.string.no_vpn_apps, Toast.LENGTH_LONG).show()
+        return
+    }
+    val ticked = BooleanArray(apps.size) { i -> chosen.any { AppKey.pkg(it) == apps[i].first } }
+    MaterialAlertDialogBuilder(this)
+        .setTitle(R.string.vpn_trigger_apps)
+        .setMultiChoiceItems(apps.map { it.second }.toTypedArray(), ticked) { _, i, on -> ticked[i] = on }
+        .setPositiveButton(R.string.done_btn) { _, _ -> done(apps.filterIndexed { i, _ -> ticked[i] }.map { it.first }) }
+        .setNegativeButton(R.string.cancel, null)
+        .show()
+}
+
 /** A paired device: address to act on, name to show. */
 data class BtDevice(val address: String, val name: String)

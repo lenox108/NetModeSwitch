@@ -181,6 +181,7 @@ object Widgets {
         Trigger.NOTIFY_APP -> R.drawable.w_ic_t_notify
         Trigger.USB -> R.drawable.w_ic_t_usb
         Trigger.CAR -> R.drawable.w_ic_t_car
+        Trigger.VPN -> R.drawable.w_ic_t_vpn
         Trigger.ALARM -> R.drawable.w_ic_t_alarm
         Trigger.SUN -> R.drawable.w_ic_t_sun
         Trigger.TRAFFIC -> R.drawable.w_ic_t_traffic

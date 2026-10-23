@@ -358,6 +358,7 @@
                         </LinearLayout>
 
                         <TextView
+                            android:id="@+id/carLeaveHint"
                             style="@style/NMS.Hint"
                             android:text="@string/car_leave_delay_hint" />
                     </LinearLayout>

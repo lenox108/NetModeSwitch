@@ -116,7 +116,10 @@ enum class Trigger {
     TRAFFIC,
 
     /** While connected to a Wi-Fi network not in [AppRule.knownSsids] — a café, a hotel. */
-    WIFI_OTHER;
+    WIFI_OTHER,
+
+    /** While a VPN is connected: any, or one of [AppRule.triggerApps]'s. */
+    VPN;
 
     /** Triggers that hold for a while and then stop: their rules can put things back. */
     val isCondition: Boolean get() = this != TIME && this != WIFI_LEFT
@@ -225,6 +228,7 @@ data class AppRule(
      * internet; a scene's minutes until it ends by itself.
      */
     val level: Int = 0,
+    /** APP_OPEN, NOTIFY_APP: the apps watched. VPN: the VPN apps that count; empty, any VPN. */
     val triggerApps: List<String> = emptyList(),
     /** For [Trigger.PLACE]: "tac:ci" of the towers seen there, and the user's name for it. */
     val cells: Set<String> = emptySet(),
@@ -284,7 +288,8 @@ data class AppRule(
      * APP_OPEN: leaving counts once the app has been away this many seconds — a link opened in
      * a browser, a glance at a message — so a short trip out does not end the rule and start it
      * again a moment later. Zero: at once, as before this existed. CAR: the same for the car
-     * going — a wireless Android Auto drop of a few seconds is not leaving it.
+     * going — a wireless Android Auto drop of a few seconds is not leaving it. VPN: a reconnect
+     * on a change of network is not the VPN going.
      */
     val appLeaveDelay: Int = 0,
     /**
@@ -634,6 +639,9 @@ data class AppRule(
             Trigger.SUN -> if (level == 1) "светло (от восхода до заката)" else "темно (от заката до восхода)"
             Trigger.TRAFFIC -> "моб. трафик за ${if (trafficMonth) "месяц" else "день"} ≥ " + trafficLabel(level)
             Trigger.WIFI_OTHER -> "Wi-Fi не из своих"
+            Trigger.VPN -> "VPN подключён" +
+                (if (triggerApps.isEmpty()) "" else ": " + AppPickerActivity.labels(triggerApps).joinToString(", ")) +
+                (if (appLeaveDelay > 0) " · выход через " + Steps.words(appLeaveDelay) else "")
         }
 
     val daysLabel: String get() = formatDays(days)

@@ -310,6 +310,11 @@
     <string name="trigger_alarm_hint">За выбранное время до будильника и до звонка</string>
     <string name="trigger_sun_hint">По времени заката и восхода для указанного места</string>
     <string name="trigger_traffic_hint">Когда моб. трафик за день или месяц дошёл до порога (все SIM вместе)</string>
+    <string name="trigger_vpn">VPN подключён</string>
+    <string name="trigger_vpn_hint">Пока подключён VPN: любой или выбранных приложений</string>
+    <string name="vpn_trigger_any">Любой VPN</string>
+    <string name="vpn_trigger_apps">Какой VPN</string>
+    <string name="vpn_leave_delay_hint">VPN переподключается при смене сети за несколько секунд. Короткий обрыв не считается отключением, и «В конце» не выполняется. В «В конце» можно снова включить VPN</string>
     <string name="trigger_wifi_other_hint">Пока подключён к Wi-Fi не из списка своих сетей</string>
     <string name="trigger_nonet_hint">Сеть есть, а интернет не работает, или сети нет при включённом моб. интернете. Режим полёта не считается</string>
     <string name="trigger_dnd_hint">Пока включён режим «Не беспокоить»</string>
@@ -618,6 +623,7 @@
     <string name="pick_notify">Есть уведомление или работает в фоне</string>
     <string name="pick_usb">Подключён к компьютеру</string>
     <string name="pick_car">Телефон в машине</string>
+    <string name="pick_vpn">Любой VPN или выбранного приложения</string>
     <string name="pick_alarm">Перед будильником</string>
     <string name="pick_sun">Темно или светло</string>
     <string name="pick_traffic">Израсходовано больше порога</string>

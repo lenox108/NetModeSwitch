@@ -52,6 +52,7 @@ object ConditionWatch {
         Trigger.BATTERY, Trigger.CHARGING, Trigger.SCREEN_OFF, Trigger.LOCKED, Trigger.APP_OPEN, Trigger.PLACE,
         Trigger.ROAMING, Trigger.WEAK_SIGNAL, Trigger.CALL, Trigger.HEADPHONES, Trigger.DND, Trigger.NO_INTERNET,
         Trigger.NOTIFY_APP, Trigger.USB, Trigger.CAR, Trigger.ALARM, Trigger.SUN, Trigger.TRAFFIC, Trigger.WIFI_OTHER,
+        Trigger.VPN,
     )
 
     /** Kinds that change with the clock alone: an exact alarm wakes the check (see scheduleScreenAlarm). */
@@ -70,6 +71,8 @@ object ConditionWatch {
 
     /** UsageEvents.Event.ACTIVITY_DESTROYED: a system API, though the events carry it. */
     private const val ACTIVITY_DESTROYED = 24
+
+    private const val VPN_SETTLE_MS = 700L
     private const val TRAFFIC_EVERY_MS = 10 * 60_000L
 
     /**
@@ -117,6 +120,11 @@ object ConditionWatch {
     @Volatile private var wifiSsid: String? = null
     @Volatile private var wifiKnown = false
     @Volatile private var usbConnected = false
+    /** A VPN is connected, and whose app it is (null: could not be read); [vpnKnown] once read. */
+    @Volatile private var vpnOn = false
+    @Volatile private var vpnOwner: String? = null
+    @Volatile private var vpnKnown = false
+    private var vpnRead: Job? = null
     /** Mobile bytes of today and of this month, by NetworkStatsManager; null until read. */
     @Volatile private var trafficDay: Long? = null
     @Volatile private var trafficMonth: Long? = null
@@ -170,7 +178,10 @@ object ConditionWatch {
             NotifWatch.active[AppKey.pkg(k)]?.let { ongoing -> rule.level != 1 || ongoing } == true
         }
         Trigger.USB -> usbConnected
-        Trigger.CAR -> carHolds(rule, openSince)
+        Trigger.CAR -> dropHolds(rule, openSince, carMode(), Trigger.CAR)
+        Trigger.VPN -> if (!vpnKnown) null else AppPresence.vpnHolds(vpnOn, vpnOwner, rule.triggerApps)?.let {
+            dropHolds(rule, openSince, it, Trigger.VPN)
+        }
         Trigger.ALARM -> nextAlarm()?.let { at -> val now = System.currentTimeMillis(); now >= at - rule.level * 60_000L && now < at } ?: false
         Trigger.SUN -> Prefs.sunPlace?.let { (la, lo) -> Sun.dark(java.time.ZonedDateTime.now(), la, lo) != (rule.level == 1) }
         Trigger.TRAFFIC -> (if (rule.trafficMonth) trafficMonth else trafficDay)?.let { it >= rule.level * 1024L * 1024L }
@@ -236,32 +247,33 @@ object ConditionWatch {
     }
 
     /**
-     * In the car, or out of it for less than the rule's delay: wireless Android Auto drops for
-     * a few seconds now and then, and each drop would otherwise run the end — Wi-Fi off, and
-     * with it no way back for the projection.
+     * [present] now, or gone for less than the rule's delay: wireless Android Auto drops for a
+     * few seconds now and then, a VPN reconnects when the network changes, and each drop would
+     * otherwise run the end — Wi-Fi off, and with it no way back for the projection.
      */
-    private fun carHolds(rule: AppRule, openSince: Long): Boolean {
-        if (carMode()) {
-            carGoneSince.remove(rule.id)
+    private fun dropHolds(rule: AppRule, openSince: Long, present: Boolean, kind: Trigger): Boolean {
+        if (present) {
+            goneSince.remove(rule.id)
             return true
         }
         if (openSince == 0L || rule.appLeaveDelay <= 0) {
-            carGoneSince.remove(rule.id)
+            goneSince.remove(rule.id)
             return false
         }
         val now = SystemClock.elapsedRealtime()
-        val since = carGoneSince[rule.id]
+        val since = goneSince[rule.id]
         if (since == null) {
-            carGoneSince[rule.id] = now
-            recheck(Trigger.CAR, rule.appLeaveDelay * 1000L)
+            goneSince[rule.id] = now
+            recheck(kind, rule.appLeaveDelay * 1000L)
             return true
         }
         if (now - since < rule.appLeaveDelay * 1000L) return true
-        carGoneSince.remove(rule.id)
+        goneSince.remove(rule.id)
         return false
     }
 
-    private val carGoneSince = mutableMapOf<Long, Long>()
+    /** CAR and VPN rules whose car or VPN is gone, while their delay runs: since when. */
+    private val goneSince = mutableMapOf<Long, Long>()
 
     private val placeSeenAt = mutableMapOf<Long, Long>()
     private const val PLACE_GRACE_MS = 10 * 60_000L
@@ -324,6 +336,34 @@ object ConditionWatch {
 
     /** The first extra condition of [rule] known not to hold. */
     fun failingExtra(rule: AppRule): Extra? = rule.extras.firstOrNull { extraHolds(it) == false }
+
+    /** Any VPN network, whichever app's: up, down, or another one in its place. */
+    private val vpnCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) = readVpn()
+        override fun onLost(network: Network) = readVpn()
+    }
+
+    /**
+     * Whether a VPN is up and whose: the owner from the shell, the system's own list of VPNs
+     * there; without the shell, whether this app sees a VPN network at all.
+     */
+    private fun readVpn() {
+        vpnRead?.cancel()
+        vpnRead = App.scope.launch {
+            // The network comes a moment before the system names the VPN that brought it.
+            delay(VPN_SETTLE_MS)
+            val owner = runCatching { VpnControl.owner() }.getOrNull()
+            val cm = App.ctx.getSystemService(ConnectivityManager::class.java)
+            @Suppress("DEPRECATION")
+            val on = owner != null || cm.allNetworks.any { cm.getNetworkCapabilities(it)?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true }
+            if (vpnKnown && on == vpnOn && owner == vpnOwner) return@launch
+            vpnOn = on
+            vpnOwner = owner
+            vpnKnown = true
+            Log.i(TAG, "vpn: ${if (on) owner ?: "?" else "off"}")
+            evaluate(Trigger.VPN)
+        }
+    }
 
     private val wifiCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) = readWifi(settle = true)
@@ -500,6 +540,15 @@ object ConditionWatch {
             }.onFailure { Log.w(TAG, "wifi callback failed", it) }
             readWifi(settle = false)
         }
+        if (Trigger.VPN in want) {
+            runCatching {
+                ctx.getSystemService(ConnectivityManager::class.java).registerNetworkCallback(
+                    NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_VPN)
+                        .removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN).build(),
+                    vpnCallback, Handler(Looper.getMainLooper()))
+            }.onFailure { Log.w(TAG, "vpn callback failed", it) }
+            readVpn()
+        }
         if (Trigger.NO_INTERNET in want) {
             runCatching {
                 ctx.getSystemService(ConnectivityManager::class.java)
@@ -523,8 +572,11 @@ object ConditionWatch {
         trafficPoll?.cancel()
         runCatching { ctx.getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(netCallback) }
         runCatching { ctx.getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(wifiCallback) }
+        runCatching { ctx.getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(vpnCallback) }
+        vpnRead?.cancel()
         netLostSince = 0L
         wifiKnown = false
+        vpnKnown = false
     }
 
     /** One callback per active SIM: service state for roaming and towers, strength for bars. */

@@ -70,6 +70,7 @@ class AppRulesActivity : AppCompatActivity() {
         Trigger.NOTIFY_APP -> R.drawable.ic_t_notify
         Trigger.USB -> R.drawable.ic_t_usb
         Trigger.CAR -> R.drawable.ic_t_car
+        Trigger.VPN -> R.drawable.ic_a_vpn
         Trigger.ALARM -> R.drawable.ic_t_alarm
         Trigger.SUN -> R.drawable.ic_t_sun
         Trigger.TRAFFIC -> R.drawable.ic_t_traffic

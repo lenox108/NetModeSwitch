@@ -85,6 +85,7 @@ class RuleEditActivity : AppCompatActivity() {
         TriggerInfo(Trigger.DND, R.drawable.ic_t_dnd, R.string.trigger_dnd, R.string.trigger_dnd_hint, R.string.pick_dnd),
         TriggerInfo(Trigger.NO_INTERNET, R.drawable.ic_t_nonet, R.string.trigger_nonet, R.string.trigger_nonet_hint, R.string.pick_nonet),
         TriggerInfo(Trigger.WIFI_OTHER, R.drawable.ic_t_wifi, R.string.trigger_wifi_other, R.string.trigger_wifi_other_hint, R.string.pick_wifi_other),
+        TriggerInfo(Trigger.VPN, R.drawable.ic_a_vpn, R.string.trigger_vpn, R.string.trigger_vpn_hint, R.string.pick_vpn),
         TriggerInfo(Trigger.NOTIFY_APP, R.drawable.ic_t_notify, R.string.trigger_notify, R.string.trigger_notify_hint, R.string.pick_notify),
         TriggerInfo(Trigger.ALARM, R.drawable.ic_t_alarm, R.string.trigger_alarm, R.string.trigger_alarm_hint, R.string.pick_alarm),
         TriggerInfo(Trigger.SUN, R.drawable.ic_t_sun, R.string.trigger_sun, R.string.trigger_sun_hint, R.string.pick_sun),
@@ -107,6 +108,7 @@ class RuleEditActivity : AppCompatActivity() {
     private var appPass = listOf<String>()
     private var appLeaveDelay = 0
     private var carLeaveDelay = 0
+    private var vpnLeaveDelay = 0
     private var cells = setOf<String>()
     private var batteryLevel = 20
     private var screenMinutes = 10
@@ -329,6 +331,8 @@ class RuleEditActivity : AppCompatActivity() {
         appLeaveDelay = r?.appLeaveDelay ?: 5
         // Wireless Android Auto drops for a few seconds now and then: a new rule rides them out.
         carLeaveDelay = if (r == null) 30 else r.appLeaveDelay.takeIf { r.trigger == Trigger.CAR } ?: 30
+        // A VPN reconnecting on a change of network is back within seconds.
+        vpnLeaveDelay = if (r == null) 15 else r.appLeaveDelay.takeIf { r.trigger == Trigger.VPN } ?: 15
         v.appScreenStays.isChecked = r?.appScreenOffStays ?: false
         cells = r?.cells.orEmpty()
         v.placeName.setText(r?.placeName.orEmpty())
@@ -476,7 +480,10 @@ class RuleEditActivity : AppCompatActivity() {
                 else Toast.makeText(this@RuleEditActivity, R.string.ssid_not_found, Toast.LENGTH_SHORT).show()
             }
         }
-        v.triggerApps.setOnClickListener { pickPlain(Pick.TRIGGER, triggerApps) }
+        v.triggerApps.setOnClickListener {
+            if (trigger == Trigger.VPN) pickVpnApps(triggerApps) { triggerApps = it; paint() }
+            else pickPlain(Pick.TRIGGER, triggerApps)
+        }
         v.appPass.setOnClickListener { pickPlain(Pick.PASS, appPass) }
         // One switch for every app rule: the service is the app's, not the rule's.
         v.appInstant.isChecked = Prefs.instantApps
@@ -584,7 +591,8 @@ class RuleEditActivity : AppCompatActivity() {
         val t = effectiveTrigger
         if (a.startOnly) return false
         return allowed(a) || (t == Trigger.WIFI && (a == Act.WIFI || a == Act.HOTSPOT)) ||
-            (a == Act.BT && (t == Trigger.BLUETOOTH || t == Trigger.HEADPHONES))
+            (a == Act.BT && (t == Trigger.BLUETOOTH || t == Trigger.HEADPHONES)) ||
+            (a == Act.VPN && t == Trigger.VPN)
     }
 
     private fun allowed(a: Act): Boolean {
@@ -592,6 +600,8 @@ class RuleEditActivity : AppCompatActivity() {
         return when (a) {
             Act.WIFI, Act.HOTSPOT -> t != Trigger.WIFI && t != Trigger.WIFI_OTHER
             Act.DATA -> t != Trigger.MOBILE_DATA
+            // "VPN up → VPN off" undoes its own start; at the end, bringing it back is allowed.
+            Act.VPN -> t != Trigger.VPN
             Act.BT -> t != Trigger.BLUETOOTH && t != Trigger.HEADPHONES && !(t == Trigger.WIFI_LEFT && v.leftEndBtOn.isChecked)
             Act.AIRPLANE -> t !in setOf(Trigger.WIFI, Trigger.WIFI_LEFT, Trigger.BLUETOOTH, Trigger.MOBILE_DATA,
                 Trigger.PLACE, Trigger.ROAMING, Trigger.WEAK_SIGNAL, Trigger.CALL, Trigger.NET_MODE, Trigger.NO_INTERNET, Trigger.WIFI_OTHER)
@@ -656,9 +666,9 @@ class RuleEditActivity : AppCompatActivity() {
         v.sceneShortcut.isEnabled = existing != null
         v.sceneShortcut.text = getString(if (existing != null) R.string.scene_shortcut else R.string.scene_shortcut_save_first)
         v.releaseOnLeave.setText(if (t == Trigger.MANUAL) R.string.manual_toggle else R.string.release_on_leave)
-        show(v.triggerApps, t == Trigger.APP_OPEN || t == Trigger.NOTIFY_APP)
+        show(v.triggerApps, t == Trigger.APP_OPEN || t == Trigger.NOTIFY_APP || t == Trigger.VPN)
         show(v.appLeaveBlock, t == Trigger.APP_OPEN)
-        show(v.carLeaveBlock, t == Trigger.CAR)
+        show(v.carLeaveBlock, t == Trigger.CAR || t == Trigger.VPN)
         show(v.placeBlock, t == Trigger.PLACE)
         val condition = t.isCondition && !wifiLeft
         show(v.releaseOnLeave, condition)
@@ -736,17 +746,24 @@ class RuleEditActivity : AppCompatActivity() {
         v.leftEndBt.text = endBt?.let { getString(R.string.device_x, it.name) } ?: getString(R.string.choose_device)
         v.leftEndBt.isEnabled = v.leftEndBtOn.isChecked
         v.btDevice.text = btDevice?.let { getString(R.string.device_x, it.name) } ?: getString(R.string.choose_device)
-        v.triggerApps.text = if (triggerApps.isEmpty()) getString(R.string.trigger_apps_choose)
-        else AppPickerActivity.labels(triggerApps).joinToString(", ")
+        v.triggerApps.text = when {
+            triggerApps.isNotEmpty() -> AppPickerActivity.labels(triggerApps).joinToString(", ")
+            t == Trigger.VPN -> getString(R.string.vpn_trigger_any)
+            else -> getString(R.string.trigger_apps_choose)
+        }
         v.appPass.text = if (appPass.isEmpty()) getString(R.string.app_pass_choose)
         else getString(R.string.app_pass_x, AppPickerActivity.labels(appPass).joinToString(", "))
         // A delay from elsewhere (a backup) that the list does not offer is kept as it is.
         val delays = (LEAVE_DELAYS + appLeaveDelay).distinct().sorted()
         v.appLeaveDelay.setItems(delays.map { leaveLabel(it) }, delays.indexOf(appLeaveDelay))
         v.appLeaveDelay.onChange = { i -> appLeaveDelay = delays[i]; paint() }
-        val carDelays = (LEAVE_DELAYS + carLeaveDelay).distinct().sorted()
-        v.carLeaveDelay.setItems(carDelays.map { leaveLabel(it) }, carDelays.indexOf(carLeaveDelay))
-        v.carLeaveDelay.onChange = { i -> carLeaveDelay = carDelays[i]; paint() }
+        // One block for both: a car or a VPN gone for a moment.
+        val vpnDrop = t == Trigger.VPN
+        val dropDelay = if (vpnDrop) vpnLeaveDelay else carLeaveDelay
+        val carDelays = (LEAVE_DELAYS + dropDelay).distinct().sorted()
+        v.carLeaveDelay.setItems(carDelays.map { leaveLabel(it) }, carDelays.indexOf(dropDelay))
+        v.carLeaveDelay.onChange = { i -> if (vpnDrop) vpnLeaveDelay = carDelays[i] else carLeaveDelay = carDelays[i]; paint() }
+        v.carLeaveHint.setText(if (vpnDrop) R.string.vpn_leave_delay_hint else R.string.car_leave_delay_hint)
         v.placeAdd.text = getString(R.string.place_add, cells.size)
         v.placeClear.visibility = if (cells.isEmpty()) View.GONE else View.VISIBLE
 
@@ -1574,7 +1591,10 @@ class RuleEditActivity : AppCompatActivity() {
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.sec_when)
             .setSingleChoiceItems(items, triggerInfos.indexOfFirst { it.trigger == trigger }) { d, i ->
+                val before = trigger
                 trigger = triggerInfos[i].trigger
+                // VPN apps and the apps on screen are different lists: neither carries over.
+                if ((before == Trigger.VPN) != (trigger == Trigger.VPN)) triggerApps = emptyList()
                 if ((trigger == Trigger.APP_OPEN || trigger == Trigger.NOTIFY_APP) && triggerApps.isEmpty()) v.triggerApps.post { v.triggerApps.performClick() }
                 if (trigger == Trigger.SUN && Prefs.sunPlace == null) v.sunPlace.post { v.sunPlace.performClick() }
                 if (trigger == Trigger.WIFI_OTHER && knownSsids.isEmpty()) v.knownSsids.post { v.knownSsids.performClick() }
@@ -1722,10 +1742,11 @@ class RuleEditActivity : AppCompatActivity() {
             },
             trafficMonth = t == Trigger.TRAFFIC && TRAFFIC_OPTS[trafficIdx].second,
             knownSsids = knownSsids.takeIf { t == Trigger.WIFI_OTHER }.orEmpty(),
-            triggerApps = triggerApps.takeIf { t == Trigger.APP_OPEN || t == Trigger.NOTIFY_APP }.orEmpty(),
+            triggerApps = triggerApps.takeIf { t == Trigger.APP_OPEN || t == Trigger.NOTIFY_APP || t == Trigger.VPN }.orEmpty(),
             appLeaveDelay = when (t) {
                 Trigger.APP_OPEN -> appLeaveDelay
                 Trigger.CAR -> carLeaveDelay
+                Trigger.VPN -> vpnLeaveDelay
                 else -> 0
             },
             appPassThrough = appPass.takeIf { t == Trigger.APP_OPEN }.orEmpty(),

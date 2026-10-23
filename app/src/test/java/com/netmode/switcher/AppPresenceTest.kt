@@ -75,4 +75,14 @@ class AppPresenceTest {
         b.onEvent("com.google.android.youtube", "SettingsActivity", false)
         assertEquals(setOf("com.google.android.youtube"), b.packages("com.android.launcher"))
     }
+
+    @Test fun vpnHoldsForAnyOrTheChosenApps() {
+        assertEquals(false, AppPresence.vpnHolds(false, null, emptyList()))
+        assertEquals(true, AppPresence.vpnHolds(true, null, emptyList()))
+        assertEquals(true, AppPresence.vpnHolds(true, "com.v2ray.ang", listOf("com.v2ray.ang")))
+        assertEquals(true, AppPresence.vpnHolds(true, "com.v2ray.ang", listOf("com.v2ray.ang@10")))
+        assertEquals(false, AppPresence.vpnHolds(true, "com.adguard.android", listOf("com.v2ray.ang")))
+        // Up, but whose cannot be told: keep as is.
+        assertEquals(null, AppPresence.vpnHolds(true, null, listOf("com.v2ray.ang")))
+    }
 }
