@@ -339,6 +339,18 @@ object Prefs {
         get() = sp.getBoolean("status_notification", false)
         set(value) = sp.edit().putBoolean("status_notification", value).apply()
 
+    /** How the list of rules is ordered, and the hand-made order for [RuleSort.MANUAL]. */
+    var ruleSort: RuleSort
+        get() = runCatching { RuleSort.valueOf(sp.getString("rule_sort", null)!!) }.getOrDefault(RuleSort.TYPE)
+        set(value) = sp.edit().putString("rule_sort", value.name).apply()
+
+    var ruleOrder: List<Long>
+        get() = runCatching {
+            val a = JSONArray(sp.getString("rule_order", "[]"))
+            (0 until a.length()).map { a.getLong(it) }
+        }.getOrDefault(emptyList())
+        set(value) = sp.edit().putString("rule_order", JSONArray(value).toString()).apply()
+
     var hideSystemApps: Boolean
         get() = sp.getBoolean(KEY_HIDE_SYSTEM, true)
         set(value) = sp.edit().putBoolean(KEY_HIDE_SYSTEM, value).apply()

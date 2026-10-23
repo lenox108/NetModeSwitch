@@ -32,6 +32,8 @@ object Backup {
             .put("disableTetherIpv6", Prefs.disableTetherIpv6)
             .put("hideSystem", Prefs.hideSystemApps)
             .put("unloadExclude", JSONArray(Prefs.unloadExclude))
+            .put("ruleSort", Prefs.ruleSort.name)
+            .put("ruleOrder", JSONArray(Prefs.ruleOrder))
             .put("togglePairs", JSONObject().apply {
                 Sims.slots().forEach { slot -> Prefs.togglePair(slot)?.let { put(slot.toString(), "${it.first.name},${it.second.name}") } }
             }))
@@ -59,6 +61,8 @@ object Backup {
             else if (s.has("disableIpv6")) Prefs.disableTetherIpv6 = s.getBoolean("disableIpv6")
             if (s.has("hideSystem")) Prefs.hideSystemApps = s.getBoolean("hideSystem")
             s.optJSONArray("unloadExclude")?.let { a -> Prefs.unloadExclude = (0 until a.length()).map { a.getString(it) } }
+            runCatching { Prefs.ruleSort = RuleSort.valueOf(s.getString("ruleSort")) }
+            s.optJSONArray("ruleOrder")?.let { a -> Prefs.ruleOrder = (0 until a.length()).map { a.getLong(it) } }
             s.optJSONObject("togglePairs")?.let { p ->
                 p.keys().forEach { slot ->
                     runCatching {
