@@ -82,7 +82,13 @@
     <string name="trigger_wifi">Wi-Fi</string>
     <string name="release_on_leave">Когда условие закончится — выполнить «В конце»</string>
     <string name="release_on_leave_hint"></string>
-    <string name="apps_intro">Нажми на правило, чтобы изменить. Долгое нажатие — применить, снять, удалить</string>
+    <string name="apps_intro">Нажми на правило, чтобы изменить. Долгое нажатие — применить, снять, удалить. Потяни за ⠿, чтобы поменять порядок</string>
+    <string name="sort_title">Сортировка</string>
+    <string name="sort_type">По типу</string>
+    <string name="sort_name">По названию</string>
+    <string name="sort_active">Сначала работающие</string>
+    <string name="sort_manual">Вручную</string>
+    <string name="sort_now_manual">Порядок теперь свой — сортировка «Вручную»</string>
     <string name="apps_summary_none">Правил нет — нажми, чтобы добавить</string>
     <plurals name="n_app_rules">
         <item quantity="one">%d правило</item>

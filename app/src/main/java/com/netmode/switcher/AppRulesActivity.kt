@@ -3,7 +3,9 @@ package com.netmode.switcher
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.content.Intent
 import android.os.Bundle
+import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.widget.PopupMenu
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -23,6 +25,7 @@ class AppRulesActivity : AppCompatActivity() {
         ui = ActivityAppRulesBinding.inflate(layoutInflater)
         setContentView(ui.root)
         ui.toolbar.setNavigationOnClickListener { finish() }
+        ui.toolbar.menu.add(R.string.sort_title).setOnMenuItemClickListener { chooseSort(); true }
         ui.held.setOnClickListener { chooseToReturn() }
         ui.addApps.setOnClickListener { startActivity(Intent(this, RuleEditActivity::class.java)) }
         ui.fromTemplate.setOnClickListener { fromTemplate() }
@@ -91,7 +94,8 @@ class AppRulesActivity : AppCompatActivity() {
     }
 
     private fun render() {
-        val rules = Prefs.appRules.sortedWith(compareBy({ !it.enabled }, { it.trigger.ordinal }, { it.hour }, { it.minute }))
+        val rules = sorted()
+        val ids = rules.map { it.id }
         val pendingStarts = Prefs.pendingStarts
         ui.appList.removeAllViews()
         rules.forEach { rule ->
@@ -135,12 +139,110 @@ class AppRulesActivity : AppCompatActivity() {
             }
             row.root.setOnClickListener { edit(rule) }
             row.root.setOnLongClickListener { menu(rule, it); true }
+            row.drag.visibility = if (rules.size > 1) View.VISIBLE else View.GONE
+            dragBy(row.drag, row.root) { from, to -> moved(ids, from, to) }
             ui.appList.addView(row.root)
         }
         ui.appEmpty.visibility = if (rules.isEmpty()) View.VISIBLE else View.GONE
         val heldApps = AppFreezer.heldApps()
         ui.held.visibility = if (heldApps.isEmpty()) View.GONE else View.VISIBLE
         ui.held.text = getString(R.string.held_block, heldApps.size)
+    }
+
+    private fun chooseSort() {
+        val all = RuleSort.entries
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.sort_title)
+            .setSingleChoiceItems(all.map { getString(it.label) }.toTypedArray(), all.indexOf(Prefs.ruleSort)) { d, i ->
+                // Into "by hand" from another sort: it starts from the order on screen now.
+                if (all[i] == RuleSort.MANUAL && Prefs.ruleSort != RuleSort.MANUAL) Prefs.ruleOrder = sorted().map { it.id }
+                Prefs.ruleSort = all[i]
+                d.dismiss()
+                render()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun sorted(): List<AppRule> {
+        val open = Prefs.openWindows
+        return RuleOrder.sort(Prefs.appRules, Prefs.ruleSort, Prefs.ruleOrder) { AppFreezer.isActive(it, open) }
+    }
+
+    /** A rule dragged from [from] to [to] of [ids], the list as shown: that order is the user's now. */
+    private fun moved(ids: List<Long>, from: Int, to: Int) {
+        Prefs.ruleOrder = RuleOrder.move(ids, from, to)
+        if (Prefs.ruleSort != RuleSort.MANUAL) {
+            Prefs.ruleSort = RuleSort.MANUAL
+            snack(getString(R.string.sort_now_manual))
+        }
+        render()
+    }
+
+    /**
+     * Drag [row] by [handle] to another place in the list. The other rows only slide aside
+     * while dragging; the order changes when the finger lifts — taking a view out of its
+     * parent mid-gesture would cancel the gesture. Same as the steps in [RuleEditActivity].
+     */
+    @android.annotation.SuppressLint("ClickableViewAccessibility")
+    private fun dragBy(handle: View, row: View, done: (Int, Int) -> Unit) {
+        val list = ui.appList
+        // Near the screen's edge: without this the drag is taken for the system's "back".
+        if (Compat.SDK >= 29) handle.addOnLayoutChangeListener { h, l, t, r, b, _, _, _, _ ->
+            h.systemGestureExclusionRects = listOf(android.graphics.Rect(0, 0, r - l, b - t))
+        }
+        var downY = 0f
+        var target = -1
+        handle.setOnTouchListener { view, e ->
+            val from = list.indexOfChild(row)
+            when (e.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    view.parent.requestDisallowInterceptTouchEvent(true)
+                    downY = e.rawY
+                    target = from
+                    row.elevation = 8 * resources.displayMetrics.density
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    if (target < 0) return@setOnTouchListener true
+                    row.translationY = e.rawY - downY
+                    val mid = row.top + row.translationY + row.height / 2f
+                    var to = from
+                    for (k in 0 until list.childCount) {
+                        val c = list.getChildAt(k)
+                        val cMid = c.top + c.height / 2f
+                        if (k > from && mid > cMid) to = maxOf(to, k)
+                        if (k < from && mid < cMid) to = minOf(to, k)
+                    }
+                    if (to != target) {
+                        target = to
+                        val lp = row.layoutParams as ViewGroup.MarginLayoutParams
+                        val step = row.height + lp.topMargin + lp.bottomMargin
+                        for (k in 0 until list.childCount) {
+                            if (k == from) continue
+                            val shift = when (k) {
+                                in (from + 1)..to -> -step
+                                in to until from -> step
+                                else -> 0
+                            }
+                            list.getChildAt(k).animate().translationY(shift.toFloat()).setDuration(120).start()
+                        }
+                    }
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    // Redrawn on the way out, the old handle is sent a CANCEL of its own: ignored.
+                    if (target < 0 || from < 0) return@setOnTouchListener true
+                    for (k in 0 until list.childCount) list.getChildAt(k).apply { animate().cancel(); translationY = 0f }
+                    row.elevation = 0f
+                    val to = target
+                    target = -1
+                    if (e.actionMasked == MotionEvent.ACTION_UP && to != from) done(from, to)
+                    true
+                }
+                else -> false
+            }
+        }
     }
 
     /** Long press: the quick actions without opening the rule. */
