@@ -182,6 +182,85 @@
                 android:value="true" />
         </service>
 
+        <service
+            android:name=".RuleTile1Service"
+            android:exported="true"
+            android:icon="@drawable/ic_t_manual"
+            android:label="@string/rule_tile_label_1"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="true" />
+        </service>
+
+        <service
+            android:name=".RuleTile2Service"
+            android:exported="true"
+            android:icon="@drawable/ic_t_manual"
+            android:label="@string/rule_tile_label_2"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="true" />
+        </service>
+
+        <service
+            android:name=".RuleTile3Service"
+            android:exported="true"
+            android:icon="@drawable/ic_t_manual"
+            android:label="@string/rule_tile_label_3"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="true" />
+        </service>
+
+        <service
+            android:name=".RuleTile4Service"
+            android:exported="true"
+            android:icon="@drawable/ic_t_manual"
+            android:label="@string/rule_tile_label_4"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="true" />
+        </service>
+
+        <service
+            android:name=".RuleTile5Service"
+            android:exported="true"
+            android:icon="@drawable/ic_t_manual"
+            android:label="@string/rule_tile_label_5"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="true" />
+        </service>
+
+        <!-- A rule tile with no rule yet asks for one over whatever is on screen. -->
+        <activity
+            android:name=".RuleTilePickActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.NetModeSwitch.Translucent" />
+
         <receiver
             android:name=".ConditionReceiver"
             android:exported="false" />

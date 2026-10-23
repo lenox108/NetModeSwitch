@@ -262,6 +262,17 @@ object Prefs {
      * Rule id → what of its start is still waiting for the phone to be locked: "all", or
      * "apps" when only stopping apps waits. See AppFreezer.runPending.
      */
+    /** Which rule each shade tile of [RuleTiles] presses, by tile slot. Local to the phone. */
+    var ruleTiles: Map<Int, Long>
+        get() = runCatching {
+            val o = org.json.JSONObject(sp.getString("rule_tiles", "{}")!!)
+            o.keys().asSequence().associate { it.toInt() to o.getLong(it) }
+        }.getOrDefault(emptyMap())
+        set(value) = sp.edit().putString(
+            "rule_tiles",
+            org.json.JSONObject().apply { value.forEach { (k, v) -> put(k.toString(), v) } }.toString(),
+        ).apply()
+
     var pendingStarts: Map<Long, String>
         get() = runCatching {
             val o = org.json.JSONObject(sp.getString("pending_starts", "{}")!!)
