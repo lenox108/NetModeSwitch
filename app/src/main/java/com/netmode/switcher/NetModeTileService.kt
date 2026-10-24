@@ -91,12 +91,7 @@ object NetModeTiles {
      * glance even where it cuts the label. The shade tints only the shape, so white on clear.
      */
     fun glyph(mode: NetMode): Icon {
-        val text = when (mode) {
-            NetMode.FIVE_G, NetMode.NR_LTE -> "5G"
-            NetMode.FULL, NetMode.LTE_ONLY -> "4G"
-            NetMode.THREE_G, NetMode.WCDMA_ONLY -> "3G"
-            NetMode.TWO_G -> "2G"
-        }
+        val text = "${mode.top}G"
         val size = 96
         val bmp = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
         val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {

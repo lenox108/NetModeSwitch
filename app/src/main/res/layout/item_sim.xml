@@ -37,155 +37,65 @@
             android:textAppearance="?attr/textAppearanceBodySmall"
             android:textColor="?attr/colorOnSurfaceVariant" />
 
-        <!-- A mode is a range of generations: the newest it connects to and the oldest it
-             falls back to. Seven ranges exist; a tap on one that does not moves the other bound. -->
-        <TextView
+        <!-- The networks the SIM connects to; a mode is an unbroken run of them. -->
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/nets"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="@string/range_top"
-            android:textAppearance="?attr/textAppearanceLabelMedium"
-            android:textColor="?attr/colorOnSurfaceVariant" />
-
-        <com.google.android.material.button.MaterialButtonToggleGroup
-            android:id="@+id/topGroup"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            app:singleSelection="true"
-            app:selectionRequired="true">
+            app:singleSelection="false">
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/top5"
+                android:id="@+id/net5"
                 style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="0dp"
                 android:layout_weight="1"
-                android:layout_height="48dp"
+                android:layout_height="52dp"
                 android:text="@string/mode_5g_short" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/top4"
+                android:id="@+id/net4"
                 style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="0dp"
                 android:layout_weight="1"
-                android:layout_height="48dp"
+                android:layout_height="52dp"
                 android:text="@string/mode_4g_short" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/top3"
+                android:id="@+id/net3"
                 style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="0dp"
                 android:layout_weight="1"
-                android:layout_height="48dp"
+                android:layout_height="52dp"
                 android:text="@string/mode_3g_short" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/top2"
+                android:id="@+id/net2"
                 style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="0dp"
                 android:layout_weight="1"
-                android:layout_height="48dp"
+                android:layout_height="52dp"
                 android:text="@string/mode_2g" />
         </com.google.android.material.button.MaterialButtonToggleGroup>
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="@string/range_bottom"
-            android:textAppearance="?attr/textAppearanceLabelMedium"
-            android:textColor="?attr/colorOnSurfaceVariant" />
-
-        <!-- No mode holds to 5G alone: the row starts under 4G so the columns line up. -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
-            android:orientation="horizontal">
-
-            <Space
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:layout_weight="1" />
-
-            <com.google.android.material.button.MaterialButtonToggleGroup
-                android:id="@+id/bottomGroup"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="3"
-                app:singleSelection="true"
-                app:selectionRequired="true">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/bottom4"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="48dp"
-                android:text="@string/mode_4g_short" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/bottom3"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="48dp"
-                android:text="@string/mode_3g_short" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/bottom2"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="48dp"
-                android:text="@string/mode_2g" />
-            </com.google.android.material.button.MaterialButtonToggleGroup>
-        </LinearLayout>
+            android:layout_marginStart="4dp"
+            android:text="@string/nets_hint"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:textColor="?attr/colorOnSurfaceVariant" />
 
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="12dp"
             android:alpha="0.12"
             android:background="?attr/colorOnSurface" />
 
-        <!-- The quick pair: both modes on view, the one that is on lit; a tap swaps them.
+        <!-- The quick pair in one line, the mode that is on lit; a tap swaps them.
              The same pair drives the tile, the widgets and the notification. -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:gravity="center_vertical"
-            android:minHeight="40dp"
-            android:orientation="horizontal">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/pair_block"
-                android:textAppearance="?attr/textAppearanceTitleSmall" />
-
-            <TextView
-                android:id="@+id/pairShown"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/pair_shown"
-                android:textAppearance="?attr/textAppearanceLabelLarge"
-                android:textColor="?attr/colorPrimary" />
-
-            <!-- Shown until this SIM's tile is in the shade. -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/pairAdd"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:minHeight="40dp"
-                android:text="@string/pair_add"
-                app:icon="@drawable/ic_a_tiles"
-                app:iconSize="18dp" />
-        </LinearLayout>
-
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -196,55 +106,46 @@
             <LinearLayout
                 android:id="@+id/toggle"
                 android:layout_width="0dp"
-                android:layout_height="48dp"
+                android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:background="@drawable/bg_pair"
-                android:backgroundTint="?attr/colorSurface"
+                android:background="?attr/selectableItemBackground"
                 android:clickable="true"
                 android:focusable="true"
-                android:foreground="?attr/selectableItemBackground"
                 android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="4dp">
-
-                <TextView
-                    android:id="@+id/pairFirst"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:background="@drawable/bg_pair_on"
-                    android:ellipsize="end"
-                    android:gravity="center"
-                    android:maxLines="1"
-                    android:textAppearance="?attr/textAppearanceTitleSmall" />
+                android:minHeight="48dp"
+                android:orientation="horizontal">
 
                 <ImageView
-                    android:id="@+id/pairIcon"
                     android:layout_width="20dp"
                     android:layout_height="20dp"
-                    android:layout_marginHorizontal="4dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="8dp"
                     android:importantForAccessibility="no"
                     android:src="@drawable/ic_swap"
                     app:tint="?attr/colorOnSurfaceVariant" />
 
                 <TextView
-                    android:id="@+id/pairSecond"
+                    android:id="@+id/pair"
                     android:layout_width="0dp"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:background="@drawable/bg_pair_on"
-                    android:ellipsize="end"
-                    android:gravity="center"
-                    android:maxLines="1"
-                    android:textAppearance="?attr/textAppearanceTitleSmall" />
+                    android:textAppearance="?attr/textAppearanceBodyMedium" />
             </LinearLayout>
+
+            <!-- Shown until this SIM's tile is in the shade. -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/pairAdd"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minHeight="40dp"
+                android:text="@string/pair_add" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/pairEdit"
                 style="@style/Widget.Material3.Button.IconButton"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-                android:layout_marginStart="4dp"
                 android:contentDescription="@string/pair_edit"
                 app:icon="@drawable/ic_edit"
                 app:iconTint="?attr/colorOnSurfaceVariant" />

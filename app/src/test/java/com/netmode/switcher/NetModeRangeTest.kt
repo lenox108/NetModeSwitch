@@ -6,36 +6,44 @@ import org.junit.Test
 class NetModeRangeTest {
     @Test
     fun everyRangeIsOneMode() {
-        val ranges = NetMode.entries.map { it.top to it.bottom }
+        val ranges = NetMode.entries.map { it.generations }
         assertEquals(ranges.size, ranges.toSet().size)
     }
 
     @Test
-    fun topKeepsTheFallback() {
-        assertEquals(NetMode.FULL, NetMode.withTop(4, NetMode.FIVE_G))
-        assertEquals(NetMode.THREE_G, NetMode.withTop(3, NetMode.FULL))
-        assertEquals(NetMode.FIVE_G, NetMode.withTop(5, NetMode.THREE_G))
+    fun maskReadsBackAsItsMode() {
+        for (mode in NetMode.entries) assertEquals(mode, NetMode.of(mode.mask))
     }
 
     @Test
-    fun topKeepsHolding() {
-        assertEquals(NetMode.WCDMA_ONLY, NetMode.withTop(3, NetMode.LTE_ONLY))
-        assertEquals(NetMode.NR_LTE, NetMode.withTop(5, NetMode.WCDMA_ONLY))
-        assertEquals(NetMode.LTE_ONLY, NetMode.withTop(4, NetMode.NR_LTE))
+    fun untickingTwoGKeepsTheRest() {
+        assertEquals(NetMode.LTE_WCDMA, NetMode.ticked(NetMode.FULL, 2, false))
+        assertEquals(NetMode.NR_LTE_WCDMA, NetMode.ticked(NetMode.FIVE_G, 2, false))
     }
 
     @Test
-    fun bottomMovesTopOnlyWhenItMust() {
-        assertEquals(NetMode.NR_LTE, NetMode.withBottom(4, NetMode.FIVE_G))
-        assertEquals(NetMode.WCDMA_ONLY, NetMode.withBottom(3, NetMode.FIVE_G))
-        assertEquals(NetMode.FULL, NetMode.withBottom(2, NetMode.LTE_ONLY))
-        assertEquals(NetMode.FIVE_G, NetMode.withBottom(2, null))
+    fun tickPastAGapFillsIt() {
+        assertEquals(NetMode.LTE_WCDMA, NetMode.ticked(NetMode.LTE_ONLY, 3, true))
+        assertEquals(NetMode.FULL, NetMode.ticked(NetMode.LTE_ONLY, 2, true))
+        assertEquals(NetMode.NR_LTE_WCDMA, NetMode.ticked(NetMode.WCDMA_ONLY, 5, true))
     }
 
     @Test
-    fun unavailableModesAreSkipped() {
-        val among = NetMode.entries - NetMode.NR_LTE
-        assertEquals(NetMode.LTE_ONLY, NetMode.withBottom(4, NetMode.FIVE_G, among))
-        assertEquals(null, NetMode.withTop(5, NetMode.FIVE_G, among - NetMode.FIVE_G))
+    fun untickInsideKeepsThePartAbove() {
+        assertEquals(NetMode.NR_LTE, NetMode.ticked(NetMode.FIVE_G, 3, false))
+        assertEquals(NetMode.WCDMA_ONLY, NetMode.ticked(NetMode.LTE_WCDMA, 4, false))
+    }
+
+    @Test
+    fun theLastTickStays() {
+        assertEquals(NetMode.TWO_G, NetMode.ticked(NetMode.TWO_G, 2, false))
+    }
+
+    @Test
+    fun missingModeFallsToTheNearest() {
+        // 5G alone does not exist.
+        assertEquals(NetMode.NR_LTE, NetMode.ticked(NetMode.NR_LTE, 4, false))
+        // The phone check failed 3G alone.
+        assertEquals(NetMode.THREE_G, NetMode.ticked(NetMode.LTE_WCDMA, 4, false, NetMode.entries - NetMode.WCDMA_ONLY))
     }
 }

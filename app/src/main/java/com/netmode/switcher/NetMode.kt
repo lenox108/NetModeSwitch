@@ -45,6 +45,12 @@ object Raf {
     /** NT_MODE 33 (NR/LTE/GSM/WCDMA) = 0xCD387 — the stock "5G" entry. */
     const val MODE_NR_LTE_WCDMA_GSM = NR or MODE_LTE_WCDMA_GSM
 
+    /** NT_MODE 28 (NR/LTE/WCDMA): no 2G. */
+    const val MODE_NR_LTE_WCDMA = NR or FAMILY_LTE or FAMILY_WCDMA
+
+    /** NT_MODE 12 (LTE/WCDMA): no 2G. */
+    const val MODE_LTE_WCDMA = FAMILY_LTE or FAMILY_WCDMA
+
     /** NT_MODE 24 (NR/LTE) = 0xC1000: no fallback below 4G. */
     const val MODE_NR_LTE = NR or FAMILY_LTE
 
@@ -74,11 +80,13 @@ object Raf {
         // RIL modes 26, 33, 32 and class-wide.
         NetMode.FIVE_G -> listOf(mode.mask, NR or MODE_LTE_WCDMA_GSM or FAMILY_CDMA or FAMILY_EVDO or TD_SCDMA,
             NR or MODE_LTE_WCDMA_GSM or TD_SCDMA, NR or CLASS_4G or CLASS_3G or CLASS_2G)
+        NetMode.NR_LTE_WCDMA -> listOf(mode.mask, mode.mask or TD_SCDMA, NR or CLASS_4G or CLASS_3G)
         NetMode.NR_LTE -> listOf(mode.mask, NR or CLASS_4G)
         // RIL modes 9, 10 (CDMA carriers), 20 and 22 (TD-SCDMA), and class-wide.
         NetMode.FULL -> listOf(mode.mask, MODE_LTE_WCDMA_GSM or FAMILY_CDMA or FAMILY_EVDO,
             MODE_LTE_WCDMA_GSM or TD_SCDMA, MODE_LTE_WCDMA_GSM or TD_SCDMA or FAMILY_CDMA or FAMILY_EVDO,
             CLASS_4G or CLASS_3G or CLASS_2G)
+        NetMode.LTE_WCDMA -> listOf(mode.mask, mode.mask or TD_SCDMA, CLASS_4G or CLASS_3G)
         NetMode.LTE_ONLY -> listOf(mode.mask, CLASS_4G)
         // RIL modes 3, 7, 18, 21 and class-wide.
         NetMode.THREE_G -> listOf(mode.mask, MODE_WCDMA_GSM or FAMILY_CDMA or FAMILY_EVDO, MODE_WCDMA_GSM or TD_SCDMA,
@@ -103,8 +111,10 @@ object Raf {
 /** [short] exists because a Quick Settings tile has room for about three characters. */
 enum class NetMode(val label: String, val short: String, val mask: Long) {
     FIVE_G("5G / 4G / 3G / 2G", "5G", Raf.MODE_NR_LTE_WCDMA_GSM),
+    NR_LTE_WCDMA("5G / 4G / 3G", "5G/4G/3G", Raf.MODE_NR_LTE_WCDMA),
     NR_LTE("5G / 4G", "5G/4G", Raf.MODE_NR_LTE),
     FULL("4G / 3G / 2G", "4G", Raf.MODE_LTE_WCDMA_GSM),
+    LTE_WCDMA("4G / 3G", "4G/3G", Raf.MODE_LTE_WCDMA),
     LTE_ONLY("Только 4G", "только 4G", Raf.MODE_LTE),
     THREE_G("3G / 2G", "3G", Raf.MODE_WCDMA_GSM),
     WCDMA_ONLY("Только 3G", "только 3G", Raf.MODE_WCDMA),
@@ -116,34 +126,46 @@ enum class NetMode(val label: String, val short: String, val mask: Long) {
 
     /** The newest generation this mode connects to: 5, 4, 3 or 2. */
     val top: Int get() = when (this) {
-        FIVE_G, NR_LTE -> 5
-        FULL, LTE_ONLY -> 4
+        FIVE_G, NR_LTE_WCDMA, NR_LTE -> 5
+        FULL, LTE_WCDMA, LTE_ONLY -> 4
         THREE_G, WCDMA_ONLY -> 3
         TWO_G -> 2
     }
 
-    /** The oldest generation it falls back to: 2 unless the mode holds to its upper ones. */
+    /** The oldest generation it falls back to. */
     val bottom: Int get() = when (this) {
         NR_LTE, LTE_ONLY -> 4
-        WCDMA_ONLY -> 3
+        NR_LTE_WCDMA, LTE_WCDMA, WCDMA_ONLY -> 3
         else -> 2
     }
 
+    /** The generations it connects to, newest first. */
+    val generations: IntRange get() = bottom..top
+
     companion object {
         /**
-         * The mode for a changed bound on the SIM card. Only seven ranges exist, so the other
-         * bound moves to the nearest one that does; on a tie the narrower range wins, which keeps
-         * a mode that held to its generation holding to the new one.
+         * The mode for the networks ticked on the SIM card. Modes are unbroken runs of
+         * generations, so a tick past a gap takes the generations between too, and an untick
+         * inside the run keeps the part above it. With no such mode among [among] — 5G alone,
+         * one the phone check failed — the nearest one there is.
          */
-        fun withTop(top: Int, now: NetMode?, among: List<NetMode> = entries): NetMode? =
-            among.filter { it.top == top }
-                .minWithOrNull(compareBy<NetMode> { m -> now?.let { Math.abs(m.bottom - it.bottom) } ?: m.bottom }
-                    .thenByDescending { it.bottom })
-
-        fun withBottom(bottom: Int, now: NetMode?, among: List<NetMode> = entries): NetMode? =
-            among.filter { it.bottom == bottom }
-                .minWithOrNull(compareBy<NetMode> { m -> now?.let { Math.abs(m.top - it.top) } ?: -m.top }
-                    .thenByDescending { it.top })
+        fun ticked(now: NetMode?, generation: Int, on: Boolean, among: List<NetMode> = entries): NetMode? {
+            var top = now?.top ?: generation
+            var bottom = now?.bottom ?: generation
+            if (on) {
+                top = maxOf(top, generation)
+                bottom = minOf(bottom, generation)
+            } else if (generation in bottom..top) {
+                if (top == bottom) return now
+                if (generation == top) top-- else bottom = generation + 1
+            }
+            // Whatever the fallback, the tapped network ends up the way the tap set it.
+            // An untick keeps the newest network left, or does nothing: 5G without 4G is no mode.
+            val honest = among.filter { (generation in it.generations) == on && (on || it.top == top) }
+            if (honest.isEmpty()) return now
+            return honest.minWithOrNull(compareBy<NetMode> { Math.abs(it.top - top) + Math.abs(it.bottom - bottom) }
+                .thenByDescending { it.top - it.bottom })
+        }
 
         /** The preset whose stock mask this is, bit for bit; null for any other mask. */
         fun exact(mask: Long): NetMode? =
@@ -157,10 +179,11 @@ enum class NetMode(val label: String, val short: String, val mask: Long) {
         fun of(mask: Long): NetMode? {
             if (mask <= 0L) return null
             exact(mask)?.let { return it }
-            val below3 = mask and (Raf.CLASS_3G or Raf.CLASS_2G) != 0L
+            val has3 = mask and Raf.CLASS_3G != 0L
+            val has2 = mask and Raf.CLASS_2G != 0L
             return when {
-                mask and Raf.CLASS_5G != 0L -> if (below3) FIVE_G else NR_LTE
-                mask and Raf.CLASS_4G != 0L -> if (below3) FULL else LTE_ONLY
+                mask and Raf.CLASS_5G != 0L -> if (has2) FIVE_G else if (has3) NR_LTE_WCDMA else NR_LTE
+                mask and Raf.CLASS_4G != 0L -> if (has2) FULL else if (has3) LTE_WCDMA else LTE_ONLY
                 mask and Raf.CLASS_3G != 0L -> if (mask and Raf.CLASS_2G != 0L) THREE_G else WCDMA_ONLY
                 mask and Raf.CLASS_2G != 0L -> TWO_G
                 else -> null

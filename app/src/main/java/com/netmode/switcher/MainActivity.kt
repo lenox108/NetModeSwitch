@@ -155,27 +155,21 @@ class MainActivity : AppCompatActivity() {
         sims.forEach { sim ->
             val card = ItemSimBinding.inflate(inflater, ui.simList, false)
             card.simName.text = sim.label
-            // A bound no working mode of this SIM reaches is greyed out.
+            // A network no working mode of this SIM connects to is greyed out.
             val avail = Profile.available(sim.slot)
-            for ((btn, g) in topButtons(card)) btn.isEnabled = avail.any { it.top == g }
-            for ((btn, g) in bottomButtons(card)) btn.isEnabled = avail.any { it.bottom == g }
+            for ((btn, g) in netButtons(card)) btn.isEnabled = avail.any { g in it.generations }
             card.toggle.setOnClickListener {
                 act(sim.slot) { ModeController.toggle(sim.slot, ModeController.Source.MANUAL) }
             }
             card.toggle.setOnLongClickListener { pickPair(sim.slot); true }
             card.pairEdit.setOnClickListener { pickPair(sim.slot) }
             card.pairAdd.setOnClickListener { addTiles(listOf(sim)) }
-            card.topGroup.addOnButtonCheckedListener { _, id, checked ->
-                if (!checked || syncing) return@addOnButtonCheckedListener
-                val g = topButtons(card).first { it.first.id == id }.second
-                NetMode.withTop(g, ModeController.modeOf(sim.slot), Profile.available(sim.slot))
-                    ?.let { pick(sim.slot, it) } ?: paint(sim.slot, ModeController.modeOf(sim.slot), null)
-            }
-            card.bottomGroup.addOnButtonCheckedListener { _, id, checked ->
-                if (!checked || syncing) return@addOnButtonCheckedListener
-                val g = bottomButtons(card).first { it.first.id == id }.second
-                NetMode.withBottom(g, ModeController.modeOf(sim.slot), Profile.available(sim.slot))
-                    ?.let { pick(sim.slot, it) } ?: paint(sim.slot, ModeController.modeOf(sim.slot), null)
+            card.nets.addOnButtonCheckedListener { _, id, checked ->
+                if (syncing) return@addOnButtonCheckedListener
+                val g = netButtons(card).first { it.first.id == id }.second
+                val now = ModeController.modeOf(sim.slot)
+                val mode = NetMode.ticked(now, g, checked, Profile.available(sim.slot))
+                if (mode != null && mode != now) pick(sim.slot, mode) else paint(sim.slot, now, null)
             }
             cards[sim.slot] = card
             ui.simList.addView(card.root)
@@ -185,25 +179,14 @@ class MainActivity : AppCompatActivity() {
         ui.noSims.visibility = if (sims.isEmpty()) View.VISIBLE else View.GONE
     }
 
-    private fun topButtons(card: ItemSimBinding) =
-        listOf(card.top5 to 5, card.top4 to 4, card.top3 to 3, card.top2 to 2)
-
-    private fun bottomButtons(card: ItemSimBinding) =
-        listOf(card.bottom4 to 4, card.bottom3 to 3, card.bottom2 to 2)
+    private fun netButtons(card: ItemSimBinding) =
+        listOf(card.net5 to 5, card.net4 to 4, card.net3 to 3, card.net2 to 2)
 
     private fun pick(slot: Int, mode: NetMode) =
         act(slot) { ModeController.apply(slot, mode, ModeController.Source.MANUAL) }
 
-    /** The mode as the range of networks it connects to — the words of the card and its pair. */
-    private fun rangeTitle(mode: NetMode) = getString(when (mode) {
-        NetMode.FIVE_G -> R.string.range_five_g
-        NetMode.NR_LTE -> R.string.range_nr_lte
-        NetMode.FULL -> R.string.range_full
-        NetMode.LTE_ONLY -> R.string.range_lte_only
-        NetMode.THREE_G -> R.string.range_three_g
-        NetMode.WCDMA_ONLY -> R.string.range_wcdma_only
-        NetMode.TWO_G -> R.string.range_two_g
-    })
+    /** The mode as the networks it connects to, "4G / 3G" — the words of the card and its pair. */
+    private fun nets(mode: NetMode) = mode.generations.reversed().joinToString(" / ") { "${it}G" }
 
     /**
      * The two modes the quick switch goes between on this SIM. Faster one first: from any third
@@ -213,30 +196,37 @@ class MainActivity : AppCompatActivity() {
         val modes = Profile.available(slot)
         val current = Prefs.togglePair(slot)?.toList().orEmpty()
         val checked = BooleanArray(modes.size) { modes[it] in current }
+        // Ticked order: a third tick unticks the oldest, so there are never more than two.
+        val order = modes.indices.filter { checked[it] }.toMutableList()
         val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
             .setTitle(getString(R.string.pair_title, slot + 1))
-            .setMultiChoiceItems(modes.map { rangeTitle(it) }.toTypedArray(), checked) { _, i, on -> checked[i] = on }
-            .setPositiveButton(R.string.w_cfg_save, null)
+            .setMultiChoiceItems(modes.map { nets(it) }.toTypedArray(), checked) { d, i, on ->
+                checked[i] = on
+                order.remove(i)
+                if (on) order.add(i)
+                val shown = d as androidx.appcompat.app.AlertDialog
+                if (order.size > 2) {
+                    val oldest = order.removeAt(0)
+                    checked[oldest] = false
+                    shown.listView.setItemChecked(oldest, false)
+                }
+                shown.getButton(android.content.DialogInterface.BUTTON_POSITIVE).isEnabled = order.size == 2
+            }
+            .setPositiveButton(R.string.w_cfg_save) { _, _ ->
+                val picked = order.map { modes[it] }.sortedBy { it.ordinal }
+                Prefs.setTogglePair(slot, picked[0] to picked[1])
+                paint(slot, ModeController.modeOf(slot), null)
+                StatusNotification.update()
+                NetModeTiles.refresh()
+            }
             .setNeutralButton(R.string.pair_default) { _, _ ->
                 Prefs.setTogglePair(slot, null)
                 paint(slot, ModeController.modeOf(slot), null)
                 StatusNotification.update()
             }
-            .setNegativeButton(R.string.cancel, null)
+            // Two buttons stay in one row on a narrow screen; back or a tap outside cancels.
             .show()
-        // Exactly two, or the dialog stays open and says so.
-        dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).setOnClickListener {
-            val picked = modes.filterIndexed { i, _ -> checked[i] }.sortedBy { it.ordinal }
-            if (picked.size != 2) {
-                android.widget.Toast.makeText(this, R.string.pair_need_two, android.widget.Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            Prefs.setTogglePair(slot, picked[0] to picked[1])
-            paint(slot, ModeController.modeOf(slot), null)
-            StatusNotification.update()
-            NetModeTiles.refresh()
-            dialog.dismiss()
-        }
+        dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).isEnabled = order.size == 2
     }
 
     private fun act(slot: Int, action: suspend () -> Result<NetMode>) {
@@ -252,21 +242,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun paint(slot: Int, mode: NetMode?, error: String?) {
         val card = cards[slot] ?: return
-        card.mode.text = mode?.let { rangeTitle(it) } ?: getString(R.string.unknown)
+        card.mode.text = mode?.let { nets(it) } ?: getString(R.string.unknown)
 
         syncing = true
-        val top = topButtons(card).firstOrNull { it.second == mode?.top }?.first
-        val bottom = bottomButtons(card).firstOrNull { it.second == mode?.bottom }?.first
-        if (top != null) card.topGroup.check(top.id) else card.topGroup.clearChecked()
-        // 2G has no lower bound to choose: the row would only repeat the one above.
-        if (bottom != null && mode != NetMode.TWO_G) card.bottomGroup.check(bottom.id) else card.bottomGroup.clearChecked()
+        for ((btn, g) in netButtons(card)) btn.isChecked = mode != null && g in mode.generations
         syncing = false
-        // A bound that needs the other one moved to work reads dimmer: the tap still works.
-        val avail = Profile.available(slot)
-        for ((btn, g) in topButtons(card))
-            btn.alpha = if (mode == null || avail.any { it.top == g && it.bottom == mode.bottom }) 1f else 0.5f
-        for ((btn, g) in bottomButtons(card))
-            btn.alpha = if (mode == null || avail.any { it.bottom == g && it.top == mode.top }) 1f else 0.5f
         paintPair(slot, mode)
 
         val errorColor = com.google.android.material.color.MaterialColors.getColor(card.detail, android.R.attr.colorError)
@@ -279,7 +259,6 @@ class MainActivity : AppCompatActivity() {
         }
         card.detail.setTextColor(normal)
         val notes = listOfNotNull(
-            mode?.takeIf { it.bottom > 2 }?.let { getString(R.string.range_strict, "${it.bottom}G") },
             getString(R.string.sim_for_data).takeIf { Sims.known.size > 1 && DualSim.dataSlot() == slot },
         )
         card.detail.text = notes.joinToString(" · ")
@@ -287,26 +266,24 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * The quick pair: both modes written out, the one that is on lit. With no pair chosen it is
-     * the stock one — the last 4G/5G mode and 3G.
+     * The quick pair in one line, the mode that is on lit. With no pair chosen it is the stock
+     * one — the last 4G/5G mode and 3G.
      */
     private fun paintPair(slot: Int, mode: NetMode?) {
         val card = cards[slot] ?: return
         val (first, second) = Prefs.togglePair(slot)
             ?: ((mode?.takeIf { it.high } ?: Prefs.lastHigh(slot)) to NetMode.THREE_G)
-        val lit = com.google.android.material.color.MaterialColors.getColor(card.toggle, androidx.appcompat.R.attr.colorPrimary)
-        val onLit = com.google.android.material.color.MaterialColors.getColor(card.toggle, com.google.android.material.R.attr.colorOnPrimary)
-        val dim = com.google.android.material.color.MaterialColors.getColor(card.toggle, com.google.android.material.R.attr.colorOnSurfaceVariant)
-        for ((half, m) in listOf(card.pairFirst to first, card.pairSecond to second)) {
-            val on = m == mode
-            half.text = rangeTitle(m)
-            half.backgroundTintList = android.content.res.ColorStateList.valueOf(if (on) lit else android.graphics.Color.TRANSPARENT)
-            half.setTextColor(if (on) onLit else dim)
+        val lit = com.google.android.material.color.MaterialColors.getColor(card.pair, androidx.appcompat.R.attr.colorPrimary)
+        val text = android.text.SpannableString(getString(R.string.pair_line, nets(first), nets(second)))
+        listOf(first, second).firstOrNull { it == mode }?.let { on ->
+            val part = nets(on)
+            val at = if (on == first) text.indexOf(part) else text.lastIndexOf(part)
+            text.setSpan(android.text.style.ForegroundColorSpan(lit), at, at + part.length, 0)
+            text.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), at, at + part.length, 0)
         }
-        card.toggle.contentDescription = getString(R.string.pair_to, rangeTitle(ModeController.toggleTarget(slot, mode)))
-        val shown = Prefs.tileShown(slot)
-        card.pairAdd.visibility = if (shown) View.GONE else View.VISIBLE
-        card.pairShown.visibility = if (shown) View.VISIBLE else View.GONE
+        card.pair.text = text
+        card.toggle.contentDescription = getString(R.string.pair_to, nets(ModeController.toggleTarget(slot, mode)))
+        card.pairAdd.visibility = if (Prefs.tileShown(slot)) View.GONE else View.VISIBLE
     }
 
     private fun renderStatus() {
