@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:navigationIcon="?attr/homeAsUpIndicator"
+        app:title="@string/hide_title" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="24dp">
+
+            <TextView
+                style="@style/NMS.Hint"
+                android:layout_marginTop="4dp"
+                android:text="@string/hide_hint" />
+
+            <!-- Shown while the notification listener is not bound. -->
+            <LinearLayout
+                android:id="@+id/noAccess"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    style="@style/NMS.Hint"
+                    android:textColor="?attr/colorError"
+                    android:text="@string/hide_no_access" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/grant"
+                    style="@style/NMS.PickButton"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/hide_grant" />
+            </LinearLayout>
+
+            <TextView
+                style="@style/NMS.Section"
+                android:text="@string/hide_sec_shade" />
+
+            <com.google.android.material.card.MaterialCardView style="@style/NMS.Card">
+
+                <LinearLayout
+                    android:id="@+id/shadeList"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    style="@style/NMS.Section"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:text="@string/hide_sec_recent" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/recentClear"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/hide_recent_clear" />
+            </LinearLayout>
+
+            <com.google.android.material.card.MaterialCardView style="@style/NMS.Card">
+
+                <LinearLayout
+                    android:id="@+id/recentList"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                style="@style/NMS.Section"
+                android:text="@string/hide_sec_rules" />
+
+            <com.google.android.material.card.MaterialCardView style="@style/NMS.Card">
+
+                <LinearLayout
+                    android:id="@+id/ruleList"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:id="@+id/blockSection"
+                style="@style/NMS.Section"
+                android:text="@string/hide_sec_blocked" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/blockCard"
+                style="@style/NMS.Card">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        style="@style/NMS.Hint"
+                        android:layout_marginTop="6dp"
+                        android:text="@string/hide_block_hint" />
+
+                    <LinearLayout
+                        android:id="@+id/blockList"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/blockPick"
+                        style="@style/NMS.PickButton"
+                        android:layout_marginBottom="6dp"
+                        android:text="@string/hide_block_pick" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

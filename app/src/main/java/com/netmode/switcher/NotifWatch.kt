@@ -2,16 +2,23 @@ package com.netmode.switcher
 
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import kotlinx.coroutines.launch
 
 /**
  * "Уведомление от приложения": which apps have a notification up, and whether a lasting one.
- * The listener sees only package names and the "ongoing" flag here; nothing of what the
- * notifications say is read or kept.
+ * The trigger looks at package names and the "ongoing" flag only. The titles are read just
+ * for [NotifHide]: to list what is in the shade, and for a rule that matches on a title.
+ * App, channel and title of what was posted are kept for a day, for picking later; the text
+ * of a notification is never kept.
  */
 object NotifWatch {
 
     /** Whether the system has bound the listener; until then nothing can be told. */
     @Volatile var connected = false
+        internal set
+
+    /** The bound listener, for [NotifHide] to snooze through; null while not bound. */
+    @Volatile var listener: NotifListener? = null
         internal set
 
     /** Package → whether one of its notifications is lasting (ongoing). */
@@ -35,14 +42,21 @@ object NotifWatch {
 class NotifListener : NotificationListenerService() {
     override fun onListenerConnected() {
         NotifWatch.connected = true
+        NotifWatch.listener = this
+        NotifHide.sweep(this)
+        App.scope.launch { NotifHide.release(this@NotifListener) }
         NotifWatch.update(runCatching { activeNotifications }.getOrNull())
     }
 
     override fun onListenerDisconnected() {
         NotifWatch.connected = false
+        NotifWatch.listener = null
     }
 
-    override fun onNotificationPosted(sbn: StatusBarNotification?) = NotifWatch.update(runCatching { activeNotifications }.getOrNull())
+    override fun onNotificationPosted(sbn: StatusBarNotification?) {
+        sbn?.let { NotifHide.onPosted(this, it) }
+        NotifWatch.update(runCatching { activeNotifications }.getOrNull())
+    }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) = NotifWatch.update(runCatching { activeNotifications }.getOrNull())
 }

@@ -19,6 +19,7 @@
 # Run by the privileged shell through app_process; nothing in the app references it.
 -keep class com.netmode.switcher.HotspotCli { public static void main(java.lang.String[]); }
 -keep class com.netmode.switcher.SuspendCli { public static void main(java.lang.String[]); }
+-keep class com.netmode.switcher.ChannelCli { public static void main(java.lang.String[]); }
 -keep class com.netmode.switcher.VpnCli { public static void main(java.lang.String[]); }
 -keep class com.netmode.switcher.ApConfigCli { public static void main(java.lang.String[]); }
 -keep class com.netmode.switcher.SimCli { public static void main(java.lang.String[]); }

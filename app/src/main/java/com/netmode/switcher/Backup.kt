@@ -34,6 +34,7 @@ object Backup {
             .put("unloadExclude", JSONArray(Prefs.unloadExclude))
             .put("ruleSort", Prefs.ruleSort.name)
             .put("ruleOrder", JSONArray(Prefs.ruleOrder))
+            .put("hideRules", JSONArray(Prefs.hideRules.map { it.toJson() }))
             .put("togglePairs", JSONObject().apply {
                 Sims.slots().forEach { slot -> Prefs.togglePair(slot)?.let { put(slot.toString(), "${it.first.name},${it.second.name}") } }
             }))
@@ -63,6 +64,7 @@ object Backup {
             s.optJSONArray("unloadExclude")?.let { a -> Prefs.unloadExclude = (0 until a.length()).map { a.getString(it) } }
             runCatching { Prefs.ruleSort = RuleSort.valueOf(s.getString("ruleSort")) }
             s.optJSONArray("ruleOrder")?.let { a -> Prefs.ruleOrder = (0 until a.length()).map { a.getLong(it) } }
+            s.optJSONArray("hideRules")?.let { a -> Prefs.hideRules = (0 until a.length()).mapNotNull { runCatching { HideRule.fromJson(a.getJSONObject(it)) }.getOrNull() } }
             s.optJSONObject("togglePairs")?.let { p ->
                 p.keys().forEach { slot ->
                     runCatching {

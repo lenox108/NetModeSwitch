@@ -61,6 +61,12 @@
             android:theme="@android:style/Theme.NoDisplay" />
 
         <activity
+            android:name=".NotifHideActivity"
+            android:exported="false"
+            android:label="@string/hide_title"
+            android:parentActivityName=".MainActivity" />
+
+        <activity
             android:name=".RulesActivity"
             android:exported="false"
             android:label="@string/rules_title"
@@ -401,7 +407,7 @@
                 android:resource="@xml/app_watch" />
         </service>
 
-        <!-- "Уведомление от приложения": only package names and "ongoing" are looked at. -->
+        <!-- "Уведомление от приложения" and hiding notifications (NotifHide). -->
         <service
             android:name=".NotifListener"
             android:exported="true"

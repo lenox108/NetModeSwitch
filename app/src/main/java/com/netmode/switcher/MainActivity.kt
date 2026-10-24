@@ -48,6 +48,7 @@ class MainActivity : AppCompatActivity() {
 
         ui.rulesCard.setOnClickListener { startActivity(Intent(this, AppRulesActivity::class.java)) }
         ui.settingsCard.setOnClickListener { startActivity(Intent(this, RulesActivity::class.java)) }
+        ui.hideCard.setOnClickListener { startActivity(Intent(this, NotifHideActivity::class.java)) }
         ui.apCard.setOnClickListener { startActivity(Intent(this, HotspotActivity::class.java)) }
         ui.tileCard.setOnClickListener { addTiles() }
         ui.logAll.setOnClickListener { startActivity(Intent(this, LogActivity::class.java)) }
@@ -304,6 +305,13 @@ class MainActivity : AppCompatActivity() {
             if (held > 0) getString(R.string.held_now, held) else null,
         ).joinToString(" · ")
         ui.settingsSummary.text = getString(R.string.settings_summary)
+        val hiding = Prefs.hideRules.size
+        val blocked = Prefs.notifBlocked.size
+        ui.hideSummary.text = if (hiding + blocked == 0) getString(R.string.hide_summary_none)
+        else listOfNotNull(
+            getString(R.string.hide_summary_rules, hiding).takeIf { hiding > 0 },
+            getString(R.string.hide_summary_blocked, blocked).takeIf { blocked > 0 },
+        ).joinToString(" · ")
         lifecycleScope.launch {
             runCatching { HotspotConfig.read() }.getOrNull()?.let { ui.apSummary.text = HotspotConfig.summary(it) }
         }

@@ -354,6 +354,51 @@ object Prefs {
         }.getOrDefault(emptyList())
         set(value) = sp.edit().putString("rule_order", JSONArray(value).toString()).apply()
 
+    /**
+     * What [NotifHide] keeps out of the shade. Kept in memory: the listener reads it on every
+     * post, and the snooze has to beat the shade drawing the notification.
+     */
+    var hideRules: List<HideRule>
+        get() = hideRulesCache ?: decodeList(sp.getString("hide_rules", "[]")!!, HideRule::fromJson).also { hideRulesCache = it }
+        set(value) {
+            hideRulesCache = value
+            sp.edit().putString("hide_rules", encodeList(value) { it.toJson() }).commit()
+        }
+
+    @Volatile private var hideRulesCache: List<HideRule>? = null
+
+    /** Notification key → the rule that snoozed it, so removing a rule can let it back. */
+    var hiddenKeys: Map<String, Long>
+        get() = runCatching {
+            val o = org.json.JSONObject(sp.getString("hidden_keys", "{}")!!)
+            o.keys().asSequence().associateWith { o.getLong(it) }
+        }.getOrDefault(emptyMap())
+        set(value) = sp.edit().putString(
+            "hidden_keys",
+            org.json.JSONObject().apply { value.forEach { (k, v) -> put(k, v) } }.toString(),
+        ).apply()
+
+    /** Notification key → when a removed rule let it go; see NotifHide.release. */
+    var releasedKeys: Map<String, Long>
+        get() = runCatching {
+            val o = org.json.JSONObject(sp.getString("released_keys", "{}")!!)
+            o.keys().asSequence().associateWith { o.getLong(it) }
+        }.getOrDefault(emptyMap())
+        set(value) = sp.edit().putString(
+            "released_keys",
+            org.json.JSONObject().apply { value.forEach { (k, v) -> put(k, v) } }.toString(),
+        ).apply()
+
+    /** Notifications posted over the last day; see NotifHide.recent. */
+    var seenNotifs: List<SeenEntry>
+        get() = decodeList(sp.getString("seen_notifs", "[]")!!, SeenEntry::fromJson)
+        set(value) = sp.edit().putString("seen_notifs", encodeList(value) { it.toJson() }).apply()
+
+    /** Apps whose POST_NOTIFICATIONS the app took away, as [AppKey]s. */
+    var notifBlocked: Set<String>
+        get() = sp.getStringSet("notif_blocked", emptySet())!!
+        set(value) = sp.edit().putStringSet("notif_blocked", value).commit().let { }
+
     var hideSystemApps: Boolean
         get() = sp.getBoolean(KEY_HIDE_SYSTEM, true)
         set(value) = sp.edit().putBoolean(KEY_HIDE_SYSTEM, value).apply()

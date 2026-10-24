@@ -689,4 +689,45 @@
     <string name="rule_tile_menu">Кнопка в шторке</string>
     <string name="rule_tile_full">Все %d плиток правил уже заняты. Убери одну из шторки — она освободится.</string>
     <string name="rule_tile_by_hand">Правило привязано к плитке «Правило %d». На этой версии Android её добавляют вручную: опусти шторку полностью, нажми «карандаш» (изменить) и перетащи плитку «Правило %d» наверх.</string>
+
+    <!-- Hiding notifications (NotifHide) -->
+    <string name="hide_title">Скрытие уведомлений</string>
+    <string name="hide_hint">Нажми на уведомление, чтобы оно больше не появлялось в шторке: VPN, запись звонка, работа в фоне. С root канал уведомлений отключается в системе, и уведомление не появляется даже на миг. То, что появляется только иногда, можно выбрать в «Недавно были» — там уведомления за последние сутки. Скрытое не удаляется — приложение продолжает работать как обычно</string>
+    <string name="hide_no_access">Нет доступа к уведомлениям — без него ничего не видно и не скрывается</string>
+    <string name="hide_grant">Включить доступ к уведомлениям</string>
+    <string name="hide_sec_shade">Сейчас в шторке</string>
+    <string name="hide_sec_rules">Скрываются</string>
+    <string name="hide_sec_recent">Недавно были</string>
+    <string name="hide_recent_clear">Очистить</string>
+    <string name="hide_recent_empty">За сутки ничего другого не было. Список начинает собираться после включения доступа к уведомлениям</string>
+    <string name="hide_seen_at">в %1$s</string>
+    <string name="hide_sec_blocked">Отключены целиком</string>
+    <string name="hide_shade_empty">Уведомлений нет</string>
+    <string name="hide_rules_empty">Пока ничего не скрывается</string>
+    <string name="hide_ongoing">постоянное</string>
+    <string name="hide_channel">канал %1$s</string>
+    <string name="hide_all_channels">все уведомления</string>
+    <string name="hide_with_title">заголовок с «%1$s»</string>
+    <string name="hide_opt_channel">Скрывать этот вид уведомлений (канал %1$s)</string>
+    <string name="hide_channel_off">канал отключён (root)</string>
+    <string name="hide_channel_kept">Система не дала отключить этот канал — уведомления будут скрываться сразу после появления</string>
+    <string name="hide_opt_title">Скрывать только с заголовком «%1$s»…</string>
+    <string name="hide_opt_app">Скрывать все уведомления приложения</string>
+    <string name="hide_opt_block">Отключить уведомления приложения целиком…</string>
+    <string name="hide_title_words">Слова из заголовка</string>
+    <string name="hide_do">Скрывать</string>
+    <string name="hide_unhide">Показывать снова</string>
+    <string name="hide_unhide_q">Перестать скрывать: %1$s?</string>
+    <string name="hide_block_hint">У приложения отбирается разрешение на уведомления (root или Shizuku). Надёжнее скрытия, но приложение перезапускается, а уведомление службы видно только в «Активных приложениях»</string>
+    <string name="hide_block_pick">Выбрать приложения</string>
+    <string name="hide_block_title">Отключить уведомления?</string>
+    <string name="hide_block_warn">%1$s: разрешение на уведомления будет снято. Android при этом закрывает приложение — оно запустится заново само или при открытии. Сообщения, звонки и будильники этого приложения тоже перестанут показываться</string>
+    <string name="hide_block_do">Отключить</string>
+    <string name="hide_unblock">Включить</string>
+    <string name="hide_unblock_q">Вернуть приложению разрешение на уведомления?</string>
+    <string name="hide_need_shell">Нужен root или Shizuku</string>
+    <string name="hide_block_failed">%1$s: не вышло — %2$s</string>
+    <string name="hide_summary_none">Убрать из шторки постоянные уведомления</string>
+    <string name="hide_summary_rules">скрывается: %1$d</string>
+    <string name="hide_summary_blocked">отключено приложений: %1$d</string>
 </resources>
