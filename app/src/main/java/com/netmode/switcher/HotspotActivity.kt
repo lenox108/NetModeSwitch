@@ -157,7 +157,6 @@ class HotspotActivity : AppCompatActivity() {
             ui.viaVpn.isChecked = Prefs.tetherMode == TetherMode.VPN
             ui.viaProxy.isChecked = Prefs.tetherMode == TetherMode.PROXY
             ui.proxyRow.visibility = if (ui.viaProxy.isChecked) View.VISIBLE else View.GONE
-            paintVpnFast()
             programmatic = false
             paintTweakControls(root)
         }
@@ -216,26 +215,17 @@ class HotspotActivity : AppCompatActivity() {
         ui.viaVpn.isChecked = mode == TetherMode.VPN
         ui.viaProxy.isChecked = mode == TetherMode.PROXY
         ui.proxyRow.visibility = if (mode == TetherMode.PROXY) View.VISIBLE else View.GONE
-        paintVpnFast()
-        ui.vpnFast.isChecked = Prefs.vpnFast
-        ui.vpnFast.setOnCheckedChangeListener { _, on ->
-            if (programmatic) return@setOnCheckedChangeListener
-            Prefs.vpnFast = on
-            if (ui.viaVpn.isChecked) setTether()
-        }
         proxies = listOf(Prefs.tetherProxy)
         fillProxies()
         ui.viaVpn.setOnCheckedChangeListener { _, on ->
             if (programmatic) return@setOnCheckedChangeListener
             if (on) { programmatic = true; ui.viaProxy.isChecked = false; programmatic = false; ui.proxyRow.visibility = View.GONE }
-            paintVpnFast()
             setTether()
         }
         ui.viaProxy.setOnCheckedChangeListener { _, on ->
             if (programmatic) return@setOnCheckedChangeListener
             if (on) { programmatic = true; ui.viaVpn.isChecked = false; programmatic = false }
             ui.proxyRow.visibility = if (on) View.VISIBLE else View.GONE
-            paintVpnFast()
             setTether()
         }
         ui.proxyAddr.onChange = { i ->
@@ -307,13 +297,6 @@ class HotspotActivity : AppCompatActivity() {
             }
             .setNegativeButton(R.string.cancel) { _, _ -> fillProxies() }
             .show()
-    }
-
-    /** "Ускорение" belongs to the VPN route: shown under it while it is on. */
-    private fun paintVpnFast() {
-        val v = if (ui.viaVpn.isChecked) View.VISIBLE else View.GONE
-        ui.vpnFast.visibility = v
-        ui.vpnFastHint.visibility = v
     }
 
     /** Set while the switches are changed from code, so that is not taken for a tap. */
@@ -397,7 +380,6 @@ class HotspotActivity : AppCompatActivity() {
         ui.tweaksOffloadHint.visibility = if (Prefs.tetherTtlEnabled) View.VISIBLE else View.GONE
         ui.viaVpn.isEnabled = ready
         ui.viaProxy.isEnabled = ready
-        ui.vpnFast.isEnabled = ready
         ui.startVpn.isEnabled = ready
         ui.startProxy.isEnabled = ready
     }
@@ -442,7 +424,6 @@ class HotspotActivity : AppCompatActivity() {
         // No second change while the route is being rebuilt: it would be shown but not applied.
         ui.viaVpn.isEnabled = false
         ui.viaProxy.isEnabled = false
-        ui.vpnFast.isEnabled = false
         tetherBusy = true
         paintTweakControls(false)
         ui.tetherStatus.setText(R.string.working)
@@ -460,7 +441,6 @@ class HotspotActivity : AppCompatActivity() {
             val root = Privileged.choose() == Backend.ROOT
             ui.viaVpn.isEnabled = root
             ui.viaProxy.isEnabled = root
-            ui.vpnFast.isEnabled = root
             paintTweakControls(root)
             if (!tweaksBusy) ui.tweaksStatus.text = NetworkTweaks.status.ifBlank { getString(R.string.tether_tweaks_off) }
             ui.tetherStatus.text = when {

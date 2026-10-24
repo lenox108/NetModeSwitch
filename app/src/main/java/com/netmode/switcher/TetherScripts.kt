@@ -85,11 +85,27 @@ internal object TetherScripts {
             iptables -w 5 -A NMS_FWD -i $ap -j DROP
             iptables -w 5 -I FORWARD 1 -j NMS_FWD
             ip6tables -w 5 -N NMS_FWD6
+            # Refused, not dropped: a client with IPv6 from the hotspot then falls back to IPv4 at
+            # once instead of waiting out each new connection's IPv6 attempt. DROP stays behind
+            # them for a kernel without the REJECT target.
+            ip6tables -w 5 -A NMS_FWD6 -i $ap -p tcp -j REJECT --reject-with tcp-reset 2>/dev/null || :
+            ip6tables -w 5 -A NMS_FWD6 -i $ap -j REJECT --reject-with icmp6-adm-prohibited 2>/dev/null || :
             ip6tables -w 5 -A NMS_FWD6 -i $ap -j DROP
             ip6tables -w 5 -I FORWARD 1 -j NMS_FWD6
             ip -4 rule add pref ${PREF + 1} iif $ap unreachable
         """.trimIndent()
     }
+
+    /**
+     * Sets `mss` from the VPN's MTU. Clamping to the path MTU only covers the client's SYN: the
+     * server's SYN-ACK is clamped to the hotspot's 1500, so a client then sent segments too big
+     * for a 1280 tunnel (WireGuard) and lost them until path MTU discovery caught up.
+     */
+    private fun vpnMss(out: String): String = """
+        mtu=${'$'}(ip link show dev $out | sed -n '/ mtu /{s/.* mtu \([0-9][0-9]*\).*/\1/p;q;}')
+        [ "${'$'}mtu" -ge 576 ] && [ "${'$'}mtu" -le 65535 ]
+        mss=${'$'}((mtu - 40))
+    """.trimIndent()
 
     fun open(p: TetherPath): String = with(p) {
         """
@@ -99,13 +115,13 @@ internal object TetherScripts {
             iptables -w 5 -t nat -A NMS_DNS -i $ap -p udp --dport 53 -j DNAT --to-destination $dns
             iptables -w 5 -t nat -A NMS_DNS -i $ap -p tcp --dport 53 -j DNAT --to-destination 1.1.1.1
             iptables -w 5 -t nat -I PREROUTING 1 -j NMS_DNS
-        """.trimIndent() + if (!nat) "" else "\n" + """
+        """.trimIndent() + if (!nat) "" else "\n" + vpnMss(out) + "\n" + """
             iptables -w 5 -t nat -N NMS_NAT
             iptables -w 5 -t nat -A NMS_NAT -o $out -j MASQUERADE
             iptables -w 5 -t nat -I POSTROUTING 1 -j NMS_NAT
             iptables -w 5 -t mangle -N NMS_MSS
             iptables -w 5 -t mangle -A NMS_MSS -i $ap -o $out -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
-            iptables -w 5 -t mangle -A NMS_MSS -i $out -o $ap -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+            iptables -w 5 -t mangle -A NMS_MSS -i $out -o $ap -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --set-mss ${'$'}mss
             iptables -w 5 -t mangle -I FORWARD 1 -j NMS_MSS
         """.trimIndent()
     }
@@ -135,12 +151,12 @@ internal object TetherScripts {
             printf '%s\n' "${'$'}rules" | grep -qE '^$PREF:.*iif $ap .*lookup $table( |${'$'})'
             printf '%s\n' "${'$'}rules" | grep -qE '^${PREF + 1}:.*iif $ap .*unreachable'
             ip -4 route show table $table | grep -qE '(^| )dev $out( |${'$'})'
-        """.trimIndent() + if (!nat) "" else "\n" + """
+        """.trimIndent() + if (!nat) "" else "\n" + vpnMss(out) + "\n" + """
             iptables -w 5 -t nat -C POSTROUTING -j NMS_NAT
             iptables -w 5 -t nat -C NMS_NAT -o $out -j MASQUERADE
             iptables -w 5 -t mangle -C FORWARD -j NMS_MSS
             iptables -w 5 -t mangle -C NMS_MSS -i $ap -o $out -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
-            iptables -w 5 -t mangle -C NMS_MSS -i $out -o $ap -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+            iptables -w 5 -t mangle -C NMS_MSS -i $out -o $ap -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --set-mss ${'$'}mss
         """.trimIndent()
     }
 }

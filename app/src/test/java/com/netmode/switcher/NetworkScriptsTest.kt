@@ -253,6 +253,24 @@ class NetworkScriptsTest {
         assertFalse(run(verify).contains("@VERIFIED"))
     }
 
+    @Test fun clientIpv6IsRefusedWithDropBehind() {
+        installRoute(TetherPath("wlan2", "tun0", "tun0", true, "1.1.1.1"))
+        assertEquals(listOf(
+            "-A NMS_FWD6 -i wlan2 -p tcp -j REJECT --reject-with tcp-reset",
+            "-A NMS_FWD6 -i wlan2 -j REJECT --reject-with icmp6-adm-prohibited",
+            "-A NMS_FWD6 -i wlan2 -j DROP",
+        ), chain("ip6tables_filter_NMS_FWD6").lines().filter { it.isNotBlank() })
+    }
+
+    @Test fun normalVpnLimitsTheServersMssToTheVpnMtu() {
+        val path = TetherPath("wlan2", "tun0", "tun0", true, "1.1.1.1")
+        installRoute(path)
+        assertTrue(chain("iptables_mangle_NMS_MSS").contains("-i tun0 -o wlan2 -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --set-mss 1240"))
+        // A VPN that comes back with another MTU no longer matches the installed route.
+        File(state, "link_tun0").writeText("20: tun0: <POINTOPOINT,UP> mtu 1420 state UNKNOWN\n")
+        assertFalse(run(TetherScripts.checked(TetherScripts.verify(path), "@VERIFIED")).contains("@VERIFIED"))
+    }
+
     @Test fun routeTeardownLeavesHoldAndPhoneTrafficUntouchedUntilExplicitRelease() {
         val path = TetherPath("wlan2", "nms0", "1500", false, "198.18.0.2")
         File(state, "iptables_filter_OUTPUT").writeText("-A OUTPUT -j PHONE_VPN\n")

@@ -561,8 +561,6 @@
     <string name="pair_title">Быстрая пара SIM %1$d — выбери два режима</string>
     <string name="pair_default">По умолчанию: 4G/5G ⇄ 3G</string>
     <string name="add_pause">Пауза</string>
-    <string name="tether_vpn_fast">Ускорение</string>
-    <string name="tether_vpn_fast_hint">Телефон принимает соединения устройств и открывает их заново через VPN. На некоторых сетях это быстрее; для WireGuard сравни скорость с выключенным ускорением. Если в VPN задан список приложений, добавь в него NetModeSwitch.</string>
     <string name="tether_check">Проверить раздачу</string>
     <string name="unlock_title">При разблокировке (до %s)</string>
     <string name="end_title_window">Когда время закончится (%s)</string>

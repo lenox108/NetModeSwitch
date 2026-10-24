@@ -310,14 +310,6 @@ object Prefs {
         get() = sp.getStringSet("lock_paused", emptySet())!!.mapNotNull { it.toLongOrNull() }.toSet()
         set(value) = sp.edit().putStringSet("lock_paused", value.map { it.toString() }.toSet()).commit().let { }
 
-    /**
-     * "Раздача через VPN" through the app's own SOCKS server (see [LocalSocks]) rather than by
-     * forwarding packets into the VPN: as fast as the proxy route. On unless switched off.
-     */
-    var vpnFast: Boolean
-        get() = sp.getBoolean("vpn_fast", true)
-        set(value) = sp.edit().putBoolean("vpn_fast", value).apply()
-
     /** Rules waiting out a pause between their steps; see [StepQueue]. */
     var pendingSteps: List<PendingSteps>
         get() = runCatching {

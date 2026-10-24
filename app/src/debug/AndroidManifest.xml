@@ -10,8 +10,5 @@
         <receiver
             android:name=".SimLab"
             android:exported="true" />
-        <receiver
-            android:name=".SocksLab"
-            android:exported="true" />
     </application>
 </manifest>

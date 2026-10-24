@@ -272,24 +272,6 @@
                 android:layout_height="wrap_content"
                 android:text="@string/tether_vpn" />
 
-            <!-- Under "via VPN": the app's own SOCKS server in between, for the proxy route's speed. -->
-            <com.google.android.material.materialswitch.MaterialSwitch
-                android:id="@+id/vpnFast"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:text="@string/tether_vpn_fast" />
-
-            <TextView
-                android:id="@+id/vpnFastHint"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:layout_marginBottom="8dp"
-                android:alpha="0.7"
-                android:text="@string/tether_vpn_fast_hint"
-                android:textSize="13sp" />
-
             <com.google.android.material.materialswitch.MaterialSwitch
                 android:id="@+id/viaProxy"
                 android:layout_width="match_parent"

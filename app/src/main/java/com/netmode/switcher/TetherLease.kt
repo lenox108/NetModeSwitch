@@ -12,6 +12,9 @@ internal class TetherLease(
         return if (record.identity == identity && verify()) record.line else null
     }
 
+    /** Whether a route was saved, matching or not: building over it is a rebuild. */
+    fun saved(): Boolean = read() != null
+
     fun forget() { check(write(null)) { "не удалось сбросить состояние маршрута" } }
 
     suspend fun remember(identity: String, line: String, verify: suspend () -> Boolean) {
