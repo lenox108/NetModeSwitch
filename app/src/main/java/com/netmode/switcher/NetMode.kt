@@ -114,7 +114,37 @@ enum class NetMode(val label: String, val short: String, val mask: Long) {
     /** 4G or better: what the toggle and the tile treat as "high". */
     val high: Boolean get() = mask and (Raf.CLASS_4G or Raf.CLASS_5G) != 0L
 
+    /** The newest generation this mode connects to: 5, 4, 3 or 2. */
+    val top: Int get() = when (this) {
+        FIVE_G, NR_LTE -> 5
+        FULL, LTE_ONLY -> 4
+        THREE_G, WCDMA_ONLY -> 3
+        TWO_G -> 2
+    }
+
+    /** The oldest generation it falls back to: 2 unless the mode holds to its upper ones. */
+    val bottom: Int get() = when (this) {
+        NR_LTE, LTE_ONLY -> 4
+        WCDMA_ONLY -> 3
+        else -> 2
+    }
+
     companion object {
+        /**
+         * The mode for a changed bound on the SIM card. Only seven ranges exist, so the other
+         * bound moves to the nearest one that does; on a tie the narrower range wins, which keeps
+         * a mode that held to its generation holding to the new one.
+         */
+        fun withTop(top: Int, now: NetMode?, among: List<NetMode> = entries): NetMode? =
+            among.filter { it.top == top }
+                .minWithOrNull(compareBy<NetMode> { m -> now?.let { Math.abs(m.bottom - it.bottom) } ?: m.bottom }
+                    .thenByDescending { it.bottom })
+
+        fun withBottom(bottom: Int, now: NetMode?, among: List<NetMode> = entries): NetMode? =
+            among.filter { it.bottom == bottom }
+                .minWithOrNull(compareBy<NetMode> { m -> now?.let { Math.abs(m.top - it.top) } ?: -m.top }
+                    .thenByDescending { it.top })
+
         /** The preset whose stock mask this is, bit for bit; null for any other mask. */
         fun exact(mask: Long): NetMode? =
             entries.firstOrNull { it.mask == mask } ?: entries.firstOrNull { mask in Profile.masksOf(it) }
