@@ -104,6 +104,44 @@
             android:parentActivityName=".MainActivity" />
 
         <activity
+            android:name=".FreezerActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density"
+            android:windowSoftInputMode="stateHidden|adjustResize"
+            android:parentActivityName=".MainActivity" />
+
+        <activity
+            android:name=".FreezerSettingsActivity"
+            android:exported="false"
+            android:parentActivityName=".FreezerActivity" />
+
+        <!-- The freezer's shortcuts: thaw and open an app, the folder, freeze all. Shortcuts
+             start it as this app, so it needs no export. -->
+        <activity
+            android:name=".ThawActivity"
+            android:windowSoftInputMode="stateHidden|adjustResize"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.NetModeSwitch.Translucent" />
+
+        <service
+            android:name=".FreezerTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_ice"
+            android:label="@string/ice_title"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <receiver
+            android:name=".IceReceiver"
+            android:exported="false" />
+
+        <activity
             android:name=".PermissionsActivity"
             android:exported="false"
             android:parentActivityName=".RulesActivity" />
@@ -393,7 +431,8 @@
             </intent-filter>
         </receiver>
 
-        <!-- "Мгновенно": which app is on screen; no window content is read. -->
+        <!-- "Мгновенно": which app is on screen. Of the window content, only the system's "app
+             paused" dialog is read, to open a frozen app from its own icon (Freezer). -->
         <service
             android:name=".AppWatchService"
             android:exported="false"

@@ -24,6 +24,8 @@ object Prefs {
     private const val KEY_FROZEN = "frozen_apps"
     private const val KEY_APP_HANDLED = "app_rules_handled"
     private const val KEY_HIDE_SYSTEM = "hide_system_apps"
+    const val KEY_ICE_APPS = "ice_apps"
+    const val KEY_ICE_UNDO = "ice_undo"
     private const val MAX_EVENTS = 300
 
     private val sp by lazy { App.ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE) }
@@ -337,6 +339,97 @@ object Prefs {
     var instantApps: Boolean
         get() = sp.getBoolean("instant_apps", false)
         set(value) = sp.edit().putBoolean("instant_apps", value).apply()
+
+    /** The freezer ("Морозилка"): its apps with their state; see [Freezer]. */
+    var iceApps: List<IceApp>
+        get() = decodeList(sp.getString(KEY_ICE_APPS, "[]")!!, IceApp::fromJson)
+        set(value) = sp.edit().putString(KEY_ICE_APPS, encodeList(value) { it.toJson() }).commit().let { }
+
+    /** Groups made by hand, kept while no app is in them yet. */
+    var iceGroups: List<String>
+        get() = runCatching {
+            val a = JSONArray(sp.getString("ice_groups", "[]"))
+            (0 until a.length()).map { a.getString(it) }
+        }.getOrDefault(emptyList())
+        set(value) = sp.edit().putString("ice_groups", JSONArray(value).toString()).apply()
+
+    var iceDefaultMode: IceMode
+        get() = if (sp.getString("ice_mode", null) == IceMode.DEEP.name) IceMode.DEEP else IceMode.SOFT
+        set(value) = sp.edit().putString("ice_mode", value.name).apply()
+
+    /** Minutes after leaving an app before it freezes again; [Freezer.NEVER] for never. */
+    var iceDefaultDelay: Int
+        get() = sp.getInt("ice_delay", 5)
+        set(value) = sp.edit().putInt("ice_delay", value).apply()
+
+    var iceScreenOff: Boolean
+        get() = sp.getBoolean("ice_screen_off", true)
+        set(value) = sp.edit().putBoolean("ice_screen_off", value).apply()
+
+    /** Music, navigation, a call or a download: freezing waits. */
+    var iceKeepBusy: Boolean
+        get() = sp.getBoolean("ice_keep_busy", true)
+        set(value) = sp.edit().putBoolean("ice_keep_busy", value).apply()
+
+    /** Shortcuts, the folder and the tile open the app at once, without asking. */
+    var iceNoConfirm: Boolean
+        get() = sp.getBoolean("ice_no_confirm", true)
+        set(value) = sp.edit().putBoolean("ice_no_confirm", value).apply()
+
+    /** The app's own icon opens a soft-frozen app too, through the accessibility service. */
+    var iceNativeInstant: Boolean
+        get() = sp.getBoolean("ice_native_instant", true)
+        set(value) = sp.edit().putBoolean("ice_native_instant", value).apply()
+
+    var iceBadge: Boolean
+        get() = sp.getBoolean("ice_badge", true)
+        set(value) = sp.edit().putBoolean("ice_badge", value).apply()
+
+    /** The end of a rule's own freeze does not unfreeze an app the freezer holds. */
+    var iceRespectRules: Boolean
+        get() = sp.getBoolean("ice_respect_rules", true)
+        set(value) = sp.edit().putBoolean("ice_respect_rules", value).apply()
+
+    /** How the freezer lists its apps: "list", "compact" or "grid". */
+    var iceView: String
+        get() = sp.getString("ice_view", "list")!!
+        set(value) = sp.edit().putString("ice_view", value).apply()
+
+    var iceSort: IceSort
+        get() = runCatching { IceSort.valueOf(sp.getString("ice_sort", "NAME")!!) }.getOrDefault(IceSort.NAME)
+        set(value) = sp.edit().putString("ice_sort", value.name).apply()
+
+    var iceOrder: List<String>
+        get() = runCatching { val a = JSONArray(sp.getString("ice_order", "[]")); (0 until a.length()).map { a.getString(it) } }.getOrDefault(emptyList())
+        set(value) = sp.edit().putString("ice_order", JSONArray(value.distinct()).toString()).apply()
+
+    var iceUndo: IceUndo?
+        get() = sp.getString(KEY_ICE_UNDO, null)?.let { runCatching { IceUndo.fromJson(org.json.JSONObject(it)) }.getOrNull() }
+        set(value) = sp.edit().putString(KEY_ICE_UNDO, value?.toJson()?.toString()).commit().let { }
+
+    /** Columns of the freezer's views; 0: as many as fit (icons) or one (list). */
+    var iceColumns: Int
+        get() = sp.getInt("ice_columns", 0).coerceIn(0, IceGrid.MAX_COLUMNS)
+        set(value) = sp.edit().putInt("ice_columns", value.coerceIn(0, IceGrid.MAX_COLUMNS)).apply()
+
+    /** Rows in the visible app area; 0 keeps the natural cell height. */
+    var iceRows: Int
+        get() = sp.getInt("ice_rows", 0).coerceIn(0, IceGrid.MAX_ROWS)
+        set(value) = sp.edit().putInt("ice_rows", value.coerceIn(0, IceGrid.MAX_ROWS)).apply()
+
+    /** Icon size in the freezer's views: "s", "m" or "l". */
+    var iceIconSize: String
+        get() = sp.getString("ice_icon_size", "m")!!
+        set(value) = sp.edit().putString("ice_icon_size", value).apply()
+
+    /** Names under the icons in the icon view and the folder. */
+    var iceLabels: Boolean
+        get() = sp.getBoolean("ice_labels", true)
+        set(value) = sp.edit().putBoolean("ice_labels", value).apply()
+
+    var iceBootCheck: Boolean
+        get() = sp.getBoolean("ice_boot_check", true)
+        set(value) = sp.edit().putBoolean("ice_boot_check", value).apply()
 
     var statusNotification: Boolean
         get() = sp.getBoolean("status_notification", false)

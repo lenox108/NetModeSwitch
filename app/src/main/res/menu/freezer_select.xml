@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Several apps picked in the freezer: what can be done to all of them at once. -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/sel_freeze"
+        android:icon="@drawable/ic_ice"
+        android:title="@string/ice_freeze"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/sel_thaw"
+        android:icon="@drawable/ic_t_manual"
+        android:title="@string/ice_thaw"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/sel_all"
+        android:title="@string/ice_select_all"
+        app:showAsAction="never" />
+    <item android:id="@+id/sel_thaw_for" android:title="@string/ice_thaw_for" app:showAsAction="never" />
+    <item android:id="@+id/sel_favorite" android:title="@string/ice_favorite_add" app:showAsAction="never" />
+    <item android:id="@+id/sel_unfavorite" android:title="@string/ice_favorite_remove" app:showAsAction="never" />
+    <item
+        android:id="@+id/sel_card"
+        android:title="@string/ice_card"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/sel_group"
+        android:title="@string/ice_sel_group"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/sel_mode"
+        android:title="@string/ice_sec_mode"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/sel_delay"
+        android:title="@string/ice_sec_delay"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/sel_remove"
+        android:title="@string/ice_remove"
+        app:showAsAction="never" />
+</menu>

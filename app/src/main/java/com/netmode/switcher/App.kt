@@ -31,6 +31,7 @@ class App : Application() {
             WifiMonitor.syncAll()
             runCatching { Widgets.watch() }
             runCatching { RuleTiles.watch() }
+            runCatching { Freezer.watch() }
             // Also clears rules a previous mode left behind, e.g. after a crash or reinstall.
             runCatching { TetherRoute.apply() }
             // Catches a toggle made while the process was not running.

@@ -188,6 +188,7 @@ object AppFreezer {
         // is, so the next reconcile (alarm, boot, opening the app) does the work.
         if (!Privileged.available()) {
             Prefs.log("правила: нет root/Shizuku — применю, когда доступ появится")
+            AccessWait.arm(afterBoot = boot)
             return@withLock false
         }
 
@@ -317,6 +318,7 @@ object AppFreezer {
             if (what == PENDING_ALL) {
                 sideActions(rule, why)
                 if (rule.reconnect) reconnect(why)
+                Freezer.ruleStart(rule, why)
                 if (rule.unload) unloadBackground(why, keep = rule.launchApps, all = rule.unloadAll)
                 launchApps(rule.launchApps, why)
                 OneShots.run(rule.note, rule.http, rule.shell, why)
@@ -665,6 +667,8 @@ object AppFreezer {
         acted()
         val entries = Prefs.frozen.filter { it.ruleId == id }
         Prefs.openWindows = Prefs.openWindows - id
+        // What the window thawed in the freezer freezes again.
+        runCatching { Freezer.ruleEnd(id, why) }
 
         // Another rule still open over the same thing — 08–20 → 3G around 12–13 → 2G — gets
         // it back instead of the state from before both: its own value is applied again and
@@ -757,7 +761,7 @@ object AppFreezer {
         val skipAll = (protected + Prefs.appRules.mapNotNull { it.vpnApp }.map { AppKey.pkg(it) } +
             listOfNotNull(ctx.packageName, home, keyboard)).toSet()
         fun shellKey(key: String) = "${AppKey.pkg(key)}#${AppKey.user(key)}"
-        val skipKeys = (keep + Prefs.unloadExclude + Prefs.frozen.filterNot { it.isPseudo }.map { it.pkg })
+        val skipKeys = (keep + Freezer.protectedKeys() + Prefs.unloadExclude + Prefs.frozen.filterNot { it.isPseudo }.map { it.pkg })
             .filter { AppKey.valid(it) }.map(::shellKey).toSet()
         // One shell pass: those apps' running processes, before and after. In the "all" mode
         // the app on screen is read there too, at the last moment.
@@ -1174,6 +1178,7 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
             "SHELL" -> OneShots.run(null, null, rule.shell, why)
             "UNLOAD" -> if (rule.unload) unloadBackground(why, keep = rule.launchApps, all = rule.unloadAll)
             "RECONNECT" -> if (rule.reconnect) reconnect(why)
+            "ICE" -> Freezer.ruleStart(rule, why)
             else -> keysOf(step, rule.tiles.keys).takeIf { it.isNotEmpty() }?.let { sideActions(rule, why, only = it) }
         }
     }
@@ -1258,6 +1263,16 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
             }
             if (!rule.restores) Prefs.extraRan = Prefs.extraRan + rule.id
         }
+        // No root or Shizuku yet (just rebooted): nothing could be applied, and opening the window
+        // anyway would leave the rule "on" with nothing done — its event will not come again. The
+        // start is put off unmarked, and AccessWait runs it once access is there.
+        if (!Privileged.available()) {
+            Prefs.appHandled = Prefs.appHandled - rule.id
+            Prefs.extraRan = Prefs.extraRan - rule.id
+            Prefs.log("($why): нет root/Shizuku — сработает, когда доступ появится")
+            AccessWait.arm()
+            return
+        }
         acted()
         // Started again: whatever was still pausing, of this start or of the last end, is over.
         StepQueue.cancel(rule.id, end = false)
@@ -1302,6 +1317,7 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
             }
             sideActions(rule, why)
             if (rule.reconnect) reconnect(why)
+            Freezer.ruleStart(rule, why)
             // Unloading is as much in the way of someone using the phone as stopping apps: it
             // waits with them. Before the launches, or it would take the apps just opened.
             val unloadNow = rule.unload && !(defer && rule.packages.isNotEmpty())
@@ -1337,8 +1353,9 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
         val ctx = App.ctx
         val pm = ctx.packageManager
         val guarded = protectedPackages(ctx)
+        val thawProtected = Freezer.protectedKeys()
         val infos = keys
-            .filter { AppKey.valid(it) && AppKey.pkg(it) !in guarded }
+            .filter { AppKey.valid(it) && AppKey.pkg(it) !in guarded && it !in thawProtected }
             .mapNotNull { k -> runCatching { k to pm.getApplicationInfo(AppKey.pkg(k), 0) }.getOrNull() }
         if (infos.isEmpty()) {
             Prefs.log("приложения ($why): нечего останавливать")
@@ -1796,7 +1813,9 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
                 e.appop?.let { appendLine("cmd appops set $t RUN_ANY_IN_BACKGROUND $it >/dev/null 2>&1 || echo \"@F ${e.pkg}\"") }
                 e.bucket?.let { appendLine("am set-standby-bucket $t $it >/dev/null 2>&1 || echo \"@F ${e.pkg}\"") }
             }
-            safe.filter { it.suspended }.map { it.pkg }.takeIf { it.isNotEmpty() }?.let { append(unsuspendBatch(it)) }
+            // An app the freezer holds stays suspended: the rule only borrowed it.
+            safe.filter { it.suspended && !Freezer.holdsSuspended(it.pkg) }.map { it.pkg }
+                .takeIf { it.isNotEmpty() }?.let { append(unsuspendBatch(it)) }
         }
         var failed = netFailed + if (script.isBlank()) 0
         // Unfreezing too goes through app_process per app: its time grows with the list.

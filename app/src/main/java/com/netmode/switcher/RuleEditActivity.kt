@@ -40,6 +40,7 @@ class RuleEditActivity : AppCompatActivity() {
         VPN(R.drawable.ic_a_vpn, R.string.act_vpn),
         DATASIM(R.drawable.ic_a_sim, R.string.act_datasim),
         RECONNECT(R.drawable.ic_a_airplane, R.string.act_reconnect),
+        ICE(R.drawable.ic_ice, R.string.act_ice),
         AIRPLANE(R.drawable.ic_a_airplane, R.string.act_airplane),
         POWERSAVE(R.drawable.ic_t_battery, R.string.act_powersave),
         BT(R.drawable.ic_t_bt, R.string.bluetooth),
@@ -60,7 +61,7 @@ class RuleEditActivity : AppCompatActivity() {
         val isText: Boolean get() = this == NOTE || this == HTTP || this == SHELL
 
         /** Only at the start: something done once, with nothing to put back or set at the end. */
-        val startOnly: Boolean get() = this == RECONNECT
+        val startOnly: Boolean get() = this == RECONNECT || this == ICE
     }
 
     private class TriggerInfo(val trigger: Trigger, val icon: Int, val title: Int, val hint: Int, val short: Int)
@@ -151,6 +152,9 @@ class RuleEditActivity : AppCompatActivity() {
     private var keepStopped = setOf<String>()
     private var launchApps = listOf<String>()
     private var unloadAll = false
+    /** [Act.ICE]: thaw (or freeze) these freezer groups and apps, see [IceAction]. */
+    private var iceThaw = true
+    private var iceTargets = listOf<String>()
     private var sys = mapOf<String, String>()
     /** The one-offs' texts: [Act.NOTE], [Act.HTTP], [Act.SHELL]. */
     private val texts = mutableMapOf<Act, String>()
@@ -188,7 +192,7 @@ class RuleEditActivity : AppCompatActivity() {
                 Act.LAUNCH -> launchApps = emptyList()
                 Act.SYS -> sys = emptyMap()
                 Act.NOTE, Act.HTTP, Act.SHELL -> texts -= a
-                Act.UNLOAD, Act.RECONNECT -> Unit
+                Act.UNLOAD, Act.RECONNECT, Act.ICE -> Unit
             }
         }
 
@@ -394,6 +398,7 @@ class RuleEditActivity : AppCompatActivity() {
         atEnd.shown += shown.filter { !it.anyEnd }
         if (r.unload) shown += Act.UNLOAD
         if (r.reconnect) shown += Act.RECONNECT
+        r.ice?.let { iceThaw = it.thaw; iceTargets = it.targets; shown += Act.ICE }
         if (r.endUnload) atEnd.shown += Act.UNLOAD
         unloadAll = r.unloadAll; atEnd.unloadAll = r.endUnloadAll
         if (atEnd.net != null) atEnd.shown += Act.NET
@@ -983,6 +988,21 @@ class RuleEditActivity : AppCompatActivity() {
                     row(box, a, getString(a.title), null, remove)
                     sub(box, hint(getString(R.string.act_reconnect_hint)))
                 }
+                Act.ICE -> {
+                    // Not in rowChoices: adding the action opens the target list, not this choice.
+                    val c = choice(listOf(getString(R.string.ice_act_thaw), getString(R.string.ice_act_freeze)), if (iceThaw) 0 else 1) { iceThaw = it == 0 }
+                    row(box, a, getString(a.title), c, remove)
+                    sub(box, MaterialButton(this, null, android.R.attr.borderlessButtonStyle).apply {
+                        isAllCaps = false
+                        text = if (iceTargets.isEmpty()) getString(R.string.choose) else iceTargetsLabel()
+                        setOnClickListener { pickIce() }
+                    })
+                    sub(box, hint(getString(when {
+                        Freezer.apps.isEmpty() -> R.string.ice_act_empty
+                        iceThaw -> R.string.ice_act_thaw_hint
+                        else -> R.string.ice_act_freeze_hint
+                    })))
+                }
                 Act.SYS -> {
                     row(box, a, getString(a.title), changeButton(sys.isEmpty()) {
                         pickSys(sys) { sys = it; if (sys.isEmpty()) shown -= Act.SYS; paint() }
@@ -1163,7 +1183,7 @@ class RuleEditActivity : AppCompatActivity() {
                     st.texts[a]?.let { sub(box, hint(it)) }
                 }
                 // Never offered at the end (see allowedEnd).
-                Act.RECONNECT -> Unit
+                Act.RECONNECT, Act.ICE -> Unit
             }
         }
     }
@@ -1319,9 +1339,41 @@ class RuleEditActivity : AppCompatActivity() {
             Act.LAUNCH -> launchApps = emptyList()
             Act.SYS -> sys = emptyMap()
             Act.NOTE, Act.HTTP, Act.SHELL -> texts -= a
+            Act.ICE -> iceTargets = emptyList()
             Act.UNLOAD, Act.RECONNECT -> Unit
         }
         paint()
+    }
+
+    /** "«Работа», Telegram" */
+    private fun iceTargetsLabel(): String = IceAction(iceThaw, iceTargets).label.substringAfter(": ")
+
+    /** The freezer's groups, then its apps; an empty pick on a new action takes it out again. */
+    private fun pickIce() {
+        val groups = Freezer.groups()
+        val apps = Freezer.apps.map { it.key }
+        val targets = groups.map { IceAction.GROUP + it } + apps
+        if (targets.isEmpty()) {
+            Toast.makeText(this, R.string.ice_act_empty, Toast.LENGTH_LONG).show()
+            if (iceTargets.isEmpty()) shown -= Act.ICE
+            paint()
+            return
+        }
+        val labels = groups.map { g -> getString(R.string.ice_group_n, g, Freezer.apps.count { it.group == g }) } +
+            AppPickerActivity.labels(apps)
+        val checked = targets.map { it in iceTargets }.toBooleanArray()
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.act_ice)
+            .setMultiChoiceItems(labels.toTypedArray(), checked) { _, i, on -> checked[i] = on }
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                iceTargets = targets.filterIndexed { i, _ -> checked[i] }
+                if (iceTargets.isEmpty()) shown -= Act.ICE
+                paint()
+            }
+            .setNegativeButton(R.string.cancel) { _, _ ->
+                if (iceTargets.isEmpty()) { shown -= Act.ICE; paint() }
+            }
+            .show()
     }
 
     /** Adds an action to "Что сделать" ([target] null) or to an ending. */
@@ -1363,6 +1415,7 @@ class RuleEditActivity : AppCompatActivity() {
                     Act.LAUNCH -> pickPlain(Pick.LAUNCH, launchApps)
                     Act.SYS -> pickSys(sys) { sys = it; if (sys.isEmpty()) shown -= Act.SYS; paint() }
                     Act.NOTE, Act.HTTP, Act.SHELL -> askText(a, null) { t -> if (t == null) shown -= a else texts[a] = t; paint() }
+                    Act.ICE -> pickIce()
                     else -> Unit
                 }
                 paint()
@@ -1763,6 +1816,7 @@ class RuleEditActivity : AppCompatActivity() {
             lockWindow = t == Trigger.LOCKED && v.lockWindow.isChecked,
             unload = Act.UNLOAD in shown,
             reconnect = Act.RECONNECT in shown,
+            ice = IceAction(iceThaw, iceTargets).takeIf { Act.ICE in shown && iceTargets.isNotEmpty() },
             sys = sys.takeIf { Act.SYS in shown }.orEmpty(),
             endSys = e(Act.SYS, atEnd.sys).orEmpty(),
             note = texts[Act.NOTE].takeIf { Act.NOTE in shown },

@@ -19,7 +19,23 @@ object Root {
     private const val TAG = "netmode"
     private const val TIMEOUT_MS = 15_000L
 
+    /**
+     * libsu keeps the first shell it got for the whole process: when su was not ready yet —
+     * the first minutes after a reboot, the root manager still starting — that shell is a
+     * plain one, and root stayed "missing" until the process died. In those first minutes a
+     * plain shell is thrown away, at most every [RETRY_MS], so su is asked again.
+     */
+    private const val RETRY_WINDOW_MS = 15 * 60_000L
+    private const val RETRY_MS = 15_000L
+    @Volatile private var retriedAt = 0L
+
     suspend fun available(): Boolean = withContext(Dispatchers.IO) {
+        val now = android.os.SystemClock.elapsedRealtime()
+        val cached = Shell.getCachedShell()
+        if (cached != null && !cached.isRoot && now < RETRY_WINDOW_MS && now - retriedAt > RETRY_MS) {
+            retriedAt = now
+            runCatching { cached.close() }
+        }
         runCatching { Shell.getShell().isRoot }.getOrDefault(false)
     }
 

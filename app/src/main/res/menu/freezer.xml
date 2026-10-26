@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_freeze_all"
+        android:icon="@drawable/ic_ice"
+        android:title="@string/ice_freeze_all"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_settings"
+        android:icon="@drawable/ic_settings"
+        android:title="@string/ice_settings"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_view"
+        android:title="@string/ice_view"
+        app:showAsAction="never" />
+    <item android:id="@+id/action_thaw_for" android:title="@string/ice_thaw_for" app:showAsAction="never" />
+    <item android:id="@+id/action_order" android:title="@string/ice_order" app:showAsAction="never" />
+    <item android:id="@+id/action_undo" android:title="@string/ice_undo" app:showAsAction="never" />
+    <item
+        android:id="@+id/action_folder"
+        android:title="@string/ice_pin_folder"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_tile"
+        android:title="@string/ice_add_tile"
+        app:showAsAction="never" />
+</menu>

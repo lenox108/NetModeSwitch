@@ -101,10 +101,13 @@ class BootReceiver : BroadcastReceiver() {
                 // Releasing a window that ended while the phone was off is always right; only a
                 // missed start is subject to the catch-up switch.
                 val boot = intent.action == Intent.ACTION_BOOT_COMPLETED
+                // Without access yet, reconcile arms AccessWait, which runs all of this again later.
                 runCatching { AppFreezer.reconcile(boot = boot, catchUp = Prefs.catchUpOnBoot) }
                 // Pauses that ran out while the phone was off: the rest of their steps, now.
                 runCatching { StepQueue.runDue() }
                 runCatching { AppFreezer.onExtras(null) }
+                // Thawed apps freeze again after a reboot; the freezer's alarm is re-armed.
+                runCatching { Freezer.sync(boot = intent.action == Intent.ACTION_BOOT_COMPLETED) }
                 AlarmScheduler.rearm()
             } finally {
                 pending.finish()

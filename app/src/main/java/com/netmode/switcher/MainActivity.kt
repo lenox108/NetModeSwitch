@@ -35,7 +35,11 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         ui = ActivityMainBinding.inflate(layoutInflater)
         setContentView(ui.root)
-        if (savedInstanceState == null) openFromTile(intent)
+        // The freezer tile's long press is for the folder alone: this screen is not shown.
+        if (savedInstanceState == null && openFromTile(intent) && isTaskRoot) {
+            finish()
+            return
+        }
 
         ui.toolbar.inflateMenu(R.menu.main)
         ui.toolbar.setOnMenuItemClickListener { item ->
@@ -49,6 +53,7 @@ class MainActivity : AppCompatActivity() {
         ui.rulesCard.setOnClickListener { startActivity(Intent(this, AppRulesActivity::class.java)) }
         ui.settingsCard.setOnClickListener { startActivity(Intent(this, RulesActivity::class.java)) }
         ui.hideCard.setOnClickListener { startActivity(Intent(this, NotifHideActivity::class.java)) }
+        ui.iceCard.setOnClickListener { startActivity(Intent(this, FreezerActivity::class.java)) }
         ui.apCard.setOnClickListener { startActivity(Intent(this, HotspotActivity::class.java)) }
         ui.tileCard.setOnClickListener { addTiles() }
         ui.logAll.setOnClickListener { startActivity(Intent(this, LogActivity::class.java)) }
@@ -94,20 +99,29 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * A long press on a tile in the shade lands here. The hotspot tiles (via Proxy / via VPN)
-     * open the hotspot screen straight away, over this one, so "back" still leads home.
+     * open the hotspot screen straight away, over this one, so "back" still leads home. The
+     * freezer's tile opens its folder; true then, since that needs nothing of this screen.
      */
-    private fun openFromTile(intent: Intent?) {
-        if (intent?.action != android.service.quicksettings.TileService.ACTION_QS_TILE_PREFERENCES) return
+    private fun openFromTile(intent: Intent?): Boolean {
+        if (intent?.action != android.service.quicksettings.TileService.ACTION_QS_TILE_PREFERENCES) return false
         @Suppress("DEPRECATION")
         val tile = intent.getParcelableExtra<android.content.ComponentName>(Intent.EXTRA_COMPONENT_NAME)?.className
         if (tile == HotspotProxyTileService::class.java.name || tile == HotspotVpnTileService::class.java.name) {
             startActivity(Intent(this, HotspotActivity::class.java))
         }
+        if (tile == FreezerTileService::class.java.name) {
+            startActivity(Intent(this, ThawActivity::class.java).setAction(Intent.ACTION_VIEW)
+                .putExtra(IceShortcuts.EXTRA_FOLDER, true))
+            return true
+        }
+        return false
     }
 
     override fun onStart() {
         super.onStart()
         ensurePermissions()
+        // Shizuku started by hand after a reboot: what waited for it runs now.
+        AccessWait.poke()
         refresh(force = false)
         renderStatus()
         renderLog()
@@ -298,6 +312,9 @@ class MainActivity : AppCompatActivity() {
         ui.settingsSummary.text = getString(R.string.settings_summary)
         val hiding = Prefs.hideRules.size
         val blocked = Prefs.notifBlocked.size
+        val ice = Freezer.apps
+        ui.iceSummary.text = if (ice.isEmpty()) getString(R.string.ice_summary_none)
+        else getString(R.string.ice_summary, ice.count { it.frozen }, ice.count { !it.frozen })
         ui.hideSummary.text = if (hiding + blocked == 0) getString(R.string.hide_summary_none)
         else listOfNotNull(
             getString(R.string.hide_summary_rules, hiding).takeIf { hiding > 0 },

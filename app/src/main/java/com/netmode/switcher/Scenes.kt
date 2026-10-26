@@ -47,7 +47,7 @@ object Scenes {
     fun sync(ctx: Context) {
         val sm = ctx.getSystemService(ShortcutManager::class.java) ?: return
         val scenes = Prefs.appRules.filter { it.trigger == Trigger.MANUAL }
-        sm.dynamicShortcuts = scenes.filter { it.enabled }.take(IN_MENU).map { shortcut(ctx, it) }
+        publishMenu(ctx)
         val byId = scenes.associateBy { id(it.id) }
         val pinned = sm.pinnedShortcuts.filter { it.id.startsWith("scene-") }
         val kept = pinned.mapNotNull { byId[it.id] }
@@ -57,6 +57,23 @@ object Scenes {
         }
         val gone = pinned.map { it.id }.filter { it !in byId }
         if (gone.isNotEmpty()) sm.disableShortcuts(gone, ctx.getString(R.string.scene_gone))
+    }
+
+    /** What the menu last held, so an unchanged one is not sent again (the launcher rate-limits). */
+    @Volatile private var menuSig: String? = null
+
+    /**
+     * The app icon's menu: the enabled scenes first, the freezer's last opened apps in the
+     * places left (see [IceShortcuts.menu]).
+     */
+    fun publishMenu(ctx: Context) {
+        val sm = ctx.getSystemService(ShortcutManager::class.java) ?: return
+        val scenes = Prefs.appRules.filter { it.trigger == Trigger.MANUAL && it.enabled }.take(IN_MENU).map { shortcut(ctx, it) }
+        val menu = scenes + IceShortcuts.menu(ctx, IN_MENU - scenes.size)
+        val sig = menu.joinToString("|") { "${it.id}:${it.shortLabel}" }
+        if (sig == menuSig) return
+        sm.dynamicShortcuts = menu
+        menuSig = sig
     }
 
     /** A press: starts the scene, or ends it when it is on. Returns what to tell the user. */
