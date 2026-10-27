@@ -1,0 +1,9 @@
+{
+  "supported2": true,
+  "supported5": false,
+  "supported6": false,
+  "bridged": false,
+  "max": 16,
+  "state": 11,
+  "error": null
+}

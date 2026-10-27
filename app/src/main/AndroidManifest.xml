@@ -193,6 +193,150 @@
         </service>
 
         <service
+            android:name=".HotspotVpn24TileService"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@drawable/ic_hotspot_tile"
+            android:label="@string/ap_tile_vpn_24"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".HotspotVpn5TileService"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@drawable/ic_hotspot_tile"
+            android:label="@string/ap_tile_vpn_5"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".HotspotVpn6TileService"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/ic_hotspot_tile"
+            android:label="@string/ap_tile_vpn_6"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".HotspotVpnDualTileService"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/ic_hotspot_tile"
+            android:label="@string/ap_tile_vpn_dual"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".HotspotProxy24TileService"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@drawable/ic_hotspot_tile"
+            android:label="@string/ap_tile_proxy_24"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".HotspotProxy5TileService"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@drawable/ic_hotspot_tile"
+            android:label="@string/ap_tile_proxy_5"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".HotspotProxy6TileService"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/ic_hotspot_tile"
+            android:label="@string/ap_tile_proxy_6"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".HotspotProxyDualTileService"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/ic_hotspot_tile"
+            android:label="@string/ap_tile_proxy_dual"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".HotspotDirect24TileService"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@drawable/ic_hotspot_tile"
+            android:label="@string/ap_tile_direct_24"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".HotspotDirect5TileService"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@drawable/ic_hotspot_tile"
+            android:label="@string/ap_tile_direct_5"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".HotspotDirect6TileService"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/ic_hotspot_tile"
+            android:label="@string/ap_tile_direct_6"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".HotspotDirectDualTileService"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/ic_hotspot_tile"
+            android:label="@string/ap_tile_direct_dual"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
             android:name=".HotspotProxyTileService"
             android:exported="true"
             android:icon="@drawable/ic_hotspot_tile"

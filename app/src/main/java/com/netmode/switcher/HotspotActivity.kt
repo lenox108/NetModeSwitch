@@ -23,14 +23,31 @@ class HotspotActivity : AppCompatActivity() {
     private var clientValues = listOf(0, 1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 25, 32)
     private var timeoutValues = listOf(0L, 1, 3, 5, 10, 15, 30, 60)
     private var savedChannel = 0
+    private lateinit var bands: HotspotBandButtons
+    private var bandEdited = false
+    private var saveBusy = false
+    private lateinit var panel: HotspotPanel
+    private lateinit var screen: HotspotScreen
+    private lateinit var presets: HotspotPresetsUi
+    private val routeIds = mapOf(TetherMode.DIRECT to R.id.routeDirect, TetherMode.VPN to R.id.routeVpn, TetherMode.PROXY to R.id.routeProxy)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ui = ActivityHotspotBinding.inflate(layoutInflater)
         setContentView(ui.root)
+        screen = HotspotScreen(ui)
+        screen.restore(savedInstanceState)
+        presets = HotspotPresetsUi(this, ui) { preset ->
+            performHotspotAction(reloadRadio = true) { HotspotControl.startPreset(preset) }
+        }
         ui.toolbar.setNavigationOnClickListener { finish() }
         ui.save.setOnClickListener { save() }
-        ui.band.addOnButtonCheckedListener { _, _, checked -> if (checked) fillChannels(0) }
+        bands = HotspotBandButtons(ui)
+        bands.bind("keep", Prefs.hotspotAvailableBands)
+        bands.setEnabled(false)
+        bands.onChange = { bandEdited = true; fillChannels(0); showBandHint() }
+        panel = HotspotPanel(this, ui)
+        panel.start()
         ui.autoOff.setOnCheckedChangeListener { _, on -> ui.timeoutRow.visibility = if (on) View.VISIBLE else View.GONE }
         ui.security.onChange = { ui.passLayout.visibility = if (secValues[it] == "open") View.GONE else View.VISIBLE }
         ui.save.isEnabled = false
@@ -38,19 +55,29 @@ class HotspotActivity : AppCompatActivity() {
         setupTweaks()
         ui.startProxy.setOnClickListener { quick(TetherMode.PROXY) }
         ui.startVpn.setOnClickListener { quick(TetherMode.VPN) }
-        ui.addApTiles.setOnClickListener { addTiles() }
+        ui.stopHotspot.setOnClickListener { performHotspotAction { HotspotControl.stop() } }
+        ui.toolbar.menu.add(R.string.ap_add_tiles).setOnMenuItemClickListener { addTiles(); true }
         paintQuick()
         load()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        screen.save(outState)
+        super.onSaveInstanceState(outState)
     }
 
     private fun load() {
         lifecycleScope.launch {
             val s = runCatching { HotspotConfig.read() }.getOrNull()
             caps = runCatching { HotspotConfig.capability() }.getOrDefault(caps)
+            if (HotspotBands.known(caps)) Prefs.hotspotAvailableBands = HotspotBands.resolve(caps, Compat.SDK, Prefs.hotspotAvailableBands)
+            presets.bindAvailable(Prefs.hotspotAvailableBands)
             if (s == null) {
                 // Before Android 11 the hotspot settings are another API (WifiConfiguration),
                 // not supported here: they stay in the system settings, the routes still work.
-                ui.status.setText(if (Compat.SDK < 30) R.string.ap_legacy else R.string.ap_read_failed)
+                ui.savedSummary.setText(if (Compat.SDK < 30) R.string.ap_legacy else R.string.ap_read_failed)
+                bands.setEnabled(false)
+                ui.channel.isEnabled = false
                 return@launch
             }
             loaded = s
@@ -61,8 +88,8 @@ class HotspotActivity : AppCompatActivity() {
             if (s.sec !in secValues) { secValues = secValues + s.sec; secLabels += s.sec.uppercase() }
             ui.security.setItems(secLabels, secValues.indexOf(s.sec))
             ui.passLayout.visibility = if (s.sec == "open") View.GONE else View.VISIBLE
-            ui.band.check(when (s.band.firstOrNull()) { '5' -> R.id.band5; '6' -> R.id.band6; else -> R.id.band2 })
-            ui.band6.isEnabled = caps.channels["6"].orEmpty().isNotEmpty()
+            bands.bind(ApRadio.key(s.radio), Prefs.hotspotAvailableBands)
+            showBandHint()
             savedChannel = s.channel
             fillChannels(s.channel)
             clientValues = (clientValues.filter { it <= caps.max } + s.clients).distinct().sorted()
@@ -77,33 +104,53 @@ class HotspotActivity : AppCompatActivity() {
             ui.ax.isChecked = s.ax
             ui.randomMac.isChecked = s.randomMac
             ui.save.isEnabled = true
+            paintTweakControls(Privileged.choose() == Backend.ROOT)
             showStatus()
         }
     }
 
     private fun showStatus() {
-        lifecycleScope.launch {
-            val running = runCatching { HotspotConfig.running() }.getOrNull()
-            ui.status.text = running?.let { getString(R.string.ap_running, it) } ?: getString(R.string.ap_off)
-        }
+        loaded?.let { ui.savedSummary.text = "${it.ssid} · ${it.sec.uppercase()}" }
+        panel.refresh()
     }
 
-    private fun band(): String = when (ui.band.checkedButtonId) { R.id.band5 -> "5"; R.id.band6 -> "6"; else -> "2" }
+    private fun band(): String = bands.selectedKey
+
+    private fun showBandHint() {
+        ui.bandHint.text = buildList {
+            when (band()) {
+                "auto25" -> add("Авто: Android выберет один диапазон — 2,4 или 5 ГГц.")
+                "dual25" -> add("2,4 и 5 ГГц одновременно. Android может отключать незанятый диапазон для экономии энергии.")
+                "keep" -> add("Сохранится текущая системная конфигурация диапазонов и каналов.")
+                else -> if (caps.channels[band()].orEmpty().isEmpty())
+                    add("Список каналов ${ApRadio.label(band())} недоступен. Оставь канал «Авто»; возможность применения проверит Android при сохранении.")
+            }
+        }.joinToString("\n")
+        ui.bandHint.visibility = if (ui.bandHint.text.isBlank()) View.GONE else View.VISIBLE
+    }
+
+    private fun setRouteEnabled(enabled: Boolean) {
+        listOf(ui.routeDirect, ui.routeVpn, ui.routeProxy).forEach { it.isEnabled = enabled }
+    }
+
+    private fun selectedRoute(): TetherMode = routeIds.entries.firstOrNull { it.value == ui.routeGroup.checkedButtonId }?.key ?: Prefs.tetherMode
 
     private fun channels(): List<Int> {
         val list = listOf(0) + caps.channels[band()].orEmpty()
         // The saved channel stays pickable on its own band even if the list lacks it.
-        val own = savedChannel.takeIf { it != 0 && loaded?.band?.firstOrNull()?.toString() == band() && it !in list }
+        val own = savedChannel.takeIf { it != 0 && loaded?.let { s -> ApRadio.key(s.radio) } == band() && it !in list }
         return if (own != null) list + own else list
     }
 
     private fun fillChannels(selected: Int) {
         val list = channels()
+        ui.channel.isEnabled = band() in listOf("2", "5", "6")
         ui.channel.setItems(list.map { if (it == 0) getString(R.string.ap_auto) else it.toString() },
             list.indexOf(selected).coerceAtLeast(0))
     }
 
     private fun save() {
+        if (saveBusy || tetherBusy) return
         val base = loaded ?: return
         val sec = secValues[ui.security.selectedItemPosition]
         val ssid = ui.ssid.text.toString().trim()
@@ -118,6 +165,8 @@ class HotspotActivity : AppCompatActivity() {
             sec = sec,
             band = band(),
             channel = channels()[ui.channel.selectedItemPosition],
+            radio = if (!bandEdited && channels()[ui.channel.selectedItemPosition] == base.channel) base.radio
+                else ApRadio.value(band(), channels()[ui.channel.selectedItemPosition], base.radio),
             hidden = ui.hidden.isChecked,
             clients = clientValues[ui.clients.selectedItemPosition],
             autoOff = ui.autoOff.isChecked,
@@ -125,18 +174,22 @@ class HotspotActivity : AppCompatActivity() {
             ax = ui.ax.isChecked,
             randomMac = ui.randomMac.isChecked,
         )
-        ui.save.isEnabled = false
+        saveBusy = true
+        paintTweakControls(false)
         lifecycleScope.launch {
-            val error = runCatching { HotspotConfig.write(s) }.getOrElse { it.message }
-            ui.save.isEnabled = true
+            val error = runCatching { HotspotControl.saveSettings(s, base) }.getOrElse { it.message ?: it.javaClass.simpleName }
+            saveBusy = false
             if (error == null) {
-                loaded = s
-                Prefs.log("точка доступа: сохранено — ${HotspotConfig.summary(s)}")
+                loaded = runCatching { HotspotConfig.read() }.getOrNull() ?: s
+                bandEdited = false
+                savedChannel = loaded!!.channel
+                Prefs.log("точка доступа: сохранено — ${HotspotConfig.summary(loaded!!)}")
                 toast(R.string.ap_saved)
                 showStatus()
             } else {
                 Toast.makeText(this@HotspotActivity, getString(R.string.ap_save_failed, error), Toast.LENGTH_LONG).show()
             }
+            paintTweakControls(Privileged.choose() == Backend.ROOT)
         }
     }
 
@@ -146,32 +199,52 @@ class HotspotActivity : AppCompatActivity() {
             runCatching { HotspotControl.isOn() }
             val proxyOn = HotspotControl.activeIn(TetherMode.PROXY)
             val vpnOn = HotspotControl.activeIn(TetherMode.VPN)
-            ui.startProxy.setText(if (proxyOn) R.string.ap_btn_proxy_off else R.string.ap_btn_proxy_on)
-            ui.startVpn.setText(if (vpnOn) R.string.ap_btn_vpn_off else R.string.ap_btn_vpn_on)
+            HotspotScreen.quick(ui, when { vpnOn -> TetherMode.VPN; proxyOn -> TetherMode.PROXY
+                HotspotControl.lastOn -> TetherMode.DIRECT; else -> null })
             // Both need root: without it they would only report that it is missing.
             val root = Privileged.choose() == Backend.ROOT
             ui.startProxy.isEnabled = root
             ui.startVpn.isEnabled = root
             // Keep the switches below in step with what the buttons just did.
             programmatic = true
-            ui.viaVpn.isChecked = Prefs.tetherMode == TetherMode.VPN
-            ui.viaProxy.isChecked = Prefs.tetherMode == TetherMode.PROXY
-            ui.proxyRow.visibility = if (ui.viaProxy.isChecked) View.VISIBLE else View.GONE
+            setRouteEnabled(true)
+            ui.routeGroup.check(routeIds.getValue(Prefs.tetherMode))
+            ui.proxyRow.visibility = if (Prefs.tetherMode == TetherMode.PROXY) View.VISIBLE else View.GONE
             programmatic = false
             paintTweakControls(root)
         }
     }
 
-    private fun quick(mode: TetherMode) {
-        ui.startProxy.isEnabled = false
-        ui.startVpn.isEnabled = false
-        lifecycleScope.launch {
-            val line = runCatching { HotspotControl.toggle(mode) }.getOrElse { "ошибка: ${it.message}" }
-            ui.tetherStatus.text = line
-            ui.startProxy.isEnabled = true
-            ui.startVpn.isEnabled = true
-            paintQuick()
-            showStatus()
+    private fun quick(mode: TetherMode) = performHotspotAction { HotspotControl.toggle(mode) }
+
+    private fun performHotspotAction(reloadRadio: Boolean = false, action: suspend () -> String) {
+        if (tetherBusy || tweaksBusy || saveBusy) return
+        tetherBusy = true
+        paintTweakControls(false)
+        ui.presetStatus.visibility = View.VISIBLE
+        ui.presetStatus.setText(R.string.working)
+        // A frequency switch must finish even if the user leaves this page mid-restart.
+        App.scope.launch {
+            val line = runCatching { action() }.getOrElse { "Ошибка: ${it.message}" }
+            val current = if (reloadRadio) runCatching { HotspotConfig.read() }.getOrNull() else null
+            withContext(Dispatchers.Main) {
+                tetherBusy = false
+                if (!isDestroyed) {
+                    ui.tetherStatus.text = line
+                    ui.presetStatus.text = line
+                    if (current != null) {
+                        // Keep unsaved identity/advanced edits; only the launched band is replaced.
+                        loaded = current
+                        bandEdited = false
+                        savedChannel = current.channel
+                        bands.bind(ApRadio.key(current.radio), Prefs.hotspotAvailableBands)
+                        fillChannels(current.channel)
+                        showBandHint()
+                    }
+                    paintQuick()
+                    showStatus()
+                }
+            }
         }
     }
 
@@ -180,7 +253,7 @@ class HotspotActivity : AppCompatActivity() {
         HotspotProxyTileService::class.java to R.string.ap_tile_proxy,
         HotspotVpnTileService::class.java to R.string.ap_tile_vpn,
     )) {
-        if (!Compat.canRequestTile) return Compat.tilesByHand(this)
+        if (android.os.Build.VERSION.SDK_INT < 33 || !Compat.canRequestTile) return Compat.tilesByHand(this)
         val (cls, label) = remaining.firstOrNull() ?: return
         getSystemService(android.app.StatusBarManager::class.java).requestAddTileService(
             android.content.ComponentName(this, cls), getString(label),
@@ -196,7 +269,7 @@ class HotspotActivity : AppCompatActivity() {
     /** Proxy choices: the saved one plus whatever listens on 127.0.0.1 right now. */
     private var proxies: List<String> = emptyList()
 
-    /** The two switches are exclusive: VPN, proxy, or neither (direct). */
+    /** One explicit route choice, applied immediately. */
     private fun setupTether() {
         ui.checkTether.setOnClickListener {
             ui.checkTether.isEnabled = false
@@ -212,21 +285,15 @@ class HotspotActivity : AppCompatActivity() {
             }
         }
         val mode = Prefs.tetherMode
-        ui.viaVpn.isChecked = mode == TetherMode.VPN
-        ui.viaProxy.isChecked = mode == TetherMode.PROXY
+        ui.routeGroup.check(routeIds.getValue(mode))
         ui.proxyRow.visibility = if (mode == TetherMode.PROXY) View.VISIBLE else View.GONE
         proxies = listOf(Prefs.tetherProxy)
         fillProxies()
-        ui.viaVpn.setOnCheckedChangeListener { _, on ->
-            if (programmatic) return@setOnCheckedChangeListener
-            if (on) { programmatic = true; ui.viaProxy.isChecked = false; programmatic = false; ui.proxyRow.visibility = View.GONE }
-            setTether()
-        }
-        ui.viaProxy.setOnCheckedChangeListener { _, on ->
-            if (programmatic) return@setOnCheckedChangeListener
-            if (on) { programmatic = true; ui.viaVpn.isChecked = false; programmatic = false }
-            ui.proxyRow.visibility = if (on) View.VISIBLE else View.GONE
-            setTether()
+        ui.routeGroup.addOnButtonCheckedListener { _, _, checked ->
+            if (checked && !programmatic) {
+                ui.proxyRow.visibility = if (selectedRoute() == TetherMode.PROXY) View.VISIBLE else View.GONE
+                setTether()
+            }
         }
         ui.proxyAddr.onChange = { i ->
             if (i == proxies.size) manualProxy()
@@ -371,17 +438,21 @@ class HotspotActivity : AppCompatActivity() {
     }
 
     private fun paintTweakControls(root: Boolean) {
-        val ready = root && !tweaksBusy && !tetherBusy
+        val ready = root && !tweaksBusy && !tetherBusy && !saveBusy
         ui.fixTtl.isEnabled = ready
         ui.ttlValue.isEnabled = ready && Prefs.tetherTtlEnabled
         ui.checkTweaks.isEnabled = ready
         ui.checkTether.isEnabled = ready
         ui.ttlRow.visibility = if (Prefs.tetherTtlEnabled) View.VISIBLE else View.GONE
         ui.tweaksOffloadHint.visibility = if (Prefs.tetherTtlEnabled) View.VISIBLE else View.GONE
-        ui.viaVpn.isEnabled = ready
-        ui.viaProxy.isEnabled = ready
+        setRouteEnabled(ready)
         ui.startVpn.isEnabled = ready
         ui.startProxy.isEnabled = ready
+        ui.stopHotspot.isEnabled = ready
+        presets.setEnabled(ready && loaded != null && Compat.SDK >= 30)
+        ui.save.isEnabled = loaded != null && !tetherBusy && !saveBusy
+        bands.setEnabled(loaded != null && !tetherBusy && !saveBusy)
+        ui.channel.isEnabled = loaded != null && !tetherBusy && !saveBusy && band() in listOf("2", "5", "6")
     }
 
     /** The operation survives activity destruction, so turning a switch off always restores. */
@@ -416,14 +487,8 @@ class HotspotActivity : AppCompatActivity() {
 
     private fun setTether() {
         if (programmatic) return
-        Prefs.tetherMode = when {
-            ui.viaVpn.isChecked -> TetherMode.VPN
-            ui.viaProxy.isChecked -> TetherMode.PROXY
-            else -> TetherMode.DIRECT
-        }
-        // No second change while the route is being rebuilt: it would be shown but not applied.
-        ui.viaVpn.isEnabled = false
-        ui.viaProxy.isEnabled = false
+        Prefs.tetherMode = selectedRoute()
+        setRouteEnabled(false)
         tetherBusy = true
         paintTweakControls(false)
         ui.tetherStatus.setText(R.string.working)
@@ -433,20 +498,21 @@ class HotspotActivity : AppCompatActivity() {
             tetherBusy = false
             Prefs.log(line)
             showTether(line)
+            paintQuick()
+            panel.refresh()
         }
     }
 
     private fun showTether(line: String?) {
         lifecycleScope.launch {
             val root = Privileged.choose() == Backend.ROOT
-            ui.viaVpn.isEnabled = root
-            ui.viaProxy.isEnabled = root
+            setRouteEnabled(root)
             paintTweakControls(root)
             if (!tweaksBusy) ui.tweaksStatus.text = NetworkTweaks.status.ifBlank { getString(R.string.tether_tweaks_off) }
             ui.tetherStatus.text = when {
                 !root -> getString(R.string.tether_need_root)
                 line != null -> line
-                else -> "сейчас: " + TetherRoute.label(Prefs.tetherMode)
+                else -> "Выбран маршрут: " + TetherRoute.label(Prefs.tetherMode) + ". Проверка ниже показывает его состояние."
             }
         }
     }

@@ -26,6 +26,7 @@ object Backup {
             .put("dualPrimary", Prefs.dualPrimary.name)
             .put("dualSecondary", Prefs.dualSecondary.name)
             .put("tetherProxy", Prefs.tetherProxy)
+            .put("hotspotPresets", HotspotPreset.encode(Prefs.hotspotPresets))
             .put("tetherProxyUser", Prefs.tetherProxyUser)
             .put("tetherTtlEnabled", Prefs.tetherTtlEnabled)
             .put("tetherTtlValue", Prefs.tetherTtlValue)
@@ -113,6 +114,7 @@ object Backup {
             runCatching { Prefs.dualSecondary = NetMode.valueOf(s.getString("dualSecondary")) }
             s.optString("tetherProxy").takeIf { it.isNotEmpty() }?.let { Prefs.tetherProxy = it }
             if (s.has("tetherProxyUser")) Prefs.tetherProxyUser = s.getString("tetherProxyUser")
+            if (s.has("hotspotPresets")) Prefs.hotspotPresets = HotspotPreset.decode(s.getString("hotspotPresets"))
             if (s.has("tetherTtlEnabled")) Prefs.tetherTtlEnabled = s.getBoolean("tetherTtlEnabled")
             if (s.has("tetherTtlValue")) Prefs.tetherTtlValue = s.getInt("tetherTtlValue").takeIf { it in 0..255 } ?: 0
             if (s.has("disableTetherIpv6")) Prefs.disableTetherIpv6 = s.getBoolean("disableTetherIpv6")

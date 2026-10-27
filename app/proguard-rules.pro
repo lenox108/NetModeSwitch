@@ -22,6 +22,7 @@
 -keep class com.netmode.switcher.ChannelCli { public static void main(java.lang.String[]); }
 -keep class com.netmode.switcher.VpnCli { public static void main(java.lang.String[]); }
 -keep class com.netmode.switcher.ApConfigCli { public static void main(java.lang.String[]); }
+-keep class com.netmode.switcher.HotspotReadCli { public static void main(java.lang.String[]); }
 -keep class com.netmode.switcher.SimCli { public static void main(java.lang.String[]); }
 -keep class com.netmode.switcher.PhoneCli { public static void main(java.lang.String[]); }
 -keep class com.netmode.switcher.SocksCli { public static void main(java.lang.String[]); }

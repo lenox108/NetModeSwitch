@@ -331,11 +331,47 @@ object TetherRoute {
 
     /** Read-only and small: no speed-test downloads and no tunnel restart. */
     suspend fun diagnostics(): String = lock.withLock {
-        if (Privileged.choose() != Backend.ROOT) return@withLock "Нужен root"
-        val ap = apInterface() ?: return@withLock "Включи точку доступа для проверки"
+        diagnosticsLocked()
+    }
+
+    /** Hold the route mutex while capturing rules so our health watcher cannot rebuild midway. */
+    suspend fun diagnosticDetails(): String = lock.withLock {
+        val commands = """
+            echo '[Interfaces / MTU / errors]'
+            ip -s link
+            echo '[IPv4 policy]'
+            ip rule
+            ip route show table all
+            echo '[IPv6 policy]'
+            ip -6 rule
+            echo '[Forward]'
+            iptables -w 1 -nvxL NMS_FWD
+            iptables -w 1 -nvxL NMS_HOLD
+            echo '[NAT / DNS]'
+            iptables -w 1 -t nat -nvxL NMS_NAT
+            iptables -w 1 -t nat -nvxL NMS_DNS
+            iptables -w 1 -t nat -S PREROUTING
+            iptables -w 1 -S FORWARD
+            echo '[TCP MSS]'
+            iptables -w 1 -t mangle -nvxL NMS_MSS
+            echo '[IPv6 guard]'
+            ip6tables -w 1 -nvxL NMS_FWD6
+            ip6tables -w 1 -nvxL NMS_HOLD6
+            echo '[Offload settings]'
+            settings get global tether_offload_disabled
+            device_config get connectivity override_tether_enable_bpf_offload
+        """.trimIndent()
+        val raw = runCatching { Privileged.exec(commands, 20_000) }.getOrElse { "Снимок команд: ${it.javaClass.simpleName}" }
+        val verified = runCatching { diagnosticsLocked() }.getOrElse { "Проверка не завершилась: ${it.javaClass.simpleName}" }
+        raw.take(50_000) + "\n\n" + verified
+    }
+
+    private suspend fun diagnosticsLocked(): String {
+        if (Privileged.choose() != Backend.ROOT) return "Нужен root для проверки маршрута"
+        val ap = apInterface() ?: return "Включи точку доступа для проверки"
         val mode = Prefs.tetherMode
         val vpn = if (mode == TetherMode.VPN) vpnInterface() else null
-        buildList {
+        return buildList {
             add("Маршрут: ${label(mode)}")
             if (mode == TetherMode.VPN && vpn == null) add("VPN не подключён")
             else if (mode != TetherMode.DIRECT) {

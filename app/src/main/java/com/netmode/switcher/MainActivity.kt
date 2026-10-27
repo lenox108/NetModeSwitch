@@ -106,7 +106,7 @@ class MainActivity : AppCompatActivity() {
         if (intent?.action != android.service.quicksettings.TileService.ACTION_QS_TILE_PREFERENCES) return false
         @Suppress("DEPRECATION")
         val tile = intent.getParcelableExtra<android.content.ComponentName>(Intent.EXTRA_COMPONENT_NAME)?.className
-        if (tile == HotspotProxyTileService::class.java.name || tile == HotspotVpnTileService::class.java.name) {
+        if (tile == HotspotProxyTileService::class.java.name || tile == HotspotVpnTileService::class.java.name || HotspotPresetTiles.containsClass(tile)) {
             startActivity(Intent(this, HotspotActivity::class.java))
         }
         if (tile == FreezerTileService::class.java.name) {

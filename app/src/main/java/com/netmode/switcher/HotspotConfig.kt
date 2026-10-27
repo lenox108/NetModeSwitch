@@ -21,10 +21,47 @@ data class ApSettings(
     val timeout: Long,
     val ax: Boolean,
     val randomMac: Boolean,
+    /** Full band/channel map, including concurrent APs. Empty only on Android 11. */
+    val radio: String = "",
 )
 
 /** Channels the radio allows per band, as the Wi-Fi service reports them. */
-data class ApCapability(val max: Int, val channels: Map<String, List<Int>>)
+data class ApCapability(
+    val max: Int,
+    val channels: Map<String, List<Int>>,
+    val bridged: Boolean? = null,
+    /** SoftApCapability band flags. Missing means unknown, not unsupported. */
+    val supported: Map<String, Boolean> = emptyMap(),
+)
+
+internal object HotspotBands {
+    fun fromFrequencies(frequencies: List<Int>): Set<String> = frequencies.mapNotNull {
+        when (it) {
+            in 2412..2484 -> "2"
+            in 5160..5885 -> "5"
+            in 5935..7115 -> "6"
+            else -> null
+        }
+    }.toSet()
+
+    fun available(caps: ApCapability, sdk: Int): Set<String> = resolve(caps, sdk, setOf("2", "5"))
+
+    /** An incomplete OEM response must not resurrect a band previously reported unsupported. */
+    fun resolve(caps: ApCapability, sdk: Int, previous: Set<String>): Set<String> {
+        if (sdk < 30) return emptySet()
+        fun supported(band: String) = caps.supported[band]
+            ?: if (caps.channels[band].orEmpty().isNotEmpty()) true else band in previous
+        return buildSet {
+            listOf("2", "5", "6").filter(::supported).forEach(::add)
+            if ("2" in this && "5" in this) {
+                add("auto25")
+                if (sdk >= 31 && (caps.bridged == true || (caps.bridged == null && "dual25" in previous))) add("dual25")
+            }
+        }
+    }
+
+    fun known(caps: ApCapability) = caps.supported.isNotEmpty() || caps.bridged != null || caps.channels.values.any { it.isNotEmpty() }
+}
 
 object HotspotConfig {
 
@@ -38,6 +75,7 @@ object HotspotConfig {
         if (out.contains("error=")) return null
         val m = out.lineSequence().filter { '=' in it }
             .associate { it.substringBefore('=') to it.substringAfter('=') }
+        if (!m.keys.containsAll(listOf("ssid", "sec", "band"))) return null
         return ApSettings(
             ssid = m["ssid"].orEmpty(),
             pass = m["pass"].orEmpty(),
@@ -50,18 +88,35 @@ object HotspotConfig {
             timeout = m["timeout"]?.toLongOrNull() ?: 0,
             ax = m["ax"] != "0",
             randomMac = m["mac"] != "device",
+            radio = m["radio"].orEmpty().ifBlank { ApRadio.legacy(m["band"] ?: "2", m["channel"]?.toIntOrNull() ?: 0) },
         )
     }
 
     /** Returns null on success, or the error text. */
-    suspend fun write(s: ApSettings): String? {
-        val args = listOf(
-            "ssid=${s.ssid}", "pass=${s.pass}", "sec=${s.sec}", "band=${s.band}", "channel=${s.channel}",
-            "hidden=${if (s.hidden) 1 else 0}", "clients=${s.clients}", "autooff=${if (s.autoOff) 1 else 0}",
-            "timeout=${s.timeout}", "ax=${if (s.ax) 1 else 0}", "mac=${if (s.randomMac) "random" else "device"}",
-        ).joinToString(" ") { q(it) }
-        val out = Privileged.exec("${cli()} set $args").trim()
+    suspend fun write(s: ApSettings, previous: ApSettings): String? = configure("set", s, previous)
+
+    /** Validate the builder without changing the saved configuration or a running AP. */
+    suspend fun validate(s: ApSettings, previous: ApSettings): String? = configure("check", s, previous)
+
+    private suspend fun configure(command: String, s: ApSettings, previous: ApSettings): String? {
+        val changed = changes(s, previous)
+        if (changed.isEmpty()) return null
+        val args = changed.map { (key, value) -> q("$key=$value") }.joinToString(" ")
+        val out = Privileged.exec("${cli()} $command $args").trim()
         return if (out.lines().any { it == "ok" }) null else out.substringAfter("error=", out)
+    }
+
+    /** Only edited fields cross the shell boundary: preserve OEM/dual-band settings verbatim. */
+    internal fun changes(s: ApSettings, old: ApSettings): Map<String, String> = buildMap {
+        if (s.ssid != old.ssid) put("ssid", s.ssid)
+        if (s.pass != old.pass || s.sec != old.sec) { put("pass", s.pass); put("sec", s.sec) }
+        if (s.radio != old.radio) put("radio", s.radio)
+        if (s.hidden != old.hidden) put("hidden", if (s.hidden) "1" else "0")
+        if (s.clients != old.clients) put("clients", s.clients.toString())
+        if (s.autoOff != old.autoOff) put("autooff", if (s.autoOff) "1" else "0")
+        if (s.timeout != old.timeout) put("timeout", s.timeout.toString())
+        if (s.ax != old.ax) put("ax", if (s.ax) "1" else "0")
+        if (s.randomMac != old.randomMac) put("mac", if (s.randomMac) "random" else "device")
     }
 
     /**
@@ -69,12 +124,20 @@ object HotspotConfig {
      * which shell can read without any extra permission.
      */
     suspend fun capability(): ApCapability {
+        val snapshot = HotspotMonitor.readRadio()
+        val supported = listOf("2", "5", "6").mapNotNull { band ->
+            if (snapshot.isNull("supported$band")) null else band to snapshot.getBoolean("supported$band")
+        }.toMap()
+        if (snapshot.has("max")) return ApCapability(snapshot.optInt("max", 32),
+            listOf("2", "5", "6").associateWith { band ->
+                snapshot.optJSONArray("channels$band")?.let { a -> (0 until a.length()).map { a.getInt(it) } }.orEmpty()
+            }, if (snapshot.isNull("bridged")) null else snapshot.optBoolean("bridged"), supported)
         val line = Privileged.exec("dumpsys wifi 2>/dev/null | grep -m1 'SupportedChannelListIn24g'")
         fun list(tag: String) = Regex("$tag\\[([0-9, ]*)]").find(line)?.groupValues?.get(1)
             ?.split(',')?.mapNotNull { it.trim().toIntOrNull() }.orEmpty()
         val max = Regex("MaximumSupportedClientNumber=(\\d+)").find(line)?.groupValues?.get(1)?.toIntOrNull() ?: 32
         return ApCapability(max, mapOf("2" to list("SupportedChannelListIn24g"), "5" to list("SupportedChannelListIn5g"),
-            "6" to list("SupportedChannelListIn6g")))
+            "6" to list("SupportedChannelListIn6g")), if (snapshot.isNull("bridged")) null else snapshot.optBoolean("bridged"), supported)
     }
 
     /** Band and frequency of the running hotspot, e.g. "5 ГГц · канал 149", or null when off. */
@@ -107,7 +170,7 @@ object HotspotConfig {
     }
 
     fun summary(s: ApSettings): String {
-        val band = s.band.map { when (it) { '2' -> "2,4"; '5' -> "5"; '6' -> "6"; else -> "" } }.joinToString("+") + " ГГц"
+        val band = ApRadio.label(ApRadio.key(s.radio.ifBlank { ApRadio.legacy(s.band, s.channel) }))
         val ch = if (s.channel == 0) "канал авто" else "канал ${s.channel}"
         return "${s.ssid} · $band · $ch"
     }

@@ -1,0 +1,1 @@
+PASS minified ApConfigCli: valid 5 GHz builder check; unsupported band rejected; saved config unchanged after both checks.

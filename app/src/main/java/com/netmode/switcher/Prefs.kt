@@ -30,6 +30,15 @@ object Prefs {
 
     private val sp by lazy { App.ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE) }
 
+    internal var hotspotPresets: List<HotspotPreset>
+        get() = HotspotPreset.decode(sp.getString("hotspot_presets", null))
+        set(value) = sp.edit().putString("hotspot_presets", HotspotPreset.encode(value)).apply()
+
+    /** Hardware availability stays on this phone and is not included in Backup. */
+    internal var hotspotAvailableBands: Set<String>
+        get() = if (Compat.SDK < 30) emptySet() else sp.getStringSet("hotspot_available_bands", setOf("2", "5", "auto25"))!!.toSet()
+        set(value) = sp.edit().putStringSet("hotspot_available_bands", value.toSet()).apply()
+
     var schedules: List<ScheduleRule>
         get() = decodeList(sp.getString(KEY_SCHEDULES, "[]")!!, ScheduleRule::fromJson)
         set(value) = sp.edit().putString(KEY_SCHEDULES, encodeList(value) { it.toJson() }).apply()
