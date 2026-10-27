@@ -31,6 +31,18 @@
                 android:layout_marginTop="4dp"
                 android:text="@string/hide_hint" />
 
+            <TextView
+                android:id="@+id/restoreStatus"
+                style="@style/NMS.Hint"
+                android:textColor="?attr/colorError"
+                android:visibility="gone" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/retryRestore"
+                style="@style/NMS.PickButton"
+                android:text="@string/hide_retry_restore"
+                android:visibility="gone" />
+
             <!-- Shown while the notification listener is not bound. -->
             <LinearLayout
                 android:id="@+id/noAccess"
@@ -71,11 +83,19 @@
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
-                <TextView
-                    style="@style/NMS.Section"
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/recentToggle"
+                    style="@style/Widget.Material3.Button.TextButton"
                     android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
                     android:layout_weight="1"
-                    android:text="@string/hide_sec_recent" />
+                    android:gravity="start|center_vertical"
+                    android:minHeight="48dp"
+                    android:paddingStart="0dp"
+                    android:text="@string/hide_sec_recent"
+                    app:icon="@drawable/ic_expand"
+                    app:iconGravity="start" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/recentClear"
@@ -86,13 +106,35 @@
                     android:text="@string/hide_recent_clear" />
             </LinearLayout>
 
-            <com.google.android.material.card.MaterialCardView style="@style/NMS.Card">
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/recentCard"
+                style="@style/NMS.Card"
+                android:visibility="gone">
 
                 <LinearLayout
-                    android:id="@+id/recentList"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical" />
+                    android:orientation="vertical">
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/hide_history_search"
+                        app:endIconMode="clear_text">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/historySearch"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="text"
+                            android:singleLine="true" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <LinearLayout
+                        android:id="@+id/recentList"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <TextView
@@ -106,6 +148,50 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/journalToggle"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="start|center_vertical"
+                    android:minHeight="48dp"
+                    android:text="@string/hide_journal_title"
+                    app:icon="@drawable/ic_expand" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/journalClear"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/hide_recent_clear" />
+            </LinearLayout>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/journalCard"
+                style="@style/NMS.Card"
+                android:visibility="gone">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+                    <TextView
+                        style="@style/NMS.Hint"
+                        android:text="@string/hide_journal_hint" />
+                    <LinearLayout
+                        android:id="@+id/journalList"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <TextView

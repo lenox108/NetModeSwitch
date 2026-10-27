@@ -29,6 +29,7 @@ class App : Application() {
         // returns immediately when there is nothing to watch.
         scope.launch {
             runCatching { Migration.run() }
+            runCatching { NotifRules.reconcile() }
             WifiMonitor.syncAll()
             runCatching { Widgets.watch() }
             runCatching { RuleTiles.watch() }

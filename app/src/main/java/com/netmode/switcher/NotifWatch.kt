@@ -6,8 +6,8 @@ import kotlinx.coroutines.launch
 
 /**
  * "Уведомление от приложения": which apps have a notification up, and whether a lasting one.
- * The trigger looks at package names and the "ongoing" flag only. The titles are read just
- * for [NotifHide]: to list what is in the shade, and for a rule that matches on a title.
+ * The trigger looks at package names and the "ongoing" flag only. Titles and message bodies
+ * are read by [NotifHide] for live matching and preview; bodies are not persisted.
  * App, channel and title of what was posted are kept for a day, for picking later; the text
  * of a notification is never kept.
  */
@@ -44,7 +44,7 @@ class NotifListener : NotificationListenerService() {
         NotifWatch.connected = true
         NotifWatch.listener = this
         NotifHide.sweep(this)
-        App.scope.launch { NotifHide.release(this@NotifListener) }
+        App.scope.launch { NotifRules.reconcile() }
         NotifWatch.update(runCatching { activeNotifications }.getOrNull())
     }
 

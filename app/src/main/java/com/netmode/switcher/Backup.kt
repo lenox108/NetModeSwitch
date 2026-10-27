@@ -35,7 +35,7 @@ object Backup {
             .put("unloadExclude", JSONArray(Prefs.unloadExclude))
             .put("ruleSort", Prefs.ruleSort.name)
             .put("ruleOrder", JSONArray(Prefs.ruleOrder))
-            .put("hideRules", JSONArray(Prefs.hideRules.map { it.toJson() }))
+            .put("hideRules", JSONArray(Prefs.hideRules.map { it.copy(channelWas = null, pausedUntil = 0).toJson() }))
             .put("freezer", JSONObject()
                 // Which apps and how, not whether they are frozen right now.
                 .put("apps", JSONArray(Freezer.apps.map { a ->
@@ -99,11 +99,14 @@ object Backup {
     }
 
     /** Returns the number of rules read; throws on a file that is not a backup of this app. */
-    fun import(text: String): Int {
+    suspend fun import(text: String): Int {
         val o = JSONObject(text)
         require(o.optString("app") == "NetModeSwitch") { "это не файл NetModeSwitch" }
         val arr = o.getJSONArray("rules")
         val rules = (0 until arr.length()).map { AppRule.fromJson(arr.getJSONObject(it)) }
+        o.optJSONObject("settings")?.optJSONArray("hideRules")?.let { a ->
+            NotifRules.replace((0 until a.length()).map { HideRule.fromJson(a.getJSONObject(it)) }).getOrThrow()
+        }
         o.optJSONObject("settings")?.let { s ->
             runCatching { Prefs.backend = Backend.valueOf(s.getString("backend")) }
             if (s.has("catchUp")) Prefs.catchUpOnBoot = s.getBoolean("catchUp")
@@ -123,7 +126,6 @@ object Backup {
             s.optJSONArray("unloadExclude")?.let { a -> Prefs.unloadExclude = (0 until a.length()).map { a.getString(it) } }
             runCatching { Prefs.ruleSort = RuleSort.valueOf(s.getString("ruleSort")) }
             s.optJSONArray("ruleOrder")?.let { a -> Prefs.ruleOrder = (0 until a.length()).map { a.getLong(it) } }
-            s.optJSONArray("hideRules")?.let { a -> Prefs.hideRules = (0 until a.length()).mapNotNull { runCatching { HideRule.fromJson(a.getJSONObject(it)) }.getOrNull() } }
             s.optJSONObject("freezer")?.let { importFreezer(it) }
             s.optJSONObject("togglePairs")?.let { p ->
                 p.keys().forEach { slot ->

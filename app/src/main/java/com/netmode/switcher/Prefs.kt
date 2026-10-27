@@ -480,7 +480,7 @@ object Prefs {
             org.json.JSONObject().apply { value.forEach { (k, v) -> put(k, v) } }.toString(),
         ).apply()
 
-    /** Notification key → when a removed rule let it go; see NotifHide.release. */
+    /** Notification key → pending restoration time; retained until NotifRules verifies it. */
     var releasedKeys: Map<String, Long>
         get() = runCatching {
             val o = org.json.JSONObject(sp.getString("released_keys", "{}")!!)

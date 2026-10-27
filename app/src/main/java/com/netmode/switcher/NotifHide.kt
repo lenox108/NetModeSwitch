@@ -20,19 +20,30 @@ data class HideRule(
     val channel: String?,
     val title: String?,
     val channelWas: Int? = null,
+    val enabled: Boolean = true,
+    val pausedUntil: Long = 0,
+    val ongoingOnly: Boolean = false,
+    val exclusions: List<String> = emptyList(),
 ) {
     /** A rule on one whole channel: the kind root can switch off rather than snooze. */
-    val wholeChannel: Boolean get() = channel != null && title == null
+    val wholeChannel: Boolean get() = channel != null && title == null && !ongoingOnly && exclusions.isEmpty()
+
+    fun active(now: Long = System.currentTimeMillis()) = NotifRulePolicy.active(enabled, pausedUntil, now)
 
     fun matches(sbn: StatusBarNotification): Boolean =
-        app == NotifHide.appOf(sbn) &&
+        active() && app == NotifHide.appOf(sbn) &&
             (channel == null || channel == sbn.notification.channelId) &&
-            (title == null || NotifHide.titleOf(sbn).contains(title, ignoreCase = true))
+            NotifRulePolicy.matches(title, ongoingOnly, exclusions, NotifHide.titleOf(sbn), NotifHide.textOf(sbn), sbn.isOngoing)
+
+    fun matches(e: ShadeEntry): Boolean = active() && app == e.app &&
+        (channel == null || channel == e.channel) &&
+        NotifRulePolicy.matches(title, ongoingOnly, exclusions, e.title, e.text, e.ongoing)
 
     /** The same test for a notification remembered from earlier, not up now. */
     fun covers(e: SeenEntry): Boolean =
-        app == e.app && (channel == null || channel == e.channel) &&
-            (title == null || e.title.contains(title, ignoreCase = true))
+        // History has no body: do not assume that a body exception did not match.
+        exclusions.isEmpty() && active() && app == e.app && (channel == null || channel == e.channel) &&
+            NotifRulePolicy.matches(title, ongoingOnly, exclusions, e.title, "", e.ongoing)
 
     fun toJson(): JSONObject = JSONObject()
         .put("id", id)
@@ -40,6 +51,8 @@ data class HideRule(
         .put("channel", channel ?: JSONObject.NULL)
         .put("title", title ?: JSONObject.NULL)
         .put("channelWas", channelWas ?: JSONObject.NULL)
+        .put("enabled", enabled).put("pausedUntil", pausedUntil).put("ongoingOnly", ongoingOnly)
+        .put("exclusions", org.json.JSONArray(exclusions))
 
     companion object {
         fun fromJson(o: JSONObject) = HideRule(
@@ -48,6 +61,12 @@ data class HideRule(
             channel = o.optString("channel").takeIf { !o.isNull("channel") && it.isNotEmpty() },
             title = o.optString("title").takeIf { !o.isNull("title") && it.isNotEmpty() },
             channelWas = if (o.has("channelWas") && !o.isNull("channelWas")) o.getInt("channelWas") else null,
+            enabled = o.optBoolean("enabled", true),
+            pausedUntil = o.optLong("pausedUntil", 0).coerceAtLeast(0),
+            ongoingOnly = o.optBoolean("ongoingOnly", false),
+            exclusions = o.optJSONArray("exclusions")?.let { a ->
+                NotifRulePolicy.exclusions((0 until a.length()).joinToString("\n") { a.optString(it) })
+            }.orEmpty(),
         )
     }
 }
@@ -59,7 +78,10 @@ data class ShadeEntry(
     val channel: String?,
     val title: String,
     val ongoing: Boolean,
-)
+    val text: String = "",
+) {
+    val displayedTitle: String get() = title.ifBlank { text }
+}
 
 /** A notification seen lately, for picking one that is not up right now. [at] is epoch ms. */
 data class SeenEntry(
@@ -121,16 +143,24 @@ object NotifHide {
 
     fun titleOf(sbn: StatusBarNotification): String {
         val extras = sbn.notification.extras
-        return (extras.getCharSequence(Notification.EXTRA_TITLE)
-            ?: extras.getCharSequence(Notification.EXTRA_TITLE_BIG))?.toString().orEmpty()
+        return listOf(Notification.EXTRA_TITLE, Notification.EXTRA_TITLE_BIG)
+            .firstNotNullOfOrNull { extras.getCharSequence(it)?.toString()?.takeIf { s -> s.isNotBlank() } }.orEmpty()
+    }
+
+    fun textOf(sbn: StatusBarNotification): String {
+        val extras = sbn.notification.extras
+        return listOf(Notification.EXTRA_BIG_TEXT, Notification.EXTRA_TEXT)
+            .firstNotNullOfOrNull { extras.getCharSequence(it)?.toString()?.takeIf { s -> s.isNotBlank() } }
+            ?: extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES)?.joinToString("\n").orEmpty()
     }
 
     fun entryOf(sbn: StatusBarNotification) = ShadeEntry(
         key = sbn.key,
         app = NotifHide.appOf(sbn),
         channel = sbn.notification.channelId,
-        title = titleOf(sbn).ifEmpty { sbn.notification.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty() },
+        title = titleOf(sbn),
         ongoing = sbn.isOngoing,
+        text = textOf(sbn),
     )
 
     /**
@@ -151,12 +181,16 @@ object NotifHide {
      */
     internal fun onPosted(listener: NotificationListenerService, sbn: StatusBarNotification) {
         val rule = Prefs.hideRules.firstOrNull { it.matches(sbn) }
-        val snoozed = rule != null && runCatching { listener.snoozeNotification(sbn.key, SNOOZE_MS) }.isSuccess
+        val attempt = rule?.let { runCatching { listener.snoozeNotification(sbn.key, SNOOZE_MS) } }
+        val snoozed = attempt?.isSuccess == true
         App.scope.launch {
-            if (snoozed) remember(sbn.key, rule!!.id)
+            if (snoozed) NotifRules.remember(sbn)
             seen(sbn)
-            // Up in the shade again: a released key needs no more letting go.
-            if (sbn.key in Prefs.releasedKeys) Prefs.releasedKeys = Prefs.releasedKeys - sbn.key
+            if (rule != null) {
+                kotlinx.coroutines.delay(120)
+                val confirmed = runCatching { listener.snoozedNotifications.any { it.key == sbn.key } }.getOrDefault(false)
+                NotifJournal.record(sbn, rule, if (attempt?.isFailure == true) "error" else if (confirmed) "hidden" else "unconfirmed")
+            }
         }
     }
 
@@ -173,15 +207,8 @@ object NotifHide {
      * snooze also stays as a second line, should someone switch the channel back on.
      */
     suspend fun add(rule: HideRule): HideRule {
-        val same = Prefs.hideRules.filter { it.app == rule.app && it.channel == rule.channel && it.title == rule.title }
-        // Re-adding the same rule keeps the importance to give back, not the "off" it set.
-        val was = same.firstNotNullOfOrNull { it.channelWas }
-            ?: if (rule.wholeChannel) channelOff(rule.app, rule.channel!!) else null
-        val saved = rule.copy(channelWas = was)
-        Prefs.hideRules = Prefs.hideRules - same.toSet() + saved
-        Prefs.log("скрытие уведомлений: ${describe(saved)}" + if (was != null) " — канал отключён через root" else "")
-        NotifWatch.listener?.let { sweep(it) }
-        return saved
+        NotifRules.save(rule).getOrThrow()
+        return Prefs.hideRules.first { it.id == rule.id }
     }
 
     private const val IMPORTANCE_NONE = 0
@@ -190,13 +217,13 @@ object NotifHide {
     suspend fun canSwitchChannels(): Boolean = Root.available()
 
     /** Switches the channel off; returns the importance it had, or null when it did not take. */
-    private suspend fun channelOff(app: String, channel: String): Int? {
+    internal suspend fun channelOff(app: String, channel: String): Int? {
         val r = setChannel(app, channel, IMPORTANCE_NONE) ?: return null
         return r.second.takeIf { r.first == IMPORTANCE_NONE && it != IMPORTANCE_NONE }
     }
 
     /** Runs [ChannelCli] as root; (importance now, importance before), or null on failure. */
-    private suspend fun setChannel(app: String, channel: String, importance: Int): Pair<Int, Int>? {
+    internal suspend fun setChannel(app: String, channel: String, importance: Int): Pair<Int, Int>? {
         if (!AppKey.valid(app) || !Root.available()) return null
         val uid = runCatching {
             AppKey.user(app) * 100_000 + Compat.appInfo(App.ctx.packageManager, AppKey.pkg(app)).uid % 100_000
@@ -218,41 +245,7 @@ object NotifHide {
 
     /** Drops the rule and lets back what it hid, unless another rule still covers it. */
     suspend fun remove(rule: HideRule) {
-        Prefs.hideRules = Prefs.hideRules.filterNot { it.id == rule.id }
-        rule.channelWas?.let { was -> setChannel(rule.app, rule.channel!!, was) }
-        val left = Prefs.hideRules.map { it.id }.toSet()
-        val (free, keep) = Prefs.hiddenKeys.entries.partition { it.value == rule.id || it.value !in left }
-        Prefs.hiddenKeys = keep.associate { it.key to it.value }
-        val now = System.currentTimeMillis()
-        Prefs.releasedKeys = Prefs.releasedKeys + free.associate { it.key to now }
-        free.forEach { unsnooze(it.key) }
-        Prefs.log("уведомления снова видны: ${describe(rule)}")
-    }
-
-    /**
-     * Snoozing again for a moment brings a snoozed notification back through the listener
-     * API alone. The shell's own unsnooze goes first where it works; it also reaches a key the
-     * system re-snoozed after a reboot without telling the listener.
-     */
-    private suspend fun unsnooze(key: String) {
-        val quoted = "'" + key.replace("'", "'\\''") + "'"
-        val shell = runCatching { Privileged.exec("cmd notification unsnooze $quoted") }
-            .getOrNull()?.let { !it.contains("Unknown", true) && !it.contains("error", true) } == true
-        if (!shell) runCatching { NotifWatch.listener?.snoozeNotification(key, 1L) }
-    }
-
-    /**
-     * On connect: lets go again of what removed rules hid and has not shown up since. Keys
-     * older than a snooze are dropped — whatever the system held has run out by then.
-     */
-    internal suspend fun release(listener: NotificationListenerService) {
-        val released = Prefs.releasedKeys
-        if (released.isEmpty()) return
-        val up = runCatching { listener.activeNotifications }.getOrNull().orEmpty().map { it.key }.toSet()
-        val now = System.currentTimeMillis()
-        val pending = released.filter { (k, at) -> k !in up && now - at < SNOOZE_MS && k !in Prefs.hiddenKeys }
-        Prefs.releasedKeys = pending
-        pending.keys.forEach { unsnooze(it) }
+        NotifRules.remove(rule.id).getOrThrow()
     }
 
     private const val SEEN_MS = 24L * 3600 * 1000
@@ -271,8 +264,8 @@ object NotifHide {
     @Synchronized
     private fun seen(sbn: StatusBarNotification) {
         if (sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) return
-        // The title only: what entryOf falls back to for an untitled one is the text.
-        val e = entryOf(sbn).copy(title = titleOf(sbn))
+        // Only titles go to persistent history; message bodies stay in memory.
+        val e = entryOf(sbn)
         val now = System.currentTimeMillis()
         val list = seenCache ?: Prefs.seenNotifs.also { seenCache = it }
         val old = list.firstOrNull { it.same(e) }
@@ -297,16 +290,12 @@ object NotifHide {
         Prefs.seenNotifs = emptyList()
     }
 
-    @Synchronized
-    private fun remember(key: String, ruleId: Long) {
-        val now = Prefs.hiddenKeys
-        if (now[key] != ruleId) Prefs.hiddenKeys = now + (key to ruleId)
-    }
-
     fun describe(rule: HideRule): String = listOfNotNull(
         AppPickerActivity.labels(listOf(rule.app)).first(),
         rule.channel?.let { "канал «$it»" } ?: "все каналы",
         rule.title?.let { "заголовок с «$it»" },
+        "только постоянные".takeIf { rule.ongoingOnly },
+        rule.exclusions.takeIf { it.isNotEmpty() }?.joinToString(", ", prefix = "кроме: "),
     ).joinToString(", ")
 
     /** Apps whose notifications are off as a whole, as [AppKey]s. */
