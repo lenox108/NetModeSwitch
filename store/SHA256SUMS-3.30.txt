@@ -1,2 +1,2 @@
-3b0cd646f475aa18a84d34a420de873305d738acb4fbbc06b89bfbe6998295de  NetModeSwitch-3.30.apk
-23f2de4f0fcb6f8b3f69599bd10d03c3b49e488aa2621d560291b69775ccbc6f  NetModeSwitch-3.30-a10.apk
+eeb88bce199e3f6d0b5b5a9bd7eaa83abe20eb6cb9f5adb334b7c702657a6354  NetModeSwitch-3.30.apk
+d1f6077137d2e26ada88d86afaa32d1e7176a85adb23686e380935e3156860ce  NetModeSwitch-3.30-a10.apk
