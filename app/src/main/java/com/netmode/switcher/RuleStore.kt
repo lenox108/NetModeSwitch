@@ -26,10 +26,16 @@ object RuleStore {
         return rule.enabled && !rule.isTime && rule.trigger != Trigger.MANUAL && !batteryExempt()
     }
 
-    fun delete(id: Long) {
-        Prefs.appRules = Prefs.appRules.filterNot { it.id == id }
-        Prefs.appHandled = Prefs.appHandled - id
-        RuleTiles.forget(id)
+    fun delete(id: Long) = delete(listOf(id))
+
+    /** Remove the whole batch before rearming alarms and reconciling held apps once. */
+    fun delete(ids: Collection<Long>) {
+        val removed = ids.toSet()
+        if (removed.isEmpty()) return
+        Prefs.appRules = Prefs.appRules.filterNot { it.id in removed }
+        Prefs.appHandled = Prefs.appHandled - removed
+        Prefs.ruleOrder = Prefs.ruleOrder.filterNot { it in removed }
+        RuleTiles.forget(removed)
         changed()
     }
 

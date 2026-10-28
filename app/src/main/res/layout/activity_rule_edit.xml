@@ -247,6 +247,28 @@
                             android:text="@string/wifi_off_leaves_hint" />
                     </LinearLayout>
 
+                    <LinearLayout
+                        android:id="@+id/hotspotTriggerBlock"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/NMS.Hint"
+                            android:text="@string/hotspot_trigger_route" />
+
+                        <com.netmode.switcher.ChoiceView
+                            android:id="@+id/hotspotRoute"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:minHeight="48dp" />
+
+                        <TextView
+                            style="@style/NMS.Hint"
+                            android:text="@string/trigger_hotspot_hint" />
+                    </LinearLayout>
+
                     <!-- bluetooth device -->
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btDevice"

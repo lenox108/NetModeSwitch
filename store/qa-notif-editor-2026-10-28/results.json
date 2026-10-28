@@ -1,0 +1,68 @@
+[
+  {
+    "case": "row-large",
+    "buttons": [
+      [
+        147,
+        1908,
+        583,
+        2052
+      ],
+      [
+        583,
+        1908,
+        933,
+        2052
+      ]
+    ],
+    "fixed_after_scroll": true,
+    "cancel": true
+  },
+  {
+    "case": "row-normal",
+    "buttons": [
+      [
+        147,
+        1908,
+        583,
+        2052
+      ],
+      [
+        583,
+        1908,
+        933,
+        2052
+      ]
+    ],
+    "fixed_after_scroll": true,
+    "cancel": true
+  },
+  {
+    "case": "row-small-dark-large",
+    "buttons": [
+      [
+        120,
+        1428,
+        520,
+        1572
+      ],
+      [
+        520,
+        1428,
+        840,
+        1572
+      ]
+    ],
+    "fixed_after_scroll": true,
+    "cancel": true
+  },
+  {
+    "case": "keyboard",
+    "single_row": true,
+    "save_draft": true
+  },
+  {
+    "case": "remove",
+    "callback": true
+  }
+]

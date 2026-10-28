@@ -62,7 +62,7 @@ class FreezerActivity : AppCompatActivity() {
     private var labels = mapOf<String, String>()
     private val icons = LruCache<String, Drawable>(120)
 
-    /** Apps picked for one action together; a long press on a row starts picking. */
+    /** Apps picked for one action together through the app's actions menu. */
     private val selected = linkedSetOf<String>()
     private val selecting get() = selected.isNotEmpty()
 
@@ -288,7 +288,8 @@ class FreezerActivity : AppCompatActivity() {
                 (q.isEmpty() || labels[a.key].orEmpty().contains(q, true) || a.key.contains(q, true))
         }, Prefs.iceSort, Prefs.iceOrder) { labels[it].orEmpty() }
         // Picked apps that are gone from the freezer are no longer picked.
-        if (selected.retainAll(all.map { it.key }.toSet())) paintToolbar()
+        selected.retainAll(all.map { it.key }.toSet())
+        paintToolbar()
         ui.empty.visibility = if (shown.isEmpty()) View.VISIBLE else View.GONE
         ui.empty.setText(if (all.isEmpty()) R.string.ice_empty else R.string.ice_nothing_found)
         adapter.notifyDataSetChanged()
@@ -355,9 +356,9 @@ class FreezerActivity : AppCompatActivity() {
             row.label.setTextColor(if (compact) statusColor(a) else MaterialColors.getColor(row.root, com.google.android.material.R.attr.colorOnSurface))
             loadIcon(a, row.icon)
             row.open.setOnClickListener { if (selecting) flip(a.key) else openSheet(a.key) }
-            row.open.setOnLongClickListener { flip(a.key); true }
+            row.open.setOnLongClickListener { appActions(a.key); true }
             row.root.setOnClickListener { if (selecting) flip(a.key) else openSheet(a.key) }
-            row.root.setOnLongClickListener { flip(a.key); true }
+            row.root.setOnLongClickListener { appActions(a.key); true }
             row.check.visibility = if (selecting) View.VISIBLE else View.GONE
             row.check.isChecked = a.key in selected
             row.root.setBackgroundColor(if (a.key in selected)
@@ -378,7 +379,7 @@ class FreezerActivity : AppCompatActivity() {
         }
     }
 
-    /** The icon view: a tap opens the app (or picks, while picking), a long press picks. */
+    /** The icon view: a tap opens the app (or picks), a long press opens its actions. */
     private fun cell(position: Int, convertView: View?, parent: ViewGroup): View {
         val c = convertView?.let { CellIceBinding.bind(it) } ?: CellIceBinding.inflate(layoutInflater, parent, false)
         IceGrid.style(c, ui.list)
@@ -394,8 +395,39 @@ class FreezerActivity : AppCompatActivity() {
         else android.graphics.Color.TRANSPARENT)
         c.root.contentDescription = name + ", " + status(a)
         c.root.setOnClickListener { if (selecting) flip(a.key) else launch(a.key) }
-        c.root.setOnLongClickListener { flip(a.key); true }
+        c.root.setOnLongClickListener { appActions(a.key); true }
         return c.root
+    }
+
+    /** Single-app actions in every list look; selection keeps its usual toggle gesture. */
+    private fun appActions(key: String) {
+        if (selecting) { flip(key); return }
+        val a = Freezer.find(key) ?: return
+        val keys = listOf(key)
+        val actions = mutableListOf<Pair<Int, () -> Unit>>()
+        fun action(title: Int, run: () -> Unit) { actions += title to run }
+        action(R.string.ice_open) { launch(key) }
+        action(if (a.frozen) R.string.ice_thaw else R.string.ice_freeze) { perform(keys, freeze = !a.frozen) }
+        action(R.string.ice_thaw_for) { chooseThawFor(keys) }
+        if (!a.frozen && a.keepUntil != 0L) {
+            action(R.string.ice_resume_auto) { App.scope.launch { Freezer.resumeAuto(keys) } }
+        }
+        action(if (a.favorite) R.string.ice_favorite_remove else R.string.ice_favorite_add) {
+            Freezer.setFavorite(keys, !a.favorite)
+        }
+        if (!IceShortcuts.isPinned(this, key)) {
+            action(R.string.ice_pin) { if (!IceShortcuts.pin(this, key)) toast(getString(R.string.ice_pin_failed)) }
+        }
+        action(R.string.ice_card) { openSheet(key) }
+        action(R.string.ice_select) { flip(key) }
+        action(R.string.ice_remove) { askRemove(key) }
+        MaterialAlertDialogBuilder(this)
+            .setTitle(labels[key] ?: Freezer.label(key))
+            .setItems(actions.map { getString(it.first) }.toTypedArray()) { _, index ->
+                if (Freezer.find(key) != null) actions[index].second()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     /** Thaws (if frozen) and opens the app straight from the list, as its shortcut does. */
@@ -433,7 +465,7 @@ class FreezerActivity : AppCompatActivity() {
         if (picking) ui.toolbar.setNavigationIcon(R.drawable.ic_close) else ui.toolbar.navigationIcon = upIcon
         ui.toolbar.subtitle = if (picking || Freezer.apps.isEmpty()) null else
             getString(R.string.ice_toolbar_summary, Freezer.apps.size, Freezer.apps.count { it.frozen })
-        ui.selectionHint.visibility = if (!picking && Freezer.apps.size > 1) View.VISIBLE else View.GONE
+        ui.selectionHint.visibility = if (!picking && Freezer.apps.isNotEmpty()) View.VISIBLE else View.GONE
         ui.selectionHint.setText(if (look == Look.GRID) R.string.ice_grid_hint else R.string.ice_selection_tip)
         ui.toolbar.menu.findItem(R.id.sel_card)?.isVisible = selected.size == 1
         ui.toolbar.menu.findItem(R.id.action_undo)?.isEnabled = Freezer.undoAvailable()
@@ -589,6 +621,18 @@ class FreezerActivity : AppCompatActivity() {
         perform(listOf(key), freeze = !a.frozen)
     }
 
+    private fun askRemove(key: String, then: () -> Unit = {}) {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(Freezer.label(key))
+            .setMessage(R.string.ice_remove_confirm)
+            .setPositiveButton(R.string.ice_remove) { _, _ ->
+                then()
+                App.scope.launch { Freezer.remove(listOf(key)) }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
     // --- an app's card ------------------------------------------------------------------------
 
     private fun openSheet(key: String) {
@@ -617,17 +661,7 @@ class FreezerActivity : AppCompatActivity() {
         s.groupInfo.setOnClickListener { sheetHelp(R.string.ice_sec_group, getString(R.string.ice_group_hint)) }
         s.resumeAuto.setOnClickListener { App.scope.launch { Freezer.resumeAuto(listOf(key)) } }
         s.favorite.setOnClickListener { Freezer.find(key)?.let { Freezer.setFavorite(listOf(key), !it.favorite) } }
-        s.remove.setOnClickListener {
-            MaterialAlertDialogBuilder(this)
-                .setTitle(Freezer.label(key))
-                .setMessage(R.string.ice_remove_confirm)
-                .setPositiveButton(R.string.ice_remove) { _, _ ->
-                    dialog.dismiss()
-                    App.scope.launch { Freezer.remove(listOf(key)) }
-                }
-                .setNegativeButton(R.string.cancel, null)
-                .show()
-        }
+        s.remove.setOnClickListener { askRemove(key) { dialog.dismiss() } }
         paintSheet(a)
         dialog.show()
         dialog.behavior.state = BottomSheetBehavior.STATE_EXPANDED

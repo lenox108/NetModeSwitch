@@ -1,0 +1,15 @@
+{
+  "roundtrips": true,
+  "route": "DIRECT",
+  "rules": [
+    {
+      "id": 9200,
+      "label": "точка доступа включена",
+      "via": null,
+      "enabled": false,
+      "matches": null,
+      "handled": 0,
+      "open": false
+    }
+  ]
+}

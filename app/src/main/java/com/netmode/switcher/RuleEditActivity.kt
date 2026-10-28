@@ -70,6 +70,7 @@ class RuleEditActivity : AppCompatActivity() {
         TriggerInfo(Trigger.MANUAL, R.drawable.ic_t_manual, R.string.trigger_manual, R.string.trigger_manual_hint, R.string.pick_manual),
         TriggerInfo(Trigger.TIME, R.drawable.ic_t_time, R.string.trigger_time, R.string.trigger_time_hint, R.string.pick_time),
         TriggerInfo(Trigger.WIFI, R.drawable.ic_t_wifi, R.string.trigger_wifi, R.string.trigger_wifi_hint, R.string.pick_wifi),
+        TriggerInfo(Trigger.HOTSPOT, R.drawable.ic_hotspot, R.string.trigger_hotspot, R.string.trigger_hotspot_hint, R.string.pick_hotspot),
         TriggerInfo(Trigger.BLUETOOTH, R.drawable.ic_t_bt, R.string.trigger_bt, R.string.trigger_bt_hint, R.string.pick_bt),
         TriggerInfo(Trigger.MOBILE_DATA, R.drawable.ic_t_data, R.string.trigger_data, R.string.data_trigger_hint, R.string.pick_data),
         TriggerInfo(Trigger.NET_MODE, R.drawable.ic_t_net, R.string.trigger_net, R.string.net_trigger_hint, R.string.pick_net),
@@ -122,6 +123,8 @@ class RuleEditActivity : AppCompatActivity() {
     private var sunLevel = 0
     private var trafficIdx = 2
     private var knownSsids = listOf<String>()
+    private val hotspotRoutes = listOf(null, TetherMode.VPN, TetherMode.PROXY, TetherMode.DIRECT)
+    private var triggerHotspotVia: TetherMode? = null
     private var notice = RunNotice.SILENT
     private val extras = mutableListOf<Extra>()
     /** The wait switch follows the trigger's default until the user sets it. */
@@ -329,6 +332,7 @@ class RuleEditActivity : AppCompatActivity() {
         v.waitApps.isChecked = r?.waitAppsOnly ?: false
         waitTouched = existing != null
         triggerApps = r?.triggerApps.orEmpty()
+        triggerHotspotVia = r?.triggerHotspotVia
         appPass = r?.appPassThrough.orEmpty()
         notice = r?.notice ?: RunNotice.SILENT
         extras.clear()
@@ -433,6 +437,7 @@ class RuleEditActivity : AppCompatActivity() {
 
     private fun wire() {
         v.triggerPick.setOnClickListener { chooseTrigger() }
+        v.hotspotRoute.onChange = { triggerHotspotVia = hotspotRoutes[it]; paint() }
         v.wakeRow.title.setText(R.string.wake_wifi)
         v.wakeRow.root.setOnClickListener { v.wakeRow.toggle.toggle() }
         v.wakeRow.toggle.setOnCheckedChangeListener { _, _ -> paint() }
@@ -598,6 +603,7 @@ class RuleEditActivity : AppCompatActivity() {
         val t = effectiveTrigger
         if (a.startOnly) return false
         return allowed(a) || (t == Trigger.WIFI && (a == Act.WIFI || a == Act.HOTSPOT)) ||
+            (t == Trigger.HOTSPOT && (a == Act.WIFI || a == Act.HOTSPOT)) ||
             (a == Act.BT && (t == Trigger.BLUETOOTH || t == Trigger.HEADPHONES)) ||
             (a == Act.VPN && t == Trigger.VPN)
     }
@@ -605,17 +611,17 @@ class RuleEditActivity : AppCompatActivity() {
     private fun allowed(a: Act): Boolean {
         val t = effectiveTrigger
         return when (a) {
-            Act.WIFI, Act.HOTSPOT -> t != Trigger.WIFI && t != Trigger.WIFI_OTHER
+            Act.WIFI, Act.HOTSPOT -> t != Trigger.WIFI && t != Trigger.WIFI_OTHER && t != Trigger.HOTSPOT
             Act.DATA -> t != Trigger.MOBILE_DATA
             // "VPN up → VPN off" undoes its own start; at the end, bringing it back is allowed.
             Act.VPN -> t != Trigger.VPN
             Act.BT -> t != Trigger.BLUETOOTH && t != Trigger.HEADPHONES && !(t == Trigger.WIFI_LEFT && v.leftEndBtOn.isChecked)
             Act.AIRPLANE -> t !in setOf(Trigger.WIFI, Trigger.WIFI_LEFT, Trigger.BLUETOOTH, Trigger.MOBILE_DATA,
-                Trigger.PLACE, Trigger.ROAMING, Trigger.WEAK_SIGNAL, Trigger.CALL, Trigger.NET_MODE, Trigger.NO_INTERNET, Trigger.WIFI_OTHER)
+                Trigger.PLACE, Trigger.ROAMING, Trigger.WEAK_SIGNAL, Trigger.CALL, Trigger.NET_MODE, Trigger.NO_INTERNET, Trigger.WIFI_OTHER, Trigger.HOTSPOT)
             // Airplane mode for a moment drops Wi-Fi, Bluetooth and the SIMs, which these watch;
             // a lost internet is what it is for.
             Act.RECONNECT -> t !in setOf(Trigger.WIFI, Trigger.WIFI_LEFT, Trigger.BLUETOOTH, Trigger.MOBILE_DATA,
-                Trigger.PLACE, Trigger.ROAMING, Trigger.WEAK_SIGNAL, Trigger.CALL, Trigger.NET_MODE, Trigger.WIFI_OTHER)
+                Trigger.PLACE, Trigger.ROAMING, Trigger.WEAK_SIGNAL, Trigger.CALL, Trigger.NET_MODE, Trigger.WIFI_OTHER, Trigger.HOTSPOT)
             Act.POWERSAVE -> !(t == Trigger.BATTERY && batteryLevel == 0)
             Act.DATASIM -> simSlots.size > 1
             else -> true
@@ -636,6 +642,10 @@ class RuleEditActivity : AppCompatActivity() {
         show(v.hasEnd, t == Trigger.TIME)
         show(v.hasEndHint, t == Trigger.TIME)
         show(v.wifiBlock, t == Trigger.WIFI)
+        show(v.hotspotTriggerBlock, t == Trigger.HOTSPOT)
+        v.hotspotRoute.setItems(listOf(R.string.hotspot_trigger_any, R.string.hotspot_trigger_vpn,
+            R.string.hotspot_trigger_proxy, R.string.ap_route_direct).map { getString(it) },
+            hotspotRoutes.indexOf(triggerHotspotVia))
         show(v.leftEndBlock, wifiLeft)
         show(v.wakeRow.root, t == Trigger.WIFI && !wifiLeft)
         show(v.wakeForget, t == Trigger.WIFI && !wifiLeft && v.wakeRow.toggle.isChecked && cells.isNotEmpty())
@@ -788,6 +798,7 @@ class RuleEditActivity : AppCompatActivity() {
             Trigger.WIFI -> getString(R.string.end_title_wifi)
             Trigger.BLUETOOTH -> getString(R.string.end_title_bt)
             Trigger.MOBILE_DATA -> getString(R.string.end_title_data)
+            Trigger.HOTSPOT -> getString(if (triggerHotspotVia == null) R.string.end_title_hotspot else R.string.end_title_hotspot_route)
             Trigger.MANUAL -> getString(R.string.end_title_manual)
             Trigger.TIME -> getString(R.string.end_title_time, hm(end))
             Trigger.WIFI_LEFT -> getString(R.string.at_end)
@@ -1768,6 +1779,7 @@ class RuleEditActivity : AppCompatActivity() {
             name = v.ruleName.text.toString().trim().ifEmpty { null },
             triggerSlot = simSlots.getOrElse(v.tSlot.selectedItemPosition) { 0 },
             triggerMode = NetMode.entries[v.tMode.selectedItemPosition].takeIf { t == Trigger.NET_MODE },
+            triggerHotspotVia = triggerHotspotVia.takeIf { t == Trigger.HOTSPOT },
             keepStopped = keepStopped.filter { it in packages }.toSet(),
             tiles = tiles.takeIf { Act.TILES in shown }.orEmpty(),
             endTiles = e(Act.TILES, atEnd.tiles).orEmpty(),

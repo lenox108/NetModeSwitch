@@ -55,8 +55,11 @@ object RuleTiles {
         if (slot in Prefs.ruleTiles) Prefs.ruleTiles = Prefs.ruleTiles - slot
     }
 
-    fun forget(ruleId: Long) {
-        if (ruleId in Prefs.ruleTiles.values) Prefs.ruleTiles = Prefs.ruleTiles.filterValues { it != ruleId }
+    fun forget(ruleId: Long) = forget(setOf(ruleId))
+
+    fun forget(ruleIds: Set<Long>) {
+        val tiles = Prefs.ruleTiles
+        if (tiles.values.any { it in ruleIds }) Prefs.ruleTiles = tiles.filterValues { it !in ruleIds }
     }
 
     fun label(rule: AppRule) = rule.name ?: rule.timeLabel
@@ -71,6 +74,7 @@ object RuleTiles {
         Trigger.USB -> R.drawable.ic_t_usb
         Trigger.CAR -> R.drawable.ic_t_car
         Trigger.VPN -> R.drawable.ic_a_vpn
+        Trigger.HOTSPOT -> R.drawable.ic_hotspot
         Trigger.ALARM -> R.drawable.ic_t_alarm
         Trigger.SUN -> R.drawable.ic_t_sun
         Trigger.TRAFFIC -> R.drawable.ic_t_traffic

@@ -1,0 +1,2 @@
+a5f5988a3acbb2fdd13868165c5eadd7c4dd9b7da415ac9ad9aace991bf46fc5  NetModeSwitch-3.30-notif-buttons.apk
+d8c4df8ce9402883578278b885e6c40fc1796e9cdd3809752ae9cc57b598092b  NetModeSwitch-3.30-notif-buttons-a10.apk

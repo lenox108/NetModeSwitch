@@ -134,6 +134,7 @@ class AppPickerActivity : AppCompatActivity() {
         val q = ui.search.text?.toString()?.trim().orEmpty()
         shown = all.filter { e ->
             (!ui.showSelected.isChecked || e.pkg in selected) &&
+                (!ui.showUnselected.isChecked || e.pkg !in selected) &&
                 (!ui.hideSystem.isChecked || !e.system || e.pkg in selected) &&
                 (q.isEmpty() || e.label.contains(q, true) || e.pkg.contains(q, true))
         }
@@ -160,7 +161,7 @@ class AppPickerActivity : AppCompatActivity() {
         row.check.isChecked = e.pkg in selected
         paintMethod(e, row)
         updateDone()
-        if (ui.showSelected.isChecked) filter()
+        if (ui.showSelected.isChecked || ui.showUnselected.isChecked) filter()
     }
 
     private val adapter = object : BaseAdapter() {

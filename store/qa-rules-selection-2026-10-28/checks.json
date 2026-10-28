@@ -1,0 +1,13 @@
+[
+  "Selection mode starts empty; switches and drag handles hidden; deletion disabled",
+  "Row and checkbox select two rules without editing or changing enabled flags",
+  "Select all includes offscreen and disabled rules; second tap clears all and stays in selection mode",
+  "Toolbar close exits selection without changing rules",
+  "Long-press quick menu can start selection with its rule checked",
+  "Cancel confirmation preserves rules and both selected IDs",
+  "Selection survives font-scale activity recreation and dark theme at 150% font on 360dp",
+  "Batch deletion removes only selected IDs and their handled/order metadata",
+  "Delete-all confirmation reports the whole list and cancel keeps every rule",
+  "Last rule remains accessible above fixed selection bar; system Back cancels selection",
+  "Delete all empties list, handled marks, saved order and bound tiles; empty state scrolls to top; disabled menu containers ignore taps"
+]

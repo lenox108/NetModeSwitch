@@ -1,0 +1,214 @@
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preModernDebugBuild UP-TO-DATE
+> Task :app:compileModernDebugAidl UP-TO-DATE
+> Task :app:dataBindingMergeDependencyArtifactsModernDebug UP-TO-DATE
+> Task :app:generateModernDebugResources UP-TO-DATE
+> Task :app:mergeModernDebugResources UP-TO-DATE
+> Task :app:packageModernDebugResources UP-TO-DATE
+> Task :app:processModernDebugNavigationResources UP-TO-DATE
+> Task :app:parseModernDebugLocalResources UP-TO-DATE
+> Task :app:dataBindingGenBaseClassesModernDebug UP-TO-DATE
+> Task :app:generateModernDebugBuildConfig UP-TO-DATE
+> Task :app:generateModernDebugRFile UP-TO-DATE
+> Task :app:javaPreCompileModernDebug UP-TO-DATE
+> Task :app:checkModernDebugAarMetadata UP-TO-DATE
+> Task :app:mapModernDebugSourceSetPaths UP-TO-DATE
+> Task :app:compileModernDebugNavigationResources UP-TO-DATE
+> Task :app:createModernDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksModernDebug UP-TO-DATE
+> Task :app:processModernDebugMainManifest UP-TO-DATE
+> Task :app:processModernDebugManifest UP-TO-DATE
+> Task :app:processModernDebugManifestForPackage UP-TO-DATE
+> Task :app:processModernDebugResources UP-TO-DATE
+> Task :app:preModernDebugUnitTestBuild UP-TO-DATE
+> Task :app:javaPreCompileModernDebugUnitTest FROM-CACHE
+> Task :app:preA10DebugBuild UP-TO-DATE
+> Task :app:compileA10DebugAidl FROM-CACHE
+> Task :app:dataBindingMergeDependencyArtifactsA10Debug
+> Task :app:generateA10DebugResources FROM-CACHE
+> Task :app:mergeA10DebugResources FROM-CACHE
+> Task :app:packageA10DebugResources FROM-CACHE
+> Task :app:processA10DebugNavigationResources FROM-CACHE
+> Task :app:parseA10DebugLocalResources FROM-CACHE
+> Task :app:dataBindingGenBaseClassesA10Debug FROM-CACHE
+> Task :app:generateA10DebugBuildConfig FROM-CACHE
+> Task :app:generateA10DebugRFile FROM-CACHE
+> Task :app:compileModernDebugKotlin
+> Task :app:compileModernDebugJavaWithJavac UP-TO-DATE
+> Task :app:bundleModernDebugClassesToRuntimeJar
+> Task :app:bundleModernDebugClassesToCompileJar
+> Task :app:compileModernDebugUnitTestKotlin FROM-CACHE
+> Task :app:compileModernDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processModernDebugJavaRes UP-TO-DATE
+> Task :app:processModernDebugUnitTestJavaRes
+> Task :app:testModernDebugUnitTest
+> Task :app:javaPreCompileA10Debug FROM-CACHE
+> Task :app:checkA10DebugAarMetadata
+> Task :app:mapA10DebugSourceSetPaths
+> Task :app:compileA10DebugNavigationResources FROM-CACHE
+> Task :app:createA10DebugCompatibleScreenManifests
+> Task :app:extractDeepLinksA10Debug FROM-CACHE
+> Task :app:processA10DebugMainManifest FROM-CACHE
+> Task :app:processA10DebugManifest FROM-CACHE
+> Task :app:processA10DebugManifestForPackage FROM-CACHE
+> Task :app:processA10DebugResources FROM-CACHE
+> Task :app:preA10DebugUnitTestBuild UP-TO-DATE
+> Task :app:javaPreCompileA10DebugUnitTest FROM-CACHE
+> Task :app:preModernReleaseBuild UP-TO-DATE
+> Task :app:mergeModernReleaseJniLibFolders
+> Task :app:mergeModernReleaseNativeLibs
+
+> Task :app:stripModernReleaseDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libhevtun.so. Run with --info option to learn more.
+
+> Task :app:extractModernReleaseNativeSymbolTables FROM-CACHE
+> Task :app:mergeModernReleaseNativeDebugMetadata NO-SOURCE
+> Task :app:checkModernReleaseDuplicateClasses
+> Task :app:compileModernReleaseAidl FROM-CACHE
+> Task :app:dataBindingMergeDependencyArtifactsModernRelease
+> Task :app:generateModernReleaseResources FROM-CACHE
+> Task :app:mergeModernReleaseResources FROM-CACHE
+> Task :app:packageModernReleaseResources FROM-CACHE
+> Task :app:processModernReleaseNavigationResources FROM-CACHE
+> Task :app:parseModernReleaseLocalResources FROM-CACHE
+> Task :app:dataBindingGenBaseClassesModernRelease FROM-CACHE
+> Task :app:generateModernReleaseBuildConfig FROM-CACHE
+> Task :app:generateModernReleaseRFile FROM-CACHE
+> Task :app:compileA10DebugKotlin
+> Task :app:compileModernReleaseKotlin
+
+> Task :app:compileA10DebugKotlin
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/Calibration.kt:194:12 'val allNetworks: Array<(out) Network!>' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/ChannelCli.kt:71:37 Type argument for reified type parameter 'T' was inferred to the intersection of ['Comparable<Nothing>?' & 'Serializable?']. Reification of an intersection type results in the common supertype being used. This may lead to subtle issues and an explicit type argument is encouraged. This will become an error in a future release.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/HotspotReadCli.kt:17:56 'static fun prepareMainLooper(): Unit' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/ModeWidget.kt:365:46 'fun notifyAppWidgetViewDataChanged(p0: Int, p1: Int): Unit' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/PermissionsActivity.kt:155:73 'fun unsafeCheckOpNoThrow(p0: String, p1: Int, p2: String): Int' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/VpnCli.kt:51:19 Type argument for reified type parameter 'T' was inferred to the intersection of ['Comparable<Nothing>?' & 'Serializable?']. Reification of an intersection type results in the common supertype being used. This may lead to subtle issues and an explicit type argument is encouraged. This will become an error in a future release.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/WifiWake.kt:210:12 'val allNetworks: Array<(out) Network!>' is deprecated. Deprecated in Java.
+
+> Task :app:compileA10DebugJavaWithJavac
+> Task :app:bundleA10DebugClassesToRuntimeJar
+> Task :app:bundleA10DebugClassesToCompileJar
+> Task :app:compileA10DebugUnitTestKotlin FROM-CACHE
+> Task :app:compileA10DebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processA10DebugJavaRes
+> Task :app:processA10DebugUnitTestJavaRes
+
+> Task :app:compileModernReleaseKotlin
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/Calibration.kt:194:12 'val allNetworks: Array<(out) Network!>' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/ChannelCli.kt:71:37 Type argument for reified type parameter 'T' was inferred to the intersection of ['Comparable<Nothing>?' & 'Serializable?']. Reification of an intersection type results in the common supertype being used. This may lead to subtle issues and an explicit type argument is encouraged. This will become an error in a future release.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/HotspotReadCli.kt:17:56 'static fun prepareMainLooper(): Unit' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/ModeWidget.kt:365:46 'fun notifyAppWidgetViewDataChanged(p0: Int, p1: Int): Unit' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/PermissionsActivity.kt:155:73 'fun unsafeCheckOpNoThrow(p0: String, p1: Int, p2: String): Int' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/VpnCli.kt:51:19 Type argument for reified type parameter 'T' was inferred to the intersection of ['Comparable<Nothing>?' & 'Serializable?']. Reification of an intersection type results in the common supertype being used. This may lead to subtle issues and an explicit type argument is encouraged. This will become an error in a future release.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/WifiWake.kt:210:12 'val allNetworks: Array<(out) Network!>' is deprecated. Deprecated in Java.
+
+> Task :app:testA10DebugUnitTest
+> Task :app:javaPreCompileModernRelease FROM-CACHE
+> Task :app:compileModernReleaseJavaWithJavac
+> Task :app:mergeModernReleaseArtProfile
+> Task :app:checkModernReleaseAarMetadata
+> Task :app:mapModernReleaseSourceSetPaths
+> Task :app:compileModernReleaseNavigationResources FROM-CACHE
+> Task :app:createModernReleaseCompatibleScreenManifests
+> Task :app:extractDeepLinksModernRelease FROM-CACHE
+> Task :app:processModernReleaseMainManifest FROM-CACHE
+> Task :app:processModernReleaseManifest FROM-CACHE
+> Task :app:processModernReleaseManifestForPackage FROM-CACHE
+> Task :app:processModernReleaseResources FROM-CACHE
+> Task :app:expandModernReleaseArtProfileWildcards FROM-CACHE
+> Task :app:extractProguardFiles
+> Task :app:mergeModernReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :app:processModernReleaseJavaRes
+> Task :app:mergeModernReleaseStartupProfile UP-TO-DATE
+> Task :app:generateModernReleaseAssets UP-TO-DATE
+> Task :app:mergeModernReleaseAssets
+> Task :app:compressModernReleaseAssets FROM-CACHE
+> Task :app:extractModernReleaseVersionControlInfo
+> Task :app:mergeModernReleaseJavaResource
+> Task :app:generateModernReleaseLintVitalReportModel
+> Task :app:minifyModernReleaseWithR8 FROM-CACHE
+> Task :app:compileModernReleaseArtProfile FROM-CACHE
+> Task :app:convertShrunkResourcesToBinaryModernRelease FROM-CACHE
+> Task :app:optimizeModernReleaseResources FROM-CACHE
+> Task :app:collectModernReleaseDependencies
+> Task :app:sdkModernReleaseDependencyData
+> Task :app:validateSigningModernRelease
+> Task :app:writeModernReleaseAppMetadata
+> Task :app:writeModernReleaseSigningConfigVersions
+> Task :app:preA10ReleaseBuild UP-TO-DATE
+> Task :app:mergeA10ReleaseJniLibFolders
+> Task :app:mergeA10ReleaseNativeLibs
+
+> Task :app:stripA10ReleaseDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libhevtun.so. Run with --info option to learn more.
+
+> Task :app:extractA10ReleaseNativeSymbolTables FROM-CACHE
+> Task :app:mergeA10ReleaseNativeDebugMetadata NO-SOURCE
+> Task :app:checkA10ReleaseDuplicateClasses
+> Task :app:compileA10ReleaseAidl FROM-CACHE
+> Task :app:dataBindingMergeDependencyArtifactsA10Release
+> Task :app:generateA10ReleaseResources FROM-CACHE
+> Task :app:mergeA10ReleaseResources FROM-CACHE
+> Task :app:packageA10ReleaseResources FROM-CACHE
+> Task :app:processA10ReleaseNavigationResources FROM-CACHE
+> Task :app:parseA10ReleaseLocalResources FROM-CACHE
+> Task :app:dataBindingGenBaseClassesA10Release FROM-CACHE
+> Task :app:generateA10ReleaseBuildConfig FROM-CACHE
+> Task :app:generateA10ReleaseRFile FROM-CACHE
+> Task :app:lintVitalAnalyzeModernRelease
+> Task :app:compileA10ReleaseKotlin
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/Calibration.kt:194:12 'val allNetworks: Array<(out) Network!>' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/ChannelCli.kt:71:37 Type argument for reified type parameter 'T' was inferred to the intersection of ['Comparable<Nothing>?' & 'Serializable?']. Reification of an intersection type results in the common supertype being used. This may lead to subtle issues and an explicit type argument is encouraged. This will become an error in a future release.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/HotspotReadCli.kt:17:56 'static fun prepareMainLooper(): Unit' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/ModeWidget.kt:365:46 'fun notifyAppWidgetViewDataChanged(p0: Int, p1: Int): Unit' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/PermissionsActivity.kt:155:73 'fun unsafeCheckOpNoThrow(p0: String, p1: Int, p2: String): Int' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/VpnCli.kt:51:19 Type argument for reified type parameter 'T' was inferred to the intersection of ['Comparable<Nothing>?' & 'Serializable?']. Reification of an intersection type results in the common supertype being used. This may lead to subtle issues and an explicit type argument is encouraged. This will become an error in a future release.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/WifiWake.kt:210:12 'val allNetworks: Array<(out) Network!>' is deprecated. Deprecated in Java.
+
+> Task :app:javaPreCompileA10Release FROM-CACHE
+> Task :app:compileA10ReleaseJavaWithJavac
+> Task :app:mergeA10ReleaseArtProfile
+> Task :app:checkA10ReleaseAarMetadata
+> Task :app:mapA10ReleaseSourceSetPaths
+> Task :app:compileA10ReleaseNavigationResources FROM-CACHE
+> Task :app:createA10ReleaseCompatibleScreenManifests
+> Task :app:extractDeepLinksA10Release FROM-CACHE
+> Task :app:processA10ReleaseMainManifest FROM-CACHE
+> Task :app:processA10ReleaseManifest FROM-CACHE
+> Task :app:processA10ReleaseManifestForPackage FROM-CACHE
+> Task :app:processA10ReleaseResources FROM-CACHE
+> Task :app:expandA10ReleaseArtProfileWildcards FROM-CACHE
+> Task :app:mergeA10ReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :app:processA10ReleaseJavaRes
+> Task :app:mergeA10ReleaseJavaResource
+> Task :app:mergeA10ReleaseStartupProfile UP-TO-DATE
+> Task :app:minifyA10ReleaseWithR8 FROM-CACHE
+> Task :app:compileA10ReleaseArtProfile FROM-CACHE
+> Task :app:generateA10ReleaseAssets UP-TO-DATE
+> Task :app:mergeA10ReleaseAssets
+> Task :app:compressA10ReleaseAssets FROM-CACHE
+> Task :app:extractA10ReleaseVersionControlInfo
+> Task :app:generateA10ReleaseLintVitalReportModel
+> Task :app:lintVitalReportModernRelease
+> Task :app:lintVitalModernRelease
+> Task :app:packageModernRelease
+> Task :app:createModernReleaseApkListingFileRedirect
+> Task :app:assembleModernRelease
+> Task :app:convertShrunkResourcesToBinaryA10Release FROM-CACHE
+> Task :app:optimizeA10ReleaseResources FROM-CACHE
+> Task :app:collectA10ReleaseDependencies
+> Task :app:sdkA10ReleaseDependencyData
+> Task :app:validateSigningA10Release
+> Task :app:writeA10ReleaseAppMetadata
+> Task :app:writeA10ReleaseSigningConfigVersions
+> Task :app:lintVitalAnalyzeA10Release
+> Task :app:lintVitalReportA10Release
+> Task :app:lintVitalA10Release
+> Task :app:packageA10Release
+> Task :app:createA10ReleaseApkListingFileRedirect
+> Task :app:assembleA10Release
+
+BUILD SUCCESSFUL in 3m 34s
+161 actionable tasks: 69 executed, 66 from cache, 26 up-to-date
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.1/userguide/configuration_cache_enabling.html

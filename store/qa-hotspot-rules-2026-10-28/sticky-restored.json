@@ -1,0 +1,42 @@
+{
+  "roundtrips": true,
+  "route": "DIRECT",
+  "rules": [
+    {
+      "id": 9100,
+      "label": "точка доступа включена",
+      "via": null,
+      "enabled": true,
+      "matches": true,
+      "handled": 1793193694457,
+      "open": false
+    },
+    {
+      "id": 9101,
+      "label": "точка доступа включена · напрямую",
+      "via": "DIRECT",
+      "enabled": true,
+      "matches": true,
+      "handled": 0,
+      "open": false
+    },
+    {
+      "id": 9102,
+      "label": "точка доступа включена · через VPN",
+      "via": "VPN",
+      "enabled": true,
+      "matches": false,
+      "handled": 0,
+      "open": false
+    },
+    {
+      "id": 9103,
+      "label": "точка доступа включена · через прокси",
+      "via": "PROXY",
+      "enabled": true,
+      "matches": false,
+      "handled": 0,
+      "open": false
+    }
+  ]
+}

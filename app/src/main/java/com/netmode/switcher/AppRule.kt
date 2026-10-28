@@ -119,7 +119,10 @@ enum class Trigger {
     WIFI_OTHER,
 
     /** While a VPN is connected: any, or one of [AppRule.triggerApps]'s. */
-    VPN;
+    VPN,
+
+    /** While Wi-Fi sharing is on, optionally in [AppRule.triggerHotspotVia]'s route mode. */
+    HOTSPOT;
 
     /** Triggers that hold for a while and then stop: their rules can put things back. */
     val isCondition: Boolean get() = this != TIME && this != WIFI_LEFT
@@ -324,6 +327,8 @@ data class AppRule(
     val trafficMonth: Boolean = false,
     /** [Trigger.WIFI_OTHER]: the user's own networks. */
     val knownSsids: List<String> = emptyList(),
+    /** [Trigger.HOTSPOT]: null accepts any route; independent of the hotspot action's mode. */
+    val triggerHotspotVia: TetherMode? = null,
 ) {
     /** What the start sets, key → value, to tell rules that pull the same thing different ways. */
     val sets: Map<String, String>
@@ -642,6 +647,7 @@ data class AppRule(
             Trigger.SUN -> if (level == 1) "светло (от восхода до заката)" else "темно (от заката до восхода)"
             Trigger.TRAFFIC -> "моб. трафик за ${if (trafficMonth) "месяц" else "день"} ≥ " + trafficLabel(level)
             Trigger.WIFI_OTHER -> "Wi-Fi не из своих"
+            Trigger.HOTSPOT -> HotspotCondition.label(triggerHotspotVia)
             Trigger.VPN -> "VPN подключён" +
                 (if (triggerApps.isEmpty()) "" else ": " + AppPickerActivity.labels(triggerApps).joinToString(", ")) +
                 (if (appLeaveDelay > 0) " · выход через " + Steps.words(appLeaveDelay) else "")
@@ -695,6 +701,7 @@ data class AppRule(
         .put("http", http ?: JSONObject.NULL).put("eHttp", endHttp ?: JSONObject.NULL)
         .put("shell", shell ?: JSONObject.NULL).put("eShell", endShell ?: JSONObject.NULL)
         .put("tMonth", trafficMonth).put("known", JSONArray(knownSsids))
+        .put("tApVia", triggerHotspotVia?.name ?: JSONObject.NULL)
         .put("leaveS", appLeaveDelay).put("tPass", JSONArray(appPassThrough)).put("screenStay", appScreenOffStays)
 
     companion object {
@@ -732,6 +739,7 @@ data class AppRule(
                 leaveOnWifiOff = if (o.has("wifiOff")) o.getBoolean("wifiOff") else !Prefs.ignoreWifiOff,
                 trigger = o.str("trigger")?.let { runCatching { Trigger.valueOf(it) }.getOrNull() }
                     ?: if (ssid != null) Trigger.WIFI else Trigger.TIME,
+                triggerHotspotVia = o.str("tApVia")?.let { runCatching { TetherMode.valueOf(it) }.getOrNull() },
                 btAddress = o.str("btAddr"),
                 btName = o.str("btName"),
                 endBtAddress = o.str("endBtAddr"),

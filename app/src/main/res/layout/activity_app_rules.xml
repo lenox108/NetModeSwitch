@@ -14,8 +14,10 @@
         app:title="@string/section_apps" />
 
     <ScrollView
+        android:id="@+id/scroll"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:clipToPadding="false">
 
         <LinearLayout
@@ -27,6 +29,7 @@
             android:paddingBottom="24dp">
 
             <TextView
+                android:id="@+id/intro"
                 style="@style/NMS.Hint"
                 android:text="@string/apps_intro"
                 android:textSize="13sp" />
@@ -82,4 +85,35 @@
                 android:text="@string/from_template" />
         </LinearLayout>
     </ScrollView>
+
+    <LinearLayout
+        android:id="@+id/selectBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?attr/colorSurfaceContainer"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingEnd="20dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:visibility="gone">
+
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:id="@+id/selectAll"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:contentDescription="@string/rules_select_all"
+            android:text="@string/filter_all" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/deleteSelected"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            android:minHeight="48dp"
+            android:text="@string/rules_delete_selected" />
+    </LinearLayout>
 </LinearLayout>

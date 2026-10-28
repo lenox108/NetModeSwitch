@@ -1,0 +1,18 @@
+{
+  "ModernDebug": {
+    "tests": 127,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "A10Debug": {
+    "tests": 127,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "apks": {
+    "NetModeSwitch-3.30-hotspot-rules.apk": "8996e33d478bff111933b14910628cbf7ee6165444886602a6fc8f41d45bfd1b",
+    "NetModeSwitch-3.30-hotspot-rules-a10.apk": "8f1534e123ec9addf06a958a001ca461d67f84d77e7c2ac9f68082afc028118f"
+  }
+}

@@ -2,14 +2,17 @@ package com.netmode.switcher
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.content.Intent
+import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.PopupMenu
 import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.snackbar.Snackbar
 import com.netmode.switcher.databinding.ActivityAppRulesBinding
 import com.netmode.switcher.databinding.RowRuleBinding
@@ -19,17 +22,37 @@ import kotlinx.coroutines.launch
 class AppRulesActivity : AppCompatActivity() {
 
     private lateinit var ui: ActivityAppRulesBinding
+    private val selected = linkedSetOf<Long>()
+    private var selecting = false
+    private var upIcon: Drawable? = null
+    private val endSelection = object : OnBackPressedCallback(false) {
+        override fun handleOnBackPressed() = clearSelection()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ui = ActivityAppRulesBinding.inflate(layoutInflater)
         setContentView(ui.root)
-        ui.toolbar.setNavigationOnClickListener { finish() }
-        ui.toolbar.menu.add(R.string.sort_title).setOnMenuItemClickListener { chooseSort(); true }
+        selecting = savedInstanceState?.getBoolean("selecting") ?: false
+        savedInstanceState?.getLongArray("selected")?.let { selected.addAll(it.toList()) }
+        upIcon = ui.toolbar.navigationIcon
+        ui.toolbar.setNavigationOnClickListener { if (selecting) clearSelection() else finish() }
+        onBackPressedDispatcher.addCallback(this, endSelection)
+        ui.selectAll.setOnClickListener {
+            if (ui.selectAll.isChecked) selected.addAll(Prefs.appRules.map { it.id }) else selected.clear()
+            paintSelection()
+        }
+        ui.deleteSelected.setOnClickListener { confirmDelete(selected.toList()) }
         ui.held.setOnClickListener { chooseToReturn() }
         ui.addApps.setOnClickListener { startActivity(Intent(this, RuleEditActivity::class.java)) }
         ui.fromTemplate.setOnClickListener { fromTemplate() }
         renderTemplates()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean("selecting", selecting)
+        outState.putLongArray("selected", selected.toLongArray())
+        super.onSaveInstanceState(outState)
     }
 
     override fun onResume() {
@@ -70,6 +93,8 @@ class AppRulesActivity : AppCompatActivity() {
     private fun render() {
         val rules = sorted()
         val ids = rules.map { it.id }
+        selected.retainAll(ids.toSet())
+        if (rules.isEmpty()) selecting = false
         val pendingStarts = Prefs.pendingStarts
         ui.appList.removeAllViews()
         rules.forEach { rule ->
@@ -105,22 +130,101 @@ class AppRulesActivity : AppCompatActivity() {
                 getString(R.string.active_now).takeIf { active && !waiting && !unlocked && !asked },
                 getString(R.string.held_now, held).takeIf { held > 0 },
             ).joinToString(" · ")
-            row.root.alpha = if (rule.enabled) 1f else 0.55f
+            row.root.tag = rule.id
+            row.root.alpha = if (rule.enabled || selecting) 1f else 0.55f
             row.enabled.isChecked = rule.enabled
+            row.enabled.visibility = if (selecting) View.GONE else View.VISIBLE
             row.enabled.setOnCheckedChangeListener { _, on ->
                 RuleStore.save(rule.copy(enabled = on))
                 render()
             }
-            row.root.setOnClickListener { edit(rule) }
-            row.root.setOnLongClickListener { menu(rule, it); true }
-            row.drag.visibility = if (rules.size > 1) View.VISIBLE else View.GONE
-            dragBy(row.drag, row.root) { from, to -> moved(ids, from, to) }
+            row.check.contentDescription = getString(R.string.rules_select_named, row.title.text)
+            row.check.setOnClickListener { flip(rule.id) }
+            row.root.setOnClickListener { if (selecting) flip(rule.id) else edit(rule) }
+            row.root.setOnLongClickListener {
+                if (selecting) flip(rule.id) else menu(rule, it)
+                true
+            }
+            row.drag.visibility = if (!selecting && rules.size > 1) View.VISIBLE else View.GONE
+            if (!selecting) dragBy(row.drag, row.root) { from, to -> moved(ids, from, to) }
             ui.appList.addView(row.root)
         }
         ui.appEmpty.visibility = if (rules.isEmpty()) View.VISIBLE else View.GONE
+        if (rules.isEmpty()) ui.scroll.post { ui.scroll.scrollTo(0, 0) }
         val heldApps = AppFreezer.heldApps()
         ui.held.visibility = if (heldApps.isEmpty()) View.GONE else View.VISIBLE
         ui.held.text = getString(R.string.held_block, heldApps.size)
+        paintSelection()
+    }
+
+    private fun startSelection(id: Long? = null) {
+        selecting = true
+        id?.let { selected.add(it) }
+        render()
+    }
+
+    private fun clearSelection() {
+        selecting = false
+        selected.clear()
+        render()
+    }
+
+    private fun flip(id: Long) {
+        if (!selected.remove(id)) selected.add(id)
+        paintSelection()
+    }
+
+    /** Update checks in place so picking a row does not move the scroll or accessibility focus. */
+    private fun paintSelection() {
+        val count = ui.appList.childCount
+        endSelection.isEnabled = selecting
+        ui.toolbar.title = if (selecting) getString(R.string.rules_selected_n, selected.size) else getString(R.string.section_apps)
+        if (selecting) ui.toolbar.setNavigationIcon(R.drawable.ic_close) else ui.toolbar.navigationIcon = upIcon
+        ui.toolbar.setNavigationContentDescription(if (selecting) R.string.rules_cancel_selection else androidx.appcompat.R.string.abc_action_bar_up_description)
+        ui.toolbar.menu.clear()
+        if (!selecting) {
+            ui.toolbar.menu.add(R.string.rules_select).apply {
+                isEnabled = count > 0
+                setOnMenuItemClickListener { startSelection(); true }
+            }
+            ui.toolbar.menu.add(R.string.sort_title).setOnMenuItemClickListener { chooseSort(); true }
+            ui.toolbar.menu.add(R.string.rules_delete_all).apply {
+                isEnabled = count > 0
+                setOnMenuItemClickListener { confirmDelete(Prefs.appRules.map { it.id }, all = true); true }
+            }
+        }
+        ui.selectBar.visibility = if (selecting) View.VISIBLE else View.GONE
+        ui.addApps.visibility = if (selecting) View.GONE else View.VISIBLE
+        ui.fromTemplate.visibility = if (selecting) View.GONE else View.VISIBLE
+        ui.intro.setText(if (selecting) R.string.rules_selection_hint else R.string.apps_intro)
+        ui.deleteSelected.isEnabled = selected.isNotEmpty()
+        ui.selectAll.checkedState = when {
+            selected.isEmpty() -> MaterialCheckBox.STATE_UNCHECKED
+            selected.size == count -> MaterialCheckBox.STATE_CHECKED
+            else -> MaterialCheckBox.STATE_INDETERMINATE
+        }
+        for (i in 0 until count) {
+            val row = RowRuleBinding.bind(ui.appList.getChildAt(i))
+            val checked = (row.root.tag as Long) in selected
+            row.check.visibility = if (selecting) View.VISIBLE else View.GONE
+            row.check.isChecked = checked
+            row.root.strokeWidth = if (checked) (2 * resources.displayMetrics.density).toInt() else 0
+        }
+    }
+
+    /** Capture the IDs before opening the dialog; confirmation only removes that set. */
+    private fun confirmDelete(ids: List<Long>, all: Boolean = false) {
+        if (ids.isEmpty()) return
+        MaterialAlertDialogBuilder(this)
+            .setTitle(if (all) R.string.rules_delete_all else R.string.rules_delete_selected)
+            .setMessage(getString(if (all) R.string.rules_delete_all_confirm else R.string.rules_delete_selected_confirm, ids.size))
+            .setPositiveButton(R.string.delete) { _, _ ->
+                RuleStore.delete(ids)
+                clearSelection()
+                snack(getString(R.string.rules_deleted_n, ids.size))
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun chooseSort() {
@@ -222,6 +326,7 @@ class AppRulesActivity : AppCompatActivity() {
     /** Long press: the quick actions without opening the rule. */
     private fun menu(rule: AppRule, anchor: View) {
         val m = PopupMenu(this, anchor)
+        m.menu.add(0, 6, 0, R.string.rules_select)
         m.menu.add(0, 1, 0, R.string.apply_now).isEnabled = rule.enabled
         m.menu.add(0, 2, 1, R.string.release_now)
         m.menu.add(0, 3, 2, R.string.duplicate)
@@ -229,6 +334,7 @@ class AppRulesActivity : AppCompatActivity() {
         if (rule.trigger == Trigger.MANUAL) m.menu.add(0, 5, 4, R.string.scene_shortcut)
         m.setOnMenuItemClickListener { item ->
             when (item.itemId) {
+                6 -> startSelection(rule.id)
                 1 -> lifecycleScope.launch {
                     AppFreezer.freezeNow(rule)
                     snack(getString(R.string.applied))

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A freezer app in the icon view: a tap opens it, a long press picks it. -->
+<!-- A freezer app in the icon view: a tap opens it, a long press opens its actions. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"

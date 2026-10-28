@@ -182,6 +182,7 @@ object Widgets {
         Trigger.USB -> R.drawable.w_ic_t_usb
         Trigger.CAR -> R.drawable.w_ic_t_car
         Trigger.VPN -> R.drawable.w_ic_t_vpn
+        Trigger.HOTSPOT -> R.drawable.w_ic_hotspot
         Trigger.ALARM -> R.drawable.w_ic_t_alarm
         Trigger.SUN -> R.drawable.w_ic_t_sun
         Trigger.TRAFFIC -> R.drawable.w_ic_t_traffic

@@ -1,0 +1,26 @@
+{
+  "NetModeSwitch-3.30-rules-selection.apk": {
+    "sha256": "87731c04c6ba084c1545c45a66a9b4698185991cdfc4ada881d6ca7cd464520d",
+    "minSdk": 34,
+    "versionCode": 85,
+    "versionName": "3.30"
+  },
+  "NetModeSwitch-3.30-rules-selection-a10.apk": {
+    "sha256": "e19f4f5b286abee28b9b0a157cd889c5b5def89696897a1d2ccd79a8b2ce1d87",
+    "minSdk": 29,
+    "versionCode": 85,
+    "versionName": "3.30-a10"
+  },
+  "ModernDebug": {
+    "tests": 121,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "A10Debug": {
+    "tests": 121,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+}

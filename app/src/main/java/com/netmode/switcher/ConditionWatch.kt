@@ -52,7 +52,7 @@ object ConditionWatch {
         Trigger.BATTERY, Trigger.CHARGING, Trigger.SCREEN_OFF, Trigger.LOCKED, Trigger.APP_OPEN, Trigger.PLACE,
         Trigger.ROAMING, Trigger.WEAK_SIGNAL, Trigger.CALL, Trigger.HEADPHONES, Trigger.DND, Trigger.NO_INTERNET,
         Trigger.NOTIFY_APP, Trigger.USB, Trigger.CAR, Trigger.ALARM, Trigger.SUN, Trigger.TRAFFIC, Trigger.WIFI_OTHER,
-        Trigger.VPN,
+        Trigger.VPN, Trigger.HOTSPOT,
     )
 
     /** Kinds that change with the clock alone: an exact alarm wakes the check (see scheduleScreenAlarm). */
@@ -120,6 +120,7 @@ object ConditionWatch {
     @Volatile private var wifiSsid: String? = null
     @Volatile private var wifiKnown = false
     @Volatile private var usbConnected = false
+    @Volatile private var hotspotOn: Boolean? = null
     /** A VPN is connected, and whose app it is (null: could not be read); [vpnKnown] once read. */
     @Volatile private var vpnOn = false
     @Volatile private var vpnOwner: String? = null
@@ -178,6 +179,7 @@ object ConditionWatch {
             NotifWatch.active[AppKey.pkg(k)]?.let { ongoing -> rule.level != 1 || ongoing } == true
         }
         Trigger.USB -> usbConnected
+        Trigger.HOTSPOT -> HotspotCondition.holds(hotspotOn, Prefs.tetherMode, rule.triggerHotspotVia)
         Trigger.CAR -> dropHolds(rule, openSince, carMode(), Trigger.CAR)
         Trigger.VPN -> if (!vpnKnown) null else AppPresence.vpnHolds(vpnOn, vpnOwner, rule.triggerApps)?.let {
             dropHolds(rule, openSince, it, Trigger.VPN)
@@ -406,6 +408,7 @@ object ConditionWatch {
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
+                HotspotCondition.ACTION -> readHotspot(intent)
                 Intent.ACTION_BATTERY_CHANGED -> {
                     val before = batteryPct to charging
                     readBattery(intent)
@@ -498,6 +501,7 @@ object ConditionWatch {
         }
         if (Trigger.NO_INTERNET in want) filter.addAction(Intent.ACTION_AIRPLANE_MODE_CHANGED)
         if (Trigger.USB in want) filter.addAction(USB_STATE)
+        if (Trigger.HOTSPOT in want) filter.addAction(HotspotCondition.ACTION)
         if (Trigger.CAR in want) {
             filter.addAction(android.app.UiModeManager.ACTION_ENTER_CAR_MODE)
             filter.addAction(android.app.UiModeManager.ACTION_EXIT_CAR_MODE)
@@ -513,6 +517,9 @@ object ConditionWatch {
             ctx.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))?.let { readBattery(it) }
             if (Trigger.USB in want) {
                 usbConnected = ctx.registerReceiver(null, IntentFilter(USB_STATE))?.getBooleanExtra("connected", false) == true
+            }
+            if (Trigger.HOTSPOT in want) {
+                ctx.registerReceiver(null, IntentFilter(HotspotCondition.ACTION))?.let { readHotspot(it) }
             }
         }
         val audio = ctx.getSystemService(AudioManager::class.java)
@@ -577,6 +584,20 @@ object ConditionWatch {
         netLostSince = 0L
         wifiKnown = false
         vpnKnown = false
+        hotspotOn = null
+    }
+
+    /** Sticky tethering state is available at process start, without polling or root commands. */
+    private fun readHotspot(intent: Intent) {
+        val now = HotspotCondition.enabled(intent.getStringArrayListExtra(HotspotCondition.ACTIVE)) ?: return
+        if (now == hotspotOn) return
+        hotspotOn = now
+        evaluate(Trigger.HOTSPOT)
+    }
+
+    /** A route may change while the AP remains up and no system tethering event is sent. */
+    fun hotspotRouteChanged() {
+        if (Trigger.HOTSPOT in registered) evaluate(Trigger.HOTSPOT)
     }
 
     /** One callback per active SIM: service state for roaming and towers, strength for bars. */

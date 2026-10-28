@@ -151,7 +151,12 @@ object Prefs {
     var tetherMode: TetherMode
         get() = runCatching { TetherMode.valueOf(sp.getString("tether_mode", null) ?: "DIRECT") }
             .getOrDefault(TetherMode.DIRECT)
-        set(value) = sp.edit().putString("tether_mode", value.name).commit().let { }
+        set(value) {
+            val changed = value != tetherMode
+            if (sp.edit().putString("tether_mode", value.name).commit() && changed) {
+                ConditionWatch.hotspotRouteChanged()
+            }
+        }
 
     var tetherTtlEnabled: Boolean
         get() = sp.getBoolean("tether_ttl_enabled", false)
