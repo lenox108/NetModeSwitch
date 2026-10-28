@@ -46,9 +46,26 @@ object VpnControl {
         return out.contains("ok")
     }
 
-    /** Disconnects the current VPN. Returns a line for the log. */
-    suspend fun off(): String {
-        val pkg = owner()
+    /** [target] null disconnects any VPN; otherwise a different owner's VPN is left alone. */
+    suspend fun off(target: String? = null, before: (String) -> Unit = {}): String =
+        off(target, ::owner, ::label) { pkg ->
+            pkg?.let(before)
+            disconnect(pkg, selected = target != null)
+        }
+
+    /** Keep the owner guard before *all* mutations, including always-on restoration and tiles. */
+    internal suspend fun off(
+        target: String?,
+        readOwner: suspend () -> String?,
+        name: (String) -> String,
+        disconnect: suspend (String?) -> String,
+    ): String {
+        val current = readOwner()
+        if (target != null && current != target) return "VPN ${name(target)} не подключён — пропущено"
+        return disconnect(current)
+    }
+
+    private suspend fun disconnect(pkg: String?, selected: Boolean): String {
         if (pkg == null) {
             // Switched off in the app itself: still drop the always-on setting left by [on].
             if (ours() != null && root()) restore()
@@ -63,15 +80,16 @@ object VpnControl {
         }
         // Watch a little longer than needed: an app that reconnects on its own does it within
         // seconds, and the log should say so rather than claim the VPN is off.
+        fun connected(now: String?): Boolean = now != null && (!selected || now == pkg)
         var wentDown = false
         val deadline = System.currentTimeMillis() + RECONNECT_WATCH_MS
         while (System.currentTimeMillis() < deadline) {
             delay(2_000)
             val now = owner()
-            if (now == null) wentDown = true
+            if (!connected(now)) wentDown = true
             else if (wentDown) return "VPN ${label(pkg)}: выключен, но приложение сразу подключилось снова само"
         }
-        return if (owner() == null) "VPN ${label(pkg)} выкл" else "VPN ${label(pkg)}: не выключился"
+        return if (!connected(owner())) "VPN ${label(pkg)} выкл" else "VPN ${label(pkg)}: не выключился"
     }
 
     /** Connects [pkg]'s VPN. Returns a line for the log. */

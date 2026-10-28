@@ -23,7 +23,7 @@ object RuleStore {
         if (rule.trigger == Trigger.APP_OPEN) ConditionWatch.grantUsageAccess()
         changed()
         // A scene runs on a press, and its time on an exact alarm: nothing waits in the background.
-        return rule.enabled && !rule.isTime && rule.trigger != Trigger.MANUAL && !batteryExempt()
+        return rule.enabled && !rule.isTime && rule.trigger != Trigger.MANUAL && rule.trigger != Trigger.TILE_CLICK && !batteryExempt()
     }
 
     fun delete(id: Long) = delete(listOf(id))

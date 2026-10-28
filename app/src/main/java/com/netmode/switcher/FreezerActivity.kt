@@ -171,6 +171,7 @@ class FreezerActivity : AppCompatActivity() {
         }
         Prefs.listen(prefs)
         render()
+        if (savedInstanceState == null) intent.getStringExtra(EXTRA_APP_KEY)?.let { openSheet(it) }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -402,32 +403,13 @@ class FreezerActivity : AppCompatActivity() {
     /** Single-app actions in every list look; selection keeps its usual toggle gesture. */
     private fun appActions(key: String) {
         if (selecting) { flip(key); return }
-        val a = Freezer.find(key) ?: return
-        val keys = listOf(key)
-        val actions = mutableListOf<Pair<Int, () -> Unit>>()
-        fun action(title: Int, run: () -> Unit) { actions += title to run }
-        action(R.string.ice_open) { launch(key) }
-        action(if (a.frozen) R.string.ice_thaw else R.string.ice_freeze) { perform(keys, freeze = !a.frozen) }
-        action(R.string.ice_thaw_for) { chooseThawFor(keys) }
-        if (!a.frozen && a.keepUntil != 0L) {
-            action(R.string.ice_resume_auto) { App.scope.launch { Freezer.resumeAuto(keys) } }
-        }
-        action(if (a.favorite) R.string.ice_favorite_remove else R.string.ice_favorite_add) {
-            Freezer.setFavorite(keys, !a.favorite)
-        }
-        if (!IceShortcuts.isPinned(this, key)) {
-            action(R.string.ice_pin) { if (!IceShortcuts.pin(this, key)) toast(getString(R.string.ice_pin_failed)) }
-        }
-        action(R.string.ice_card) { openSheet(key) }
-        action(R.string.ice_select) { flip(key) }
-        action(R.string.ice_remove) { askRemove(key) }
-        MaterialAlertDialogBuilder(this)
-            .setTitle(labels[key] ?: Freezer.label(key))
-            .setItems(actions.map { getString(it.first) }.toTypedArray()) { _, index ->
-                if (Freezer.find(key) != null) actions[index].second()
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
+        IceAppMenu.show(this, key,
+            open = { launch(key) },
+            freeze = { perform(listOf(key), freeze = it) },
+            thawFor = { chooseThawFor(listOf(key)) },
+            card = { openSheet(key) },
+            remove = { askRemove(key) },
+            select = { flip(key) })
     }
 
     /** Thaws (if frozen) and opens the app straight from the list, as its shortcut does. */
@@ -798,6 +780,9 @@ class FreezerActivity : AppCompatActivity() {
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
     companion object {
+        /** Open the chosen app's card from the folder without searching for it again. */
+        const val EXTRA_APP_KEY = "ice_app_card"
+
         /** The "as in the settings" delay chip; a delay is never this. */
         private const val DEFAULT_TAG = -100
 

@@ -61,4 +61,33 @@ class HotspotConditionTest {
         assertEquals(TetherMode.DIRECT, r.endSpec.hotspotVia)
         assertTrue(r.hasActions)
     }
+
+    @Test fun bandRequiresLiveRadioAndRouteAndBandMustBothMatch() {
+        assertNull(HotspotCondition.holds(true, TetherMode.VPN, null, null, "2"))
+        assertNull(HotspotCondition.holds(true, TetherMode.VPN, null, emptySet(), "2"))
+        assertEquals(false, HotspotCondition.holds(false, TetherMode.VPN, null, null, "2"))
+        assertEquals(false, HotspotCondition.holds(true, TetherMode.DIRECT, TetherMode.VPN, null, "2"))
+        for (band in listOf("2", "5")) {
+            assertEquals(true, HotspotCondition.holds(true, TetherMode.VPN, TetherMode.VPN, setOf(band), band))
+            assertEquals(false, HotspotCondition.holds(true, TetherMode.VPN, TetherMode.VPN, setOf(band), if (band == "2") "5" else "2"))
+            assertEquals(true, HotspotCondition.holds(true, TetherMode.VPN, TetherMode.VPN, setOf("2", "5"), band))
+        }
+    }
+
+    @Test fun oldAndroidDumpDoesNotMistakeUpstreamOrHistoricalFrequencyForTheAp() {
+        assertTrue(HotspotCondition.bandsFromDump("mWifiInfo Frequency: 2412MHz\nmReportedFrequency=5180").isEmpty())
+        assertEquals(setOf("5"), HotspotCondition.bandsFromDump("mWifiInfo Frequency: 2412MHz\n--Dump of SoftApManager--\nmReportedFrequency: 5180\n--Dump of Other--\nmFrequency=2412"))
+    }
+
+    @Test fun labelsEndingsAndConflictsIncludeBandIndependentlyOfTheCondition() {
+        val r = rule(TetherMode.VPN).copy(triggerHotspotBand = "5", hotspot = Toggle.ON, hotspotBand = "2",
+            endCustom = true, endHotspot = Toggle.ON, endHotspotBand = "5")
+        assertTrue(r.timeLabel.endsWith("5 ГГц"))
+        assertEquals("5", r.endSpec.hotspotBand)
+        assertEquals("2", r.hotspotBand)
+        assertEquals("5", r.withEnd(r.endSpec).endHotspotBand)
+        assertEquals("точка доступа вкл · через VPN · 2,4 ГГц", apLabel(Toggle.ON, TetherMode.VPN, "2"))
+        assertEquals("точка доступа выкл", apLabel(Toggle.OFF, TetherMode.VPN, "2"))
+        assertFalse(r.conflicts(listOf(r.copy(id = 2, hotspotBand = "5"))).isEmpty())
+    }
 }

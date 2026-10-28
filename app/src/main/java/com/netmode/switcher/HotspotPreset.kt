@@ -35,7 +35,25 @@ internal class HotspotPresetStart(private val device: Device) {
         suspend fun ensureOn(mode: TetherMode): String
     }
 
-    suspend fun run(preset: HotspotPreset): String {
+    suspend fun restore(radio: String, enabled: Boolean, mode: TetherMode): String? {
+        if (ApRadio.parse(radio).isEmpty()) return "Неверный сохранённый диапазон"
+        val old = device.read() ?: return "Не удалось прочитать настройки Wi-Fi"
+        val changed = old.radio != radio
+        val next = old.copy(radio = radio)
+        if (changed) device.validate(next, old)?.let { return it }
+        if (device.isOn() && (changed || !enabled) && !device.stop()) return "Точка не остановилась"
+        if (changed) {
+            device.write(next, old)?.let { return it }
+            if (device.read()?.radio != radio) return "Android не подтвердил возврат диапазона"
+        }
+        if (enabled) {
+            device.ensureOn(mode)
+            if (!device.isOn()) return "Точка доступа не включилась при возврате"
+        }
+        return null
+    }
+
+    suspend fun run(preset: HotspotPreset, before: (ApSettings, Boolean) -> Unit = { _, _ -> }): String {
         require(preset.band in HotspotPreset.bands)
         val old = device.read() ?: return "Не удалось прочитать настройки Wi-Fi. Быстрый запуск отменён."
         val changed = ApRadio.key(old.radio) != preset.band
@@ -45,6 +63,7 @@ internal class HotspotPresetStart(private val device: Device) {
         val active = if (on) device.activeBands() else emptySet()
         // One idle AP may be shut down in bridged mode; that is not a reason to restart it.
         val expected = if (preset.band == "dual25") setOf("2", "5") else setOf(preset.band)
+        before(old, on)
         if (on && (changed || active.any { it !in expected }) && !device.stop())
             return "Точка не остановилась. Диапазон и маршрут оставлены без изменений."
         if (changed) {

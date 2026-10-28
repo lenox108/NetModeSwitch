@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
+    android:descendantFocusability="beforeDescendants"
+    android:importantForAutofill="noExcludeDescendants"
+    android:orientation="vertical">
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:navigationIcon="?attr/homeAsUpIndicator"
+        app:title="@string/wifi_country_title" />
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+            <TextView style="@style/NMS.Hint" android:text="@string/wifi_country_hint" />
+            <com.google.android.material.card.MaterialCardView style="@style/NMS.HotspotCard">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+                    <TextView
+                        android:id="@+id/mode"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/working"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+                    <TextView android:id="@+id/current" style="@style/NMS.Hint" />
+                    <TextView android:id="@+id/driver" style="@style/NMS.Hint" />
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/refresh"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/refresh" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+            <TextView
+                android:id="@+id/access"
+                style="@style/NMS.Hint"
+                android:layout_marginTop="12dp"
+                android:accessibilityLiveRegion="polite" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/choose"
+                style="@style/NMS.PickButton"
+                android:text="@string/wifi_country_choose" />
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/codeLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="@string/wifi_country_code">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/code"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textCapCharacters|textNoSuggestions"
+                    android:imeOptions="actionDone|flagForceAscii"
+                    android:maxLength="2"
+                    android:maxLines="1" />
+            </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/apply"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:enabled="false"
+                android:text="@string/wifi_country_apply" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/automatic"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:enabled="false"
+                android:text="@string/wifi_country_auto" />
+            <TextView
+                android:id="@+id/result"
+                style="@style/NMS.Hint"
+                android:layout_marginTop="8dp"
+                android:accessibilityLiveRegion="polite" />
+            <TextView
+                style="@style/NMS.Hint"
+                android:layout_marginTop="16dp"
+                android:text="@string/wifi_country_lifetime" />
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

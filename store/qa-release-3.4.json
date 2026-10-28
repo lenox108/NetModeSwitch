@@ -1,0 +1,39 @@
+{
+  "version": "3.4",
+  "versionCode": 86,
+  "tests": {
+    "Modern": {
+      "tests": 158,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "A10": {
+      "tests": 158,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "certificateSHA256": "40ed2e2df70aec2d7072ff3d3437364de80928691b6d632a95f008c9b98308f2",
+  "sourceManifestSHA256": "6f23dd79560268e92f7679c7e1c29917273b48f5b52b2a41cb5d704ecbb2b02d",
+  "physicalDeviceTested": false,
+  "apks": [
+    {
+      "file": "store/NetModeSwitch-3.4.apk",
+      "versionName": "3.4",
+      "versionCode": 86,
+      "minSdk": 34,
+      "sha256": "272cf3f86d328c3c21fc97b1d43b53b957fb803b3da25b3f7352a89145e36a83",
+      "size": 3143059
+    },
+    {
+      "file": "store/NetModeSwitch-3.4-a10.apk",
+      "versionName": "3.4-a10",
+      "versionCode": 86,
+      "minSdk": 29,
+      "sha256": "3bd5d628fb14afc451c828dc647d99ae5717ff4e77331d1525f1e3a7c7886e5e",
+      "size": 3249381
+    }
+  ]
+}

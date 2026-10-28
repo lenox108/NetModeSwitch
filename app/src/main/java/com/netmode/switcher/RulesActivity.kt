@@ -61,6 +61,10 @@ class RulesActivity : AppCompatActivity() {
         ui.checkEntry.title.setText(R.string.check_title)
         ui.checkEntry.hint.setText(R.string.check_entry_hint)
         ui.checkEntry.root.setOnClickListener { startActivity(Intent(this, CheckActivity::class.java)) }
+        ui.wifiCountryEntry.title.setText(R.string.wifi_country_title)
+        ui.wifiCountryEntry.hint.setText(R.string.wifi_country_entry_hint)
+        ui.wifiCountryEntry.state.text = "›"
+        ui.wifiCountryEntry.root.setOnClickListener { startActivity(Intent(this, WifiCountryActivity::class.java)) }
 
         val backends = listOf(Backend.AUTO, Backend.ROOT, Backend.SHIZUKU)
         ui.backend.onChange = { Prefs.backend = backends[it] }

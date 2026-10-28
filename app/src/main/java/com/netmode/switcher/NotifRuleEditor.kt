@@ -88,9 +88,7 @@ internal object NotifRuleEditor {
         val body = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
         body.addView(ScrollView(context).apply { addView(content) },
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-        val actions = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
+        val actions = DialogActionLayout(context).apply {
             setPadding((16 * dp).toInt(), (8 * dp).toInt(), (16 * dp).toInt(), (12 * dp).toInt())
         }
         body.addView(actions, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))

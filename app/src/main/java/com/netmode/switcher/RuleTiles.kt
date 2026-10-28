@@ -74,6 +74,7 @@ object RuleTiles {
         Trigger.USB -> R.drawable.ic_t_usb
         Trigger.CAR -> R.drawable.ic_t_car
         Trigger.VPN -> R.drawable.ic_a_vpn
+        Trigger.TILE_CLICK -> R.drawable.ic_a_tiles
         Trigger.HOTSPOT -> R.drawable.ic_hotspot
         Trigger.ALARM -> R.drawable.ic_t_alarm
         Trigger.SUN -> R.drawable.ic_t_sun

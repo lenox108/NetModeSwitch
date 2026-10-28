@@ -182,7 +182,7 @@ internal class HotspotPanel(private val activity: AppCompatActivity, private val
         }
     }
 
-    private fun showReport(report: String) {
+    internal fun showReport(report: String) {
         MaterialAlertDialogBuilder(activity).setTitle("Диагностика раздачи")
             .setMessage(report)
             .setPositiveButton("Сохранить файл") { _, _ ->

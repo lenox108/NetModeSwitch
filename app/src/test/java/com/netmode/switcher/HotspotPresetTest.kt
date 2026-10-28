@@ -100,4 +100,39 @@ class HotspotPresetTest {
         HotspotPresetStart(device).run(HotspotPreset("2", TetherMode.DIRECT))
         assertTrue(device.events.isEmpty())
     }
+
+    @Test fun beforeStateIsCapturedBeforeMutationAndNotOnValidationFailure() = runBlocking {
+        val d = Device()
+        var captured: Pair<ApSettings, Boolean>? = null
+        HotspotPresetStart(d).run(HotspotPreset("5", TetherMode.VPN)) { old, on ->
+            assertEquals(listOf("validate"), d.events)
+            captured = old to on
+        }
+        assertEquals("1:6", captured!!.first.radio)
+        assertTrue(captured!!.second)
+        d.validationError = "unsupported"
+        HotspotPresetStart(d).run(HotspotPreset("2", TetherMode.VPN)) { _, _ -> fail("Validation must precede recording") }
+        Unit
+    }
+
+    @Test fun restoringExactChannelPreservesCredentialsAndCanLeaveTheApOff() = runBlocking {
+        val d = Device()
+        assertNull(HotspotPresetStart(d).restore("2:149", false, TetherMode.VPN))
+        assertEquals("2:149", d.settings!!.radio)
+        assertEquals("Home", d.settings!!.ssid)
+        assertEquals("password", d.settings!!.pass)
+        assertFalse(d.on)
+        assertEquals(listOf("validate", "stop", "write"), d.events)
+        d.events.clear()
+        assertNull(HotspotPresetStart(d).restore("1:6", true, TetherMode.PROXY))
+        assertTrue(d.on)
+        assertEquals(listOf("validate", "write", "launch:PROXY"), d.events)
+    }
+
+    @Test fun rejectedRestoreDoesNotResumeInTheWrongBand() = runBlocking {
+        val d = Device().apply { ignoreWrite = true }
+        assertNotNull(HotspotPresetStart(d).restore("2:149", true, TetherMode.DIRECT))
+        assertFalse(d.on)
+        assertEquals(listOf("validate", "stop", "write"), d.events)
+    }
 }

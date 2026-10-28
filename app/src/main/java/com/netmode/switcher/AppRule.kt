@@ -21,13 +21,18 @@ enum class FreezeMethod(val label: String) {
 }
 
 /** "точка доступа вкл · через Proxy" */
-internal fun apLabel(t: Toggle, via: TetherMode?): String =
+internal fun apLabel(t: Toggle, via: TetherMode?, band: String? = null): String =
     if (t == Toggle.OFF) "точка доступа выкл"
     else "точка доступа вкл" + when (via) {
         TetherMode.VPN -> " · через VPN"
         TetherMode.PROXY -> " · через Proxy"
         else -> ""
-    }
+    } + (band?.let { " · ${ApRadio.label(it)}" } ?: "")
+
+internal fun vpnLabel(toggle: Toggle?, offApp: String?): String? = toggle?.let {
+    if (it == Toggle.ON) "VPN вкл"
+    else "VPN" + (offApp?.let { p -> " ${AppPickerActivity.labels(listOf(p)).first()}" } ?: "") + " выкл"
+}
 
 /** What starts a rule's window. */
 enum class Trigger {
@@ -122,10 +127,13 @@ enum class Trigger {
     VPN,
 
     /** While Wi-Fi sharing is on, optionally in [AppRule.triggerHotspotVia]'s route mode. */
-    HOTSPOT;
+    HOTSPOT,
+
+    /** Each press of a selected app tile in the shade; a one-shot event. */
+    TILE_CLICK;
 
     /** Triggers that hold for a while and then stop: their rules can put things back. */
-    val isCondition: Boolean get() = this != TIME && this != WIFI_LEFT
+    val isCondition: Boolean get() = this != TIME && this != WIFI_LEFT && this != TILE_CLICK
 }
 
 /** What the user hears of a rule starting by itself; never asked when started by hand. */
@@ -210,13 +218,16 @@ data class AppRule(
     val tiles: Map<String, Toggle> = emptyMap(),
     val endTiles: Map<String, Toggle> = emptyMap(),
     /**
-     * The system VPN: [vpn] off disconnects whatever VPN is connected, on starts [vpnApp].
+     * The system VPN: [vpn] off disconnects [vpnOffApp] (null: any), on starts [vpnApp].
      * [vpnTile] is the older, tile-based form of the same choice, read only to find the app.
      */
     val vpnApp: String? = null,
     val vpnTile: String? = null,
     val vpn: Toggle? = null,
     val endVpn: Toggle? = null,
+    /** Separate off targets keep old rules (including a stale [vpnApp]) unscoped. */
+    val vpnOffApp: String? = null,
+    val endVpnOffApp: String? = null,
     /** For [Trigger.NET_MODE]: which SIM is watched and for which mode. */
     val triggerSlot: Int = 0,
     val triggerMode: NetMode? = null,
@@ -329,6 +340,12 @@ data class AppRule(
     val knownSsids: List<String> = emptyList(),
     /** [Trigger.HOTSPOT]: null accepts any route; independent of the hotspot action's mode. */
     val triggerHotspotVia: TetherMode? = null,
+    val triggerHotspotBand: String? = null,
+    val hotspotBand: String? = null,
+    val endHotspotBand: String? = null,
+    /** Stable tile component, plus its label as shown in the shade. */
+    val triggerTile: String? = null,
+    val triggerTileLabel: String? = null,
 ) {
     /** What the start sets, key → value, to tell rules that pull the same thing different ways. */
     val sets: Map<String, String>
@@ -337,6 +354,10 @@ data class AppRule(
             mobileData?.let { put("DATA", it.name) }
             wifi?.let { put("WIFI", it.name) }
             hotspot?.let { put("HOTSPOT", it.name) }
+            if (hotspot == Toggle.ON) {
+                hotspotBand?.let { put("HOTSPOT:BAND", it) }
+                hotspotVia?.let { put("HOTSPOT:ROUTE", it.name) }
+            }
             vpn?.let { put("VPN", it.name) }
             airplane?.let { put("AIRPLANE", it.name) }
             powerSave?.let { put("POWERSAVE", it.name) }
@@ -364,8 +385,8 @@ data class AppRule(
     val endSpec: EndSpec
         get() = EndSpec(
             mode = if (endCustom) EndMode.CUSTOM else EndMode.RESTORE,
-            net = endNet, data = endData, wifi = endWifi, hotspot = endHotspot, hotspotVia = endHotspotVia,
-            bt = endBt, loc = endLoc, vpn = endVpn, airplane = endAirplane, powerSave = endPowerSave,
+            net = endNet, data = endData, wifi = endWifi, hotspot = endHotspot, hotspotVia = endHotspotVia, hotspotBand = endHotspotBand,
+            bt = endBt, loc = endLoc, vpn = endVpn, vpnOffApp = endVpnOffApp, airplane = endAirplane, powerSave = endPowerSave,
             dataSim = endDataSim, tiles = endTiles, stopApps = endStopApps, appMethods = endAppMethods,
             launchApps = endLaunchApps, unload = endUnload, unloadAll = endUnloadAll, steps = endSteps,
             sys = endSys, note = endNote, http = endHttp, shell = endShell,
@@ -374,8 +395,8 @@ data class AppRule(
     /** This rule with [e] as its end: the unlock block runs through the end's own code. */
     fun withEnd(e: EndSpec): AppRule = copy(
         endCustom = e.mode == EndMode.CUSTOM,
-        endNet = e.net, endData = e.data, endWifi = e.wifi, endHotspot = e.hotspot, endHotspotVia = e.hotspotVia,
-        endBt = e.bt, endLoc = e.loc, endVpn = e.vpn, endAirplane = e.airplane, endPowerSave = e.powerSave,
+        endNet = e.net, endData = e.data, endWifi = e.wifi, endHotspot = e.hotspot, endHotspotVia = e.hotspotVia, endHotspotBand = e.hotspotBand,
+        endBt = e.bt, endLoc = e.loc, endVpn = e.vpn, endVpnOffApp = e.vpnOffApp, endAirplane = e.airplane, endPowerSave = e.powerSave,
         endDataSim = e.dataSim, endTiles = e.tiles, endStopApps = e.stopApps, endAppMethods = e.appMethods,
         endLaunchApps = e.launchApps, endUnload = e.unload, endUnloadAll = e.unloadAll, endSteps = e.steps,
         endSys = e.sys, endNote = e.note, endHttp = e.http, endShell = e.shell,
@@ -411,7 +432,8 @@ data class AppRule(
         entry == FrozenApp.LOCATION -> locationOff
         entry == FrozenApp.WIFI -> wifi != null
         entry == FrozenApp.HOTSPOT -> hotspot != null
-        entry == FrozenApp.TETHER_MODE -> hotspotVia != null
+        entry == FrozenApp.TETHER_MODE -> hotspot == Toggle.ON && (hotspotVia != null || hotspotBand != null)
+        entry == FrozenApp.HOTSPOT_RADIO -> hotspot == Toggle.ON && hotspotBand != null
         entry == FrozenApp.DATA -> mobileData != null
         entry.startsWith(FrozenApp.NET) -> netMode != null &&
             (netSlot == SLOT_ALL || entry == FrozenApp.NET + netSlot)
@@ -432,8 +454,8 @@ data class AppRule(
             "NET" to netMode?.let { (if (netSlot == SLOT_ALL) "все SIM" else "SIM ${netSlot + 1}") + " → ${it.short}" },
             "DATA" to mobileData?.let { if (it == Toggle.ON) "моб. интернет вкл" else "моб. интернет выкл" },
             "WIFI" to wifi?.let { if (it == Toggle.ON) "Wi-Fi вкл" else "Wi-Fi выкл" },
-            "HOTSPOT" to hotspot?.let { apLabel(it, hotspotVia) },
-            "VPN" to vpn?.let { if (it == Toggle.ON) "VPN вкл" else "VPN выкл" },
+            "HOTSPOT" to hotspot?.let { apLabel(it, hotspotVia, hotspotBand) },
+            "VPN" to vpnLabel(vpn, vpnOffApp),
             "TILES" to tiles.size.takeIf { it > 0 }?.let { "плитки: $it" },
             "BT" to "Bluetooth выкл".takeIf { bluetoothOff },
             "LOC" to "геолокация выкл".takeIf { locationOff },
@@ -508,9 +530,9 @@ data class AppRule(
             val parts = apps + linkedMapOf(
                 "NET" to endNet?.let { (if (netSlot == SLOT_ALL) "все SIM" else "SIM ${netSlot + 1}") + " → ${it.short}" },
                 "DATA" to t("моб. интернет", endData), "WIFI" to t("Wi-Fi", endWifi),
-                "HOTSPOT" to endHotspot?.let { apLabel(it, endHotspotVia) },
+                "HOTSPOT" to endHotspot?.let { apLabel(it, endHotspotVia, endHotspotBand) },
                 "BT" to t("Bluetooth", endBt), "LOC" to t("геолокация", endLoc),
-                "VPN" to t("VPN", endVpn), "AIRPLANE" to t("полёт", endAirplane), "POWERSAVE" to t("энергосбережение", endPowerSave),
+                "VPN" to vpnLabel(endVpn, endVpnOffApp), "AIRPLANE" to t("полёт", endAirplane), "POWERSAVE" to t("энергосбережение", endPowerSave),
                 "DATASIM" to endDataSim?.let { "интернет через SIM ${it + 1}" },
                 "TILES" to endTiles.size.takeIf { it > 0 }?.let { "плитки: $it" },
                 "SYS" to endSys.takeIf { it.isNotEmpty() }?.let { SysKey.summary(it) },
@@ -534,6 +556,7 @@ data class AppRule(
         get() = when (trigger) {
             Trigger.TIME -> hasEnd
             Trigger.WIFI_LEFT -> true
+            Trigger.TILE_CLICK -> false
             else -> releaseOnLeave
         }
 
@@ -647,7 +670,8 @@ data class AppRule(
             Trigger.SUN -> if (level == 1) "светло (от восхода до заката)" else "темно (от заката до восхода)"
             Trigger.TRAFFIC -> "моб. трафик за ${if (trafficMonth) "месяц" else "день"} ≥ " + trafficLabel(level)
             Trigger.WIFI_OTHER -> "Wi-Fi не из своих"
-            Trigger.HOTSPOT -> HotspotCondition.label(triggerHotspotVia)
+            Trigger.HOTSPOT -> HotspotCondition.label(triggerHotspotVia, triggerHotspotBand)
+            Trigger.TILE_CLICK -> "нажатие плитки «${triggerTileLabel ?: triggerTile?.let { Tiles.label(it) } ?: "не выбрана"}»"
             Trigger.VPN -> "VPN подключён" +
                 (if (triggerApps.isEmpty()) "" else ": " + AppPickerActivity.labels(triggerApps).joinToString(", ")) +
                 (if (appLeaveDelay > 0) " · выход через " + Steps.words(appLeaveDelay) else "")
@@ -674,6 +698,7 @@ data class AppRule(
         .put("endTiles", JSONObject().apply { endTiles.forEach { (c, t) -> put(c, t.name) } })
         .put("vpnApp", vpnApp ?: JSONObject.NULL).put("vpnTile", vpnTile ?: JSONObject.NULL).put("vpn", vpn?.name ?: JSONObject.NULL)
         .put("endVpn", endVpn?.name ?: JSONObject.NULL)
+        .put("vpnOffApp", vpnOffApp ?: JSONObject.NULL).put("endVpnOffApp", endVpnOffApp ?: JSONObject.NULL)
         .put("endCustom", endCustom)
         .put("eNet", endNet?.name ?: JSONObject.NULL).put("eData", endData?.name ?: JSONObject.NULL)
         .put("eWifi", endWifi?.name ?: JSONObject.NULL).put("eAp", endHotspot?.name ?: JSONObject.NULL)
@@ -702,6 +727,9 @@ data class AppRule(
         .put("shell", shell ?: JSONObject.NULL).put("eShell", endShell ?: JSONObject.NULL)
         .put("tMonth", trafficMonth).put("known", JSONArray(knownSsids))
         .put("tApVia", triggerHotspotVia?.name ?: JSONObject.NULL)
+        .put("tApBand", triggerHotspotBand ?: JSONObject.NULL)
+        .put("apBand", hotspotBand ?: JSONObject.NULL).put("eApBand", endHotspotBand ?: JSONObject.NULL)
+        .put("tTile", triggerTile ?: JSONObject.NULL).put("tTileLabel", triggerTileLabel ?: JSONObject.NULL)
         .put("leaveS", appLeaveDelay).put("tPass", JSONArray(appPassThrough)).put("screenStay", appScreenOffStays)
 
     companion object {
@@ -740,6 +768,11 @@ data class AppRule(
                 trigger = o.str("trigger")?.let { runCatching { Trigger.valueOf(it) }.getOrNull() }
                     ?: if (ssid != null) Trigger.WIFI else Trigger.TIME,
                 triggerHotspotVia = o.str("tApVia")?.let { runCatching { TetherMode.valueOf(it) }.getOrNull() },
+                triggerHotspotBand = HotspotCondition.band(o.str("tApBand")),
+                hotspotBand = HotspotCondition.band(o.str("apBand")),
+                endHotspotBand = HotspotCondition.band(o.str("eApBand")),
+                triggerTile = o.str("tTile")?.takeIf { Tiles.valid(it) },
+                triggerTileLabel = o.str("tTileLabel"),
                 btAddress = o.str("btAddr"),
                 btName = o.str("btName"),
                 endBtAddress = o.str("endBtAddr"),
@@ -756,6 +789,7 @@ data class AppRule(
                 vpnApp = o.str("vpnApp") ?: o.str("vpnTile")?.substringBefore('/'),
                 vpn = o.str("vpn")?.let { runCatching { Toggle.valueOf(it) }.getOrNull() },
                 endVpn = o.str("endVpn")?.let { runCatching { Toggle.valueOf(it) }.getOrNull() },
+                vpnOffApp = o.str("vpnOffApp"), endVpnOffApp = o.str("endVpnOffApp"),
                 // Rules saved with the single on/off switch: off meant every app stays stopped.
                 keepStopped = o.optJSONArray("keepStopped")
                     ?.let { a -> (0 until a.length()).map { a.getString(it) }.toSet() }
@@ -847,6 +881,8 @@ data class FrozenApp(
         const val LOCATION = "#location"
         const val WIFI = "#wifi"
         const val HOTSPOT = "#hotspot"
+        /** Full band/channel map before a rule changed the AP frequency. No credentials. */
+        const val HOTSPOT_RADIO = "#hotspotradio"
         /** The hotspot traffic mode before a rule changed it; prev is a TetherMode name. */
         const val TETHER_MODE = "#tethermode"
         const val DATA = "#data"

@@ -18,6 +18,12 @@ class HotspotLab : AppCompatActivity() {
         screen.restore(savedInstanceState)
         ui.toolbar.setNavigationOnClickListener { finish() }
         val panel = HotspotPanel(this, ui)
+        val report = buildString {
+            appendLine("NetModeSwitch — диагностика раздачи (пример)")
+            repeat(50) { appendLine("Строка ${it + 1}: тестовый отчёт без сетевых команд") }
+        }
+        ui.captureReport.setOnClickListener { panel.showReport(report) }
+        if (intent.getBooleanExtra("report", false)) panel.showReport(report)
         panel.render(HotspotSnapshot(true, listOf("2,4 ГГц · канал 6 · 20 МГц", "5 ГГц · канал 149 · 80 МГц"),
             listOf(ApPeer("aa:bb:cc:dd:ee:01", listOf("192.168.43.10")), ApPeer("aa:bb:cc:dd:ee:02", emptyList())),
             2, listOf("ap_br0"), ApCounters("ap_br0:9", 1000, 2000), null))

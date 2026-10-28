@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shared by every Material 3 alert dialog. Keep AlertController's button IDs and
+     listeners, replacing Material 1.14's scrollable/stacking action panel only. -->
+<com.netmode.switcher.DialogActionLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/buttonPanel"
+    style="?attr/buttonBarStyle"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layoutDirection="locale"
+    android:paddingStart="12dp"
+    android:paddingTop="8dp"
+    android:paddingEnd="12dp"
+    android:paddingBottom="12dp">
+
+    <Button
+        android:id="@android:id/button3"
+        style="?attr/buttonBarNeutralButtonStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+
+    <Button
+        android:id="@android:id/button2"
+        style="?attr/buttonBarNegativeButtonStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+
+    <Button
+        android:id="@android:id/button1"
+        style="?attr/buttonBarPositiveButtonStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+</com.netmode.switcher.DialogActionLayout>

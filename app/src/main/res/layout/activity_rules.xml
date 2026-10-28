@@ -65,6 +65,15 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <TextView
+                style="@style/NMS.Section"
+                android:text="@string/wifi_country_section" />
+            <com.google.android.material.card.MaterialCardView style="@style/NMS.Card">
+                <include
+                    android:id="@+id/wifiCountryEntry"
+                    layout="@layout/row_perm" />
+            </com.google.android.material.card.MaterialCardView>
+
             <!-- primary and secondary SIM -->
             <TextView
                 style="@style/NMS.Section"

@@ -87,6 +87,23 @@ fun AppCompatActivity.pickVpnApp(done: (String) -> Unit) {
         .show()
 }
 
+/** A disconnect target, with an explicit "any" choice and a preserved uninstalled target. */
+fun AppCompatActivity.pickVpnOffApp(chosen: String?, done: (String?) -> Unit) {
+    val installed = VpnControl.apps()
+    val apps = installed + listOfNotNull(chosen?.takeIf { p -> installed.none { it.first == p } }
+        ?.let { it to AppPickerActivity.labels(listOf(it)).first() })
+    val targets = listOf<String?>(null) + apps.map { it.first }
+    val labels = listOf(getString(R.string.vpn_off_any)) + apps.map { it.second }
+    MaterialAlertDialogBuilder(this)
+        .setTitle(R.string.vpn_off_choose)
+        .setSingleChoiceItems(labels.toTypedArray(), targets.indexOf(chosen)) { dialog, i ->
+            done(targets[i])
+            dialog.dismiss()
+        }
+        .setNegativeButton(R.string.cancel, null)
+        .show()
+}
+
 /** VPN apps for the "VPN подключён" condition; none ticked — any VPN. */
 fun AppCompatActivity.pickVpnApps(chosen: List<String>, done: (List<String>) -> Unit) {
     // Apps chosen once and gone since stay on the list, to be unticked.

@@ -5,7 +5,7 @@ import android.content.Context
 import android.content.Intent
 
 /** A Quick Settings tile of another app, addressed as "pkg/.Service". */
-data class TileApp(val component: String, val pkg: String, val label: String, val vpn: Boolean)
+data class TileApp(val component: String, val pkg: String, val label: String, val vpn: Boolean, val tileLabel: String = label)
 
 /**
  * Switches other apps on and off through their own Quick Settings tile — what the user would
@@ -33,7 +33,7 @@ object Tiles {
 
     fun pkg(component: String): String = component.substringBefore('/')
 
-    fun list(ctx: Context = App.ctx): List<TileApp> {
+    fun list(ctx: Context = App.ctx, includeOwn: Boolean = false): List<TileApp> {
         val pm = ctx.packageManager
         val vpnPkgs = runCatching {
             pm.queryIntentServices(Intent(ACTION_VPN), 0).map { it.serviceInfo.packageName }.toSet()
@@ -41,12 +41,12 @@ object Tiles {
         return runCatching { pm.queryIntentServices(Intent(ACTION_QS_TILE), 0) }.getOrDefault(emptyList())
             .mapNotNull { r ->
                 val si = r.serviceInfo
-                if (si.packageName == ctx.packageName) return@mapNotNull null
+                if (!includeOwn && si.packageName == ctx.packageName) return@mapNotNull null
                 val component = ComponentName(si.packageName, si.name).flattenToShortString()
                 if (!valid(component)) return@mapNotNull null
                 val app = si.applicationInfo.loadLabel(pm).toString()
                 val svc = si.loadLabel(pm).toString()
-                TileApp(component, si.packageName, if (svc.isBlank() || svc == app) app else "$app · $svc", si.packageName in vpnPkgs)
+                TileApp(component, si.packageName, if (svc.isBlank() || svc == app) app else "$app · $svc", si.packageName in vpnPkgs, svc.ifBlank { app })
             }
             .sortedWith(compareBy<TileApp>({ !it.vpn }, { it.label.lowercase() }))
     }
@@ -140,6 +140,7 @@ object Tiles {
     private suspend fun click(components: Collection<String>): Set<String> {
         // Two tiles clicked in the same instant interfere — the shade binds one tile's service
         // while the other click arrives, and one of them is dropped. Measured on OxygenOS 16.
+        TileClickWatch.suppress(components)
         val script = components.joinToString("\nsleep 2\n") { c ->
             "t='$c'; settings get secure sysui_qs_tiles | grep -qF \"custom(\$t)\" || " +
                 "{ cmd statusbar add-tile \"\$t\" >/dev/null 2>&1; echo \"@ADD \$t\"; sleep 1; }; " +

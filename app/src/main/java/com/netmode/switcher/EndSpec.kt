@@ -26,9 +26,12 @@ data class EndSpec(
     val wifi: Toggle? = null,
     val hotspot: Toggle? = null,
     val hotspotVia: TetherMode? = null,
+    val hotspotBand: String? = null,
     val bt: Toggle? = null,
     val loc: Toggle? = null,
     val vpn: Toggle? = null,
+    /** Null keeps the legacy "disconnect any VPN" action. */
+    val vpnOffApp: String? = null,
     val airplane: Toggle? = null,
     val powerSave: Toggle? = null,
     val dataSim: Int? = null,
@@ -48,8 +51,10 @@ data class EndSpec(
         .put("mode", mode.name).put("keepApps", keepApps)
         .put("net", net?.name ?: JSONObject.NULL).put("data", data?.name ?: JSONObject.NULL)
         .put("wifi", wifi?.name ?: JSONObject.NULL).put("ap", hotspot?.name ?: JSONObject.NULL)
+        .put("apBand", hotspotBand ?: JSONObject.NULL)
         .put("apVia", hotspotVia?.name ?: JSONObject.NULL).put("bt", bt?.name ?: JSONObject.NULL)
         .put("loc", loc?.name ?: JSONObject.NULL).put("vpn", vpn?.name ?: JSONObject.NULL)
+        .put("vpnOffApp", vpnOffApp ?: JSONObject.NULL)
         .put("air", airplane?.name ?: JSONObject.NULL).put("ps", powerSave?.name ?: JSONObject.NULL)
         .put("dSim", dataSim ?: JSONObject.NULL)
         .put("tiles", JSONObject().apply { tiles.forEach { (c, t) -> put(c, t.name) } })
@@ -73,7 +78,9 @@ data class EndSpec(
             keepApps = o.optBoolean("keepApps", false),
             net = o.enum<NetMode>("net"), data = o.enum<Toggle>("data"), wifi = o.enum<Toggle>("wifi"),
             hotspot = o.enum<Toggle>("ap"), hotspotVia = o.enum<TetherMode>("apVia"),
+            hotspotBand = HotspotCondition.band(o.optString("apBand")),
             bt = o.enum<Toggle>("bt"), loc = o.enum<Toggle>("loc"), vpn = o.enum<Toggle>("vpn"),
+            vpnOffApp = o.optString("vpnOffApp").takeIf { !o.isNull("vpnOffApp") && it.isNotBlank() },
             airplane = o.enum<Toggle>("air"), powerSave = o.enum<Toggle>("ps"),
             dataSim = if (o.isNull("dSim") || !o.has("dSim")) null else o.optInt("dSim"),
             tiles = o.optJSONObject("tiles")?.let { m ->

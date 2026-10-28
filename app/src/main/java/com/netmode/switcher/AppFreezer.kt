@@ -276,6 +276,15 @@ object AppFreezer {
         releaseLocked(gone.filter { it.releaseOnLeave }, "после перезагрузки устройство не подключено")
     }
 
+    /** A physical shade press is an event: every distinct press starts once, without a window. */
+    suspend fun onTileClick(component: String) = lock.withLock {
+        eventState = 0
+        for (rule in Prefs.appRules.filter { it.enabled && it.hasActions &&
+            it.trigger == Trigger.TILE_CLICK && it.triggerTile == component }) {
+            freezeLocked(rule, rule.timeLabel)
+        }
+    }
+
     /** "Apply now" from the rule dialog; released at the next end boundary like any other. */
     suspend fun freezeNow(rule: AppRule) = lock.withLock {
         // Only a time rule has a start to mark. For the others the mark means "the event was
@@ -958,13 +967,25 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
                 done += "$name ${if (target) "вкл" else "выкл"}"
             }
             set("data", rule.endData, DATA_ON, DATA_OFF, "моб. интернет")
-            val endVia = rule.endHotspotVia?.takeIf { rule.endHotspot == Toggle.ON && !skip(FrozenApp.HOTSPOT) }
+            val endBand = rule.endHotspotBand?.takeIf { rule.endHotspot == Toggle.ON &&
+                !skip(FrozenApp.HOTSPOT) && !skip(FrozenApp.HOTSPOT_RADIO) && !skip(FrozenApp.TETHER_MODE) }
+            if (endBand != null) {
+                done += HotspotControl.startPreset(HotspotPreset(endBand, rule.endHotspotVia ?: Prefs.tetherMode)) { old, on ->
+                    if (ApRadio.key(old.radio) != endBand) {
+                        note(FrozenApp.HOTSPOT_RADIO, old.radio)
+                        note(FrozenApp.HOTSPOT, if (on) "on" else "off")
+                    } else if (!on) note(FrozenApp.HOTSPOT, "off")
+                    if (rule.endHotspotVia != null && rule.endHotspotVia != Prefs.tetherMode)
+                        note(FrozenApp.TETHER_MODE, Prefs.tetherMode.name)
+                }
+            }
+            val endVia = rule.endHotspotVia?.takeIf { rule.endHotspotBand == null && rule.endHotspot == Toggle.ON && !skip(FrozenApp.HOTSPOT) }
             if (endVia != null && endVia != Prefs.tetherMode) {
                 note(FrozenApp.TETHER_MODE, Prefs.tetherMode.name)
                 Prefs.tetherMode = endVia
                 TetherWatch.sync()
             }
-            set("ap", rule.endHotspot, hotspot(true), hotspot(false), "точка доступа")
+            set("ap", rule.endHotspot.takeIf { rule.endHotspotBand == null }, hotspot(true), hotspot(false), "точка доступа")
             set("wifi", rule.endWifi, WIFI_ON, WIFI_OFF, "Wi-Fi")
             if (rule.wakeWifi && rule.endWifi == Toggle.OFF) Prefs.wakeArmed = true
             set("bt", rule.endBt, BT_ON, BT_OFF, "Bluetooth")
@@ -983,11 +1004,14 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
             if (endTiles.isNotEmpty()) done += Tiles.set(endTiles) { c, wasOn ->
                 if (wasOn != endTiles[c]) note(FrozenApp.TILE + c, if (wasOn) "on" else "off")
             }
-            val vpnBefore = if (record && rule.endVpn != null) runCatching { VpnControl.owner() }.getOrNull() else null
-            if (record && rule.endVpn != null && (rule.endVpn == Toggle.OFF) == (vpnBefore != null)) note(FrozenApp.SYSVPN, vpnBefore ?: "off")
             when (rule.endVpn.takeUnless { skip(FrozenApp.SYSVPN) }) {
-                Toggle.ON -> done += rule.vpnApp?.let { VpnControl.on(it) } ?: "VPN: не выбрано приложение"
-                Toggle.OFF -> done += VpnControl.off()
+                Toggle.ON -> {
+                    if (record && VpnControl.owner() == null) note(FrozenApp.SYSVPN, "off")
+                    done += rule.vpnApp?.let { VpnControl.on(it) } ?: "VPN: не выбрано приложение"
+                }
+                Toggle.OFF -> done += VpnControl.off(rule.endVpnOffApp) { pkg ->
+                    if (record) note(FrozenApp.SYSVPN, pkg)
+                }
                 null -> Unit
             }
             for ((name, value) in rule.endSys) {
@@ -1120,7 +1144,7 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
         "NET" -> (0..1).map { FrozenApp.NET + it }.toSet()
         "DATA" -> setOf(FrozenApp.DATA)
         "WIFI" -> setOf(FrozenApp.WIFI)
-        "HOTSPOT" -> setOf(FrozenApp.HOTSPOT, FrozenApp.TETHER_MODE)
+        "HOTSPOT" -> setOf(FrozenApp.HOTSPOT, FrozenApp.TETHER_MODE, FrozenApp.HOTSPOT_RADIO)
         "VPN" -> setOf(FrozenApp.SYSVPN)
         "DATASIM" -> setOf(FrozenApp.DATASIM)
         "AIRPLANE" -> setOf(FrozenApp.AIRPLANE)
@@ -1269,8 +1293,9 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
         if (!Privileged.available()) {
             Prefs.appHandled = Prefs.appHandled - rule.id
             Prefs.extraRan = Prefs.extraRan - rule.id
-            Prefs.log("($why): нет root/Shizuku — сработает, когда доступ появится")
-            AccessWait.arm()
+            Prefs.log(if (rule.trigger == Trigger.TILE_CLICK) "($why): нет root/Shizuku — нажмите плитку после подключения доступа"
+                else "($why): нет root/Shizuku — сработает, когда доступ появится")
+            if (rule.trigger != Trigger.TILE_CLICK) AccessWait.arm()
             return
         }
         acted()
@@ -1541,7 +1566,17 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
             }
             // The traffic mode first: switching it before the hotspot comes up lets the tether
             // broadcast apply it, and an already running hotspot is re-routed below.
-            val via = rule.hotspotVia?.takeIf { rule.hotspot == Toggle.ON && wants(FrozenApp.TETHER_MODE) }
+            val band = rule.hotspotBand?.takeIf { rule.hotspot == Toggle.ON && wants(FrozenApp.HOTSPOT) }
+            if (band != null) {
+                done += HotspotControl.startPreset(HotspotPreset(band, rule.hotspotVia ?: Prefs.tetherMode)) { old, on ->
+                    val changed = ApRadio.key(old.radio) != band
+                    if (changed || FrozenApp.HOTSPOT_RADIO in existing) record(FrozenApp.HOTSPOT_RADIO, old.radio)
+                    if (changed || !on || FrozenApp.HOTSPOT in existing) record(FrozenApp.HOTSPOT, if (on) "on" else "off")
+                    if (rule.hotspotVia != null && (rule.hotspotVia != Prefs.tetherMode || FrozenApp.TETHER_MODE in existing))
+                        record(FrozenApp.TETHER_MODE, Prefs.tetherMode.name)
+                }
+            }
+            val via = rule.hotspotVia?.takeIf { band == null && rule.hotspot == Toggle.ON && wants(FrozenApp.TETHER_MODE) }
             if (via != null && via != Prefs.tetherMode) {
                 record(FrozenApp.TETHER_MODE, Prefs.tetherMode.name)
                 Prefs.tetherMode = via
@@ -1549,7 +1584,7 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
             } else if (via != null && FrozenApp.TETHER_MODE in existing) {
                 record(FrozenApp.TETHER_MODE, Prefs.tetherMode.name)
             }
-            rule.hotspot?.takeIf { wants(FrozenApp.HOTSPOT) }?.let { want ->
+            rule.hotspot?.takeIf { band == null && wants(FrozenApp.HOTSPOT) }?.let { want ->
                 val on = want == Toggle.ON
                 if (on != apOn || FrozenApp.HOTSPOT in existing) record(FrozenApp.HOTSPOT, if (apOn) "on" else "off")
                 if (on != apOn) {
@@ -1609,14 +1644,13 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
             coroutineScope {
                 val vpnJob = rule.vpn?.takeIf { wants(FrozenApp.SYSVPN) }?.let { want ->
                     async {
-                        val before = VpnControl.owner()
-                        val line = if (want == Toggle.ON) {
+                        if (want == Toggle.ON) {
+                            val before = VpnControl.owner()
                             val app = rule.vpnApp
-                            if (app == null) "VPN: не выбрано приложение" else VpnControl.on(app)
-                        } else VpnControl.off()
-                        val changed = if (want == Toggle.ON) before != rule.vpnApp else before != null
-                        if (changed || FrozenApp.SYSVPN in existing) record(FrozenApp.SYSVPN, before ?: "off")
-                        line
+                            val line = if (app == null) "VPN: не выбрано приложение" else VpnControl.on(app)
+                            if (before != app || FrozenApp.SYSVPN in existing) record(FrozenApp.SYSVPN, before ?: "off")
+                            line
+                        } else VpnControl.off(rule.vpnOffApp) { pkg -> record(FrozenApp.SYSVPN, pkg) }
                     }
                 }
                 if (tileTargets.isNotEmpty()) {
@@ -1798,9 +1832,18 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
         if (byPkg.containsKey(FrozenApp.WIFI) || byPkg.containsKey(FrozenApp.HOTSPOT) || byPkg.containsKey(FrozenApp.AIRPLANE)) {
             Prefs.selfWifiAt = System.currentTimeMillis()
         }
+        val savedRadio = byPkg[FrozenApp.HOTSPOT_RADIO]?.prev
+        var radioRestored = savedRadio == null
+        if (savedRadio != null) {
+            val mode = byPkg[FrozenApp.TETHER_MODE]?.prev?.let { runCatching { TetherMode.valueOf(it) }.getOrNull() } ?: Prefs.tetherMode
+            val on = byPkg[FrozenApp.HOTSPOT]?.prev?.let { it == "on" } ?: HotspotControl.isOn()
+            val error = runCatching { HotspotControl.restoreRadio(savedRadio, on, mode) }.getOrElse { it.message ?: "Ошибка Wi-Fi" }
+            radioRestored = error == null
+            if (!radioRestored) { netFailed++; Prefs.log("возврат диапазона: $error") }
+        }
         val script = buildString {
             // Hotspot first: bringing Wi-Fi back is the step that must not be undone by it.
-            byPkg[FrozenApp.HOTSPOT]?.prev?.let { appendLine("{ ${hotspot(it == "on")}; } || echo \"@F ap\"") }
+            byPkg[FrozenApp.HOTSPOT]?.prev?.takeIf { savedRadio == null }?.let { appendLine("{ ${hotspot(it == "on")}; } || echo \"@F ap\"") }
             byPkg[FrozenApp.DATA]?.prev?.let { appendLine("{ ${if (it == "on") DATA_ON else DATA_OFF}; } || echo \"@F data\"") }
             byPkg[FrozenApp.WIFI]?.prev?.let { appendLine("{ ${if (it == "on") WIFI_ON else WIFI_OFF}; } || echo \"@F wifi\"") }
             if (byPkg.containsKey(FrozenApp.BLUETOOTH)) appendLine("{ $BT_ON; } || echo \"@F bt\"")
@@ -1820,7 +1863,7 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
         var failed = netFailed + if (script.isBlank()) 0
         // Unfreezing too goes through app_process per app: its time grows with the list.
         else Privileged.exec(script, timeoutMs = 15_000L + 3_000L * safe.size).lineSequence().count { it.startsWith("@F ") }
-        byPkg[FrozenApp.TETHER_MODE]?.prev?.let { prev ->
+        byPkg[FrozenApp.TETHER_MODE]?.prev?.takeIf { radioRestored }?.let { prev ->
             Prefs.tetherMode = runCatching { TetherMode.valueOf(prev) }.getOrDefault(TetherMode.DIRECT)
             TetherWatch.sync()
             Prefs.log("возврат: " + applyTether())
@@ -1832,7 +1875,7 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
             Prefs.log("после разморозки: $line")
             if (!line.endsWith("вкл")) failed++
         }
-        val gone = entries.map { it.pkg to it.ruleId }.toSet()
+        val gone = entries.filter { radioRestored || it.pkg !in setOf(FrozenApp.HOTSPOT_RADIO, FrozenApp.HOTSPOT, FrozenApp.TETHER_MODE) }.map { it.pkg to it.ruleId }.toSet()
         Prefs.frozen = Prefs.frozen.filterNot { (it.pkg to it.ruleId) in gone }
         return failed
     }

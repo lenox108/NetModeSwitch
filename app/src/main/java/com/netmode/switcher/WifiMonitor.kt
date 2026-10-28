@@ -29,6 +29,7 @@ object WifiMonitor {
 
     /** Every watcher brought in line with the rules as they now stand. */
     fun syncAll() {
+        TileClickWatch.sync()
         runCatching { register() }.onFailure { Log.w(TAG, "wifi watch sync failed", it) }
         runCatching { TetherWatch.sync() }.onFailure { Log.w(TAG, "tether watch sync failed", it) }
         runCatching { NetWatch.sync() }.onFailure { Log.w(TAG, "net watch sync failed", it) }

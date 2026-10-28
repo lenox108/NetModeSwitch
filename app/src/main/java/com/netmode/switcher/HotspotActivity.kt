@@ -3,6 +3,7 @@ package com.netmode.switcher
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.netmode.switcher.databinding.ActivityHotspotBinding
@@ -29,6 +30,19 @@ class HotspotActivity : AppCompatActivity() {
     private lateinit var panel: HotspotPanel
     private lateinit var screen: HotspotScreen
     private lateinit var presets: HotspotPresetsUi
+    private val countryScreen = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        lifecycleScope.launch {
+            val selectedChannel = channels().getOrNull(ui.channel.selectedItemPosition) ?: 0
+            caps = runCatching { HotspotConfig.capability() }.getOrDefault(caps)
+            if (HotspotBands.known(caps)) Prefs.hotspotAvailableBands = HotspotBands.resolve(caps, Compat.SDK, Prefs.hotspotAvailableBands)
+            presets.bindAvailable(Prefs.hotspotAvailableBands)
+            bands.bind(band(), Prefs.hotspotAvailableBands)
+            fillChannels(selectedChannel)
+            showBandHint()
+            paintTweakControls(Privileged.choose() == Backend.ROOT)
+            panel.refresh()
+        }
+    }
     private val routeIds = mapOf(TetherMode.DIRECT to R.id.routeDirect, TetherMode.VPN to R.id.routeVpn, TetherMode.PROXY to R.id.routeProxy)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,6 +55,9 @@ class HotspotActivity : AppCompatActivity() {
             performHotspotAction(reloadRadio = true) { HotspotControl.startPreset(preset) }
         }
         ui.toolbar.setNavigationOnClickListener { finish() }
+        ui.wifiCountry.setOnClickListener {
+            countryScreen.launch(android.content.Intent(this, WifiCountryActivity::class.java))
+        }
         ui.save.setOnClickListener { save() }
         bands = HotspotBandButtons(ui)
         bands.bind("keep", Prefs.hotspotAvailableBands)

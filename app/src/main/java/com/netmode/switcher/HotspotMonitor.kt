@@ -17,6 +17,16 @@ internal object HotspotMonitor {
             ?: JSONObject().put("error", "Нет ответа Wi-Fi")
     }
 
+    suspend fun activeBands(): Set<String> {
+        val infos = readRadio().optJSONArray("infos")
+        val frequencies = infos?.let { a -> (0 until a.length()).map { a.getJSONObject(it).optInt("frequency") } }.orEmpty()
+        if (frequencies.any { it > 0 }) return HotspotBands.fromFrequencies(frequencies)
+        // Android 10 has no SoftApInfo callback. Read only the AP manager's live frequency,
+        // never WifiInfo (the phone's upstream Wi-Fi) or a historic metrics event.
+        val dump = Privileged.exec("dumpsys wifi 2>/dev/null", 5_000)
+        return HotspotCondition.bandsFromDump(dump)
+    }
+
     suspend fun snapshot(): HotspotSnapshot {
         val radio = readRadio()
         val ifaces = TetherRoute.tetherInterfaces().filter { it.matches(Regex("^(wlan|softap|ap_br|swlan)[A-Za-z0-9_.-]*$")) }

@@ -46,7 +46,7 @@ object HotspotControl {
     }
 
     /** Explicit launch: pressing an already active preset must never turn sharing off. */
-    internal suspend fun startPreset(preset: HotspotPreset): String {
+    internal suspend fun startPreset(preset: HotspotPreset, before: (ApSettings, Boolean) -> Unit = { _, _ -> }): String {
         if (!busy.tryLock()) return "Точка доступа: подожди, предыдущая команда ещё выполняется"
         try {
             if (Privileged.choose() != Backend.ROOT) return "Для быстрого запуска нужен root"
@@ -54,41 +54,49 @@ object HotspotControl {
             val capability = HotspotConfig.capability()
             if (HotspotBands.known(capability)) Prefs.hotspotAvailableBands = HotspotBands.resolve(capability, Compat.SDK, Prefs.hotspotAvailableBands)
             if (preset.band !in Prefs.hotspotAvailableBands) return "${preset.bandLabel}: диапазон недоступен на этом телефоне"
-            val result = HotspotPresetStart(object : HotspotPresetStart.Device {
-                override suspend fun read() = HotspotConfig.read()
-                override suspend fun validate(next: ApSettings, old: ApSettings): String? {
-                    return HotspotConfig.validate(next, old)
-                }
-                override suspend fun write(next: ApSettings, old: ApSettings) = HotspotConfig.write(next, old)
-                override suspend fun isOn() = HotspotControl.isOn()
-                override suspend fun activeBands(): Set<String> {
-                    val infos = HotspotMonitor.readRadio().optJSONArray("infos") ?: return emptySet()
-                    return (0 until infos.length()).mapNotNull { i ->
-                        when (infos.getJSONObject(i).optInt("frequency")) {
-                            in 2412..2484 -> "2"
-                            in 5160..5885 -> "5"
-                            in 5935..7115 -> "6"
-                            else -> null
-                        }
-                    }.toSet()
-                }
-                override suspend fun stop(): Boolean {
-                    // Keep the old protected route while the AP stops; never switch to DIRECT here.
-                    Privileged.exec("${cli()} stop")
-                    for (i in 0 until 10) { if (!isOn()) return true; delay(300) }
-                    return !isOn()
-                }
-                override suspend fun ensureOn(mode: TetherMode): String {
-                    if (isOn() && Prefs.tetherMode == mode) return "Уже включено · ${TetherRoute.apply()}"
-                    return toggleLocked(mode)
-                }
-            }).run(preset)
+            val result = presetDevice().run(preset, before)
             Prefs.log("Быстрый запуск: $result")
             return result
         } finally {
             HotspotTiles.refresh()
             busy.unlock()
         }
+    }
+
+    private fun presetDevice() = HotspotPresetStart(object : HotspotPresetStart.Device {
+        override suspend fun read() = HotspotConfig.read()
+        override suspend fun validate(next: ApSettings, old: ApSettings): String? {
+            return HotspotConfig.validate(next, old)
+        }
+        override suspend fun write(next: ApSettings, old: ApSettings) = HotspotConfig.write(next, old)
+        override suspend fun isOn() = HotspotControl.isOn()
+        override suspend fun activeBands(): Set<String> {
+            val infos = HotspotMonitor.readRadio().optJSONArray("infos") ?: return emptySet()
+            return (0 until infos.length()).mapNotNull { i ->
+                when (infos.getJSONObject(i).optInt("frequency")) {
+                    in 2412..2484 -> "2"
+                    in 5160..5885 -> "5"
+                    in 5935..7115 -> "6"
+                    else -> null
+                }
+            }.toSet()
+        }
+        override suspend fun stop(): Boolean {
+            // Keep the old protected route while the AP stops; never switch to DIRECT here.
+            Privileged.exec("${cli()} stop")
+            for (i in 0 until 10) { if (!isOn()) return true; delay(300) }
+            return !isOn()
+        }
+        override suspend fun ensureOn(mode: TetherMode): String {
+            if (isOn() && Prefs.tetherMode == mode) return "Уже включено · ${TetherRoute.apply()}"
+            return toggleLocked(mode)
+        }
+    })
+
+    internal suspend fun restoreRadio(radio: String, enabled: Boolean, mode: TetherMode): String? {
+        if (!busy.tryLock()) return "Точка доступа занята"
+        try { return presetDevice().restore(radio, enabled, mode) }
+        finally { HotspotTiles.refresh(); busy.unlock() }
     }
 
     suspend fun stop(): String {

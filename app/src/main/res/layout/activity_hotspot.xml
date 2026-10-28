@@ -336,6 +336,12 @@
                     <TextView
                         android:id="@+id/bandHint"
                         style="@style/NMS.Hint" />
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/wifiCountry"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/wifi_country_title" />
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

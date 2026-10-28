@@ -18,17 +18,22 @@ class AppWatchService : AccessibilityService() {
 
     override fun onServiceConnected() {
         connected = true
+        TileClickWatch.connected(this)
     }
 
     override fun onDestroy() {
         connected = false
+        TileClickWatch.disconnected()
         super.onDestroy()
     }
 
     override fun onInterrupt() = Unit
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        if (event == null) return
+        if (event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED) { TileClickWatch.onEvent(event); return }
+        if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        TileClickWatch.windowChanged()
         val pkg = event.packageName?.toString() ?: return
         val cls = event.className?.toString() ?: return
         if (Prefs.iceNativeInstant && (cls.contains(SUSPENDED_DIALOG) || pkg == "android")) {
@@ -103,7 +108,7 @@ class AppWatchService : AccessibilityService() {
             val now = Privileged.exec("settings get secure enabled_accessibility_services").trim()
                 .takeIf { it.isNotEmpty() && it != "null" }?.split(':').orEmpty()
             // The rules' "Мгновенно" and the freezer's own-icon launch share the service.
-            val want = on || Prefs.instantApps || Prefs.iceNativeInstant
+            val want = on || Prefs.instantApps || Prefs.iceNativeInstant || TileClickWatch.needed()
             if (want == (me in now)) return
             val next = if (want) (now - me + me) else (now - me)
             val value = next.joinToString(":")

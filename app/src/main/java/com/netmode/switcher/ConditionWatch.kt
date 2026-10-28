@@ -121,6 +121,8 @@ object ConditionWatch {
     @Volatile private var wifiKnown = false
     @Volatile private var usbConnected = false
     @Volatile private var hotspotOn: Boolean? = null
+    @Volatile private var hotspotBands: Set<String>? = null
+    private var hotspotRead: Job? = null
     /** A VPN is connected, and whose app it is (null: could not be read); [vpnKnown] once read. */
     @Volatile private var vpnOn = false
     @Volatile private var vpnOwner: String? = null
@@ -179,7 +181,7 @@ object ConditionWatch {
             NotifWatch.active[AppKey.pkg(k)]?.let { ongoing -> rule.level != 1 || ongoing } == true
         }
         Trigger.USB -> usbConnected
-        Trigger.HOTSPOT -> HotspotCondition.holds(hotspotOn, Prefs.tetherMode, rule.triggerHotspotVia)
+        Trigger.HOTSPOT -> HotspotCondition.holds(hotspotOn, Prefs.tetherMode, rule.triggerHotspotVia, hotspotBands, rule.triggerHotspotBand)
         Trigger.CAR -> dropHolds(rule, openSince, carMode(), Trigger.CAR)
         Trigger.VPN -> if (!vpnKnown) null else AppPresence.vpnHolds(vpnOn, vpnOwner, rule.triggerApps)?.let {
             dropHolds(rule, openSince, it, Trigger.VPN)
@@ -392,7 +394,7 @@ object ConditionWatch {
 
     fun sync() {
         val want = used()
-        if (want == registered) return
+        if (want == registered) { readHotspotBands(); return }
         val ctx = App.ctx
         unregister(ctx)
         registered = want
@@ -409,6 +411,13 @@ object ConditionWatch {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
                 HotspotCondition.ACTION -> readHotspot(intent)
+                HotspotCondition.RADIO_ACTION -> {
+                    // A new AP generation must not reuse the old radio snapshot.
+                    hotspotBands = null
+                    hotspotRead?.cancel()
+                    hotspotRead = null
+                    readHotspotBands()
+                }
                 Intent.ACTION_BATTERY_CHANGED -> {
                     val before = batteryPct to charging
                     readBattery(intent)
@@ -501,7 +510,10 @@ object ConditionWatch {
         }
         if (Trigger.NO_INTERNET in want) filter.addAction(Intent.ACTION_AIRPLANE_MODE_CHANGED)
         if (Trigger.USB in want) filter.addAction(USB_STATE)
-        if (Trigger.HOTSPOT in want) filter.addAction(HotspotCondition.ACTION)
+        if (Trigger.HOTSPOT in want) {
+            filter.addAction(HotspotCondition.ACTION)
+            filter.addAction(HotspotCondition.RADIO_ACTION)
+        }
         if (Trigger.CAR in want) {
             filter.addAction(android.app.UiModeManager.ACTION_ENTER_CAR_MODE)
             filter.addAction(android.app.UiModeManager.ACTION_EXIT_CAR_MODE)
@@ -584,20 +596,49 @@ object ConditionWatch {
         netLostSince = 0L
         wifiKnown = false
         vpnKnown = false
+        hotspotRead?.cancel()
+        hotspotRead = null
+        hotspotBands = null
         hotspotOn = null
     }
 
     /** Sticky tethering state is available at process start, without polling or root commands. */
     private fun readHotspot(intent: Intent) {
         val now = HotspotCondition.enabled(intent.getStringArrayListExtra(HotspotCondition.ACTIVE)) ?: return
-        if (now == hotspotOn) return
+        val changed = now != hotspotOn
         hotspotOn = now
-        evaluate(Trigger.HOTSPOT)
+        if (changed || !now) hotspotBands = null
+        if (changed) evaluate(Trigger.HOTSPOT)
+        readHotspotBands()
+    }
+
+    /** Only band-specific rules read Wi-Fi; bounded startup retries, no perpetual root poll. */
+    private fun readHotspotBands() {
+        val needed = Trigger.HOTSPOT in registered && hotspotOn == true && Prefs.appRules.any {
+            it.enabled && it.hasActions && it.trigger == Trigger.HOTSPOT && it.triggerHotspotBand != null
+        }
+        if (!needed) { hotspotRead?.cancel(); hotspotRead = null; return }
+        if (hotspotRead?.isActive == true) return
+        hotspotRead = App.scope.launch {
+            try {
+                for (attempt in 0..2) {
+                    if (attempt > 0) delay(1_500)
+                    val bands = HotspotMonitor.activeBands()
+                    if (hotspotOn != true || Trigger.HOTSPOT !in registered) return@launch
+                    if (bands.isNotEmpty()) {
+                        hotspotBands = bands
+                        evaluate(Trigger.HOTSPOT)
+                        return@launch
+                    }
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { /* Unknown frequency must never be guessed from saved settings. */ }
+        }
     }
 
     /** A route may change while the AP remains up and no system tethering event is sent. */
     fun hotspotRouteChanged() {
-        if (Trigger.HOTSPOT in registered) evaluate(Trigger.HOTSPOT)
+        if (Trigger.HOTSPOT in registered) { evaluate(Trigger.HOTSPOT); readHotspotBands() }
     }
 
     /** One callback per active SIM: service state for roaming and towers, strength for bars. */

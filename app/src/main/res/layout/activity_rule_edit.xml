@@ -266,7 +266,28 @@
 
                         <TextView
                             style="@style/NMS.Hint"
+                            android:text="@string/hotspot_band_title" />
+                        <com.netmode.switcher.ChoiceView
+                            android:id="@+id/hotspotBand"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:minHeight="48dp" />
+                        <TextView style="@style/NMS.Hint"
                             android:text="@string/trigger_hotspot_hint" />
+                    </LinearLayout>
+
+                    <LinearLayout android:id="@+id/tileTriggerBlock"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="vertical">
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/tileTriggerPick" style="@style/NMS.PickButton" />
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/tileTriggerLearn" style="@style/NMS.PickButton"
+                            android:text="@string/tile_click_learn" />
+                        <TextView style="@style/NMS.Hint" android:text="@string/trigger_tile_click_hint" />
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/tileTriggerAccess" style="@style/NMS.PickButton"
+                            android:text="@string/tile_click_access" />
                     </LinearLayout>
 
                     <!-- bluetooth device -->

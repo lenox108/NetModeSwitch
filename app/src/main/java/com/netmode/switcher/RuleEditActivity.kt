@@ -70,6 +70,7 @@ class RuleEditActivity : AppCompatActivity() {
         TriggerInfo(Trigger.MANUAL, R.drawable.ic_t_manual, R.string.trigger_manual, R.string.trigger_manual_hint, R.string.pick_manual),
         TriggerInfo(Trigger.TIME, R.drawable.ic_t_time, R.string.trigger_time, R.string.trigger_time_hint, R.string.pick_time),
         TriggerInfo(Trigger.WIFI, R.drawable.ic_t_wifi, R.string.trigger_wifi, R.string.trigger_wifi_hint, R.string.pick_wifi),
+        TriggerInfo(Trigger.TILE_CLICK, R.drawable.ic_a_tiles, R.string.trigger_tile_click, R.string.trigger_tile_click_hint, R.string.trigger_tile_click),
         TriggerInfo(Trigger.HOTSPOT, R.drawable.ic_hotspot, R.string.trigger_hotspot, R.string.trigger_hotspot_hint, R.string.pick_hotspot),
         TriggerInfo(Trigger.BLUETOOTH, R.drawable.ic_t_bt, R.string.trigger_bt, R.string.trigger_bt_hint, R.string.pick_bt),
         TriggerInfo(Trigger.MOBILE_DATA, R.drawable.ic_t_data, R.string.trigger_data, R.string.data_trigger_hint, R.string.pick_data),
@@ -125,6 +126,11 @@ class RuleEditActivity : AppCompatActivity() {
     private var knownSsids = listOf<String>()
     private val hotspotRoutes = listOf(null, TetherMode.VPN, TetherMode.PROXY, TetherMode.DIRECT)
     private var triggerHotspotVia: TetherMode? = null
+    private val hotspotBands = listOf(null, "2", "5")
+    private var triggerHotspotBand: String? = null
+    private var triggerTile: String? = null
+    private var triggerTileLabel: String? = null
+    private var hotspotBand: String? = null
     private var notice = RunNotice.SILENT
     private val extras = mutableListOf<Extra>()
     /** The wait switch follows the trigger's default until the user sets it. */
@@ -144,6 +150,7 @@ class RuleEditActivity : AppCompatActivity() {
     private var hotspot: Pair<Toggle?, TetherMode?> = null to null
     private var vpn: Toggle? = null
     private var vpnApp: String? = null
+    private var vpnOffApp: String? = null
     private var dataSim: Int? = null
     private var airplane: Toggle? = null
     private var powerSave: Toggle? = null
@@ -171,7 +178,9 @@ class RuleEditActivity : AppCompatActivity() {
         var data: Toggle? = null
         var wifi: Toggle? = null
         var hotspot: Pair<Toggle?, TetherMode?> = null to null
+        var hotspotBand: String? = null
         var vpn: Toggle? = null
+        var vpnOffApp: String? = null
         var dataSim: Int? = null
         var airplane: Toggle? = null
         var powerSave: Toggle? = null
@@ -188,7 +197,7 @@ class RuleEditActivity : AppCompatActivity() {
         fun clear(a: Act) {
             when (a) {
                 Act.NET -> net = null; Act.DATA -> data = null; Act.WIFI -> wifi = null
-                Act.HOTSPOT -> hotspot = null to null; Act.VPN -> vpn = null; Act.DATASIM -> dataSim = null
+                Act.HOTSPOT -> { hotspot = null to null; hotspotBand = null }; Act.VPN -> { vpn = null; vpnOffApp = null }; Act.DATASIM -> dataSim = null
                 Act.AIRPLANE -> airplane = null; Act.POWERSAVE -> powerSave = null; Act.BT -> bt = null
                 Act.LOC -> loc = null; Act.TILES -> tiles = emptyMap()
                 Act.APPS -> { stopApps = emptyList(); appMethods = emptyMap() }
@@ -201,8 +210,8 @@ class RuleEditActivity : AppCompatActivity() {
 
         /** Fills from [e], showing what it sets; the apps are shown under either mode. */
         fun load(e: EndSpec) {
-            net = e.net; data = e.data; wifi = e.wifi; hotspot = e.hotspot to e.hotspotVia
-            vpn = e.vpn; dataSim = e.dataSim; airplane = e.airplane; powerSave = e.powerSave
+            net = e.net; data = e.data; wifi = e.wifi; hotspot = e.hotspot to e.hotspotVia; hotspotBand = e.hotspotBand
+            vpn = e.vpn; vpnOffApp = e.vpnOffApp; dataSim = e.dataSim; airplane = e.airplane; powerSave = e.powerSave
             bt = e.bt; loc = e.loc; tiles = e.tiles
             stopApps = e.stopApps; appMethods = e.stopApps.associateWith { e.appMethods[it] ?: FreezeMethod.STOP_RESTRICT }
             launchApps = e.launchApps; unloadAll = e.unloadAll
@@ -305,6 +314,16 @@ class RuleEditActivity : AppCompatActivity() {
         paint()
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (::v.isInitialized) paint()
+    }
+
+    override fun onDestroy() {
+        TileClickWatch.cancelLearning()
+        super.onDestroy()
+    }
+
     private fun load(r: AppRule?) {
         v.ruleName.setText(r?.name.orEmpty())
         trigger = when (r?.trigger) {
@@ -333,6 +352,10 @@ class RuleEditActivity : AppCompatActivity() {
         waitTouched = existing != null
         triggerApps = r?.triggerApps.orEmpty()
         triggerHotspotVia = r?.triggerHotspotVia
+        triggerHotspotBand = r?.triggerHotspotBand
+        triggerTile = r?.triggerTile
+        triggerTileLabel = r?.triggerTileLabel
+        hotspotBand = r?.hotspotBand
         appPass = r?.appPassThrough.orEmpty()
         notice = r?.notice ?: RunNotice.SILENT
         extras.clear()
@@ -366,6 +389,7 @@ class RuleEditActivity : AppCompatActivity() {
         if (r == null) return
         netMode = r.netMode; netSlot = r.netSlot; data = r.mobileData; wifi = r.wifi
         hotspot = r.hotspot to r.hotspotVia; vpn = r.vpn; vpnApp = r.vpnApp; dataSim = r.dataSim
+        vpnOffApp = r.vpnOffApp
         airplane = r.airplane; powerSave = r.powerSave; btOff = r.bluetoothOff; locOff = r.locationOff
         tiles = r.tiles; packages = r.packages; keepStopped = r.keepStopped
         launchApps = r.launchApps; atEnd.stopApps = r.endStopApps; atEnd.launchApps = r.endLaunchApps
@@ -396,8 +420,9 @@ class RuleEditActivity : AppCompatActivity() {
         r.endShell?.let { atEnd.texts[Act.SHELL] = it; atEnd.shown += Act.SHELL }
 
         (if (r.endCustom) v.endCustom else v.endRestore).isChecked = true
-        atEnd.net = r.endNet; atEnd.data = r.endData; atEnd.wifi = r.endWifi; atEnd.hotspot = r.endHotspot to r.endHotspotVia
+        atEnd.net = r.endNet; atEnd.data = r.endData; atEnd.wifi = r.endWifi; atEnd.hotspot = r.endHotspot to r.endHotspotVia; atEnd.hotspotBand = r.endHotspotBand
         atEnd.vpn = r.endVpn; atEnd.dataSim = r.endDataSim; atEnd.airplane = r.endAirplane; atEnd.powerSave = r.endPowerSave
+        atEnd.vpnOffApp = r.endVpnOffApp
         atEnd.bt = r.endBt; atEnd.loc = r.endLoc; atEnd.tiles = r.endTiles; atEnd.sys = r.endSys
         atEnd.shown += shown.filter { !it.anyEnd }
         if (r.unload) shown += Act.UNLOAD
@@ -437,6 +462,29 @@ class RuleEditActivity : AppCompatActivity() {
 
     private fun wire() {
         v.triggerPick.setOnClickListener { chooseTrigger() }
+        v.hotspotBand.onChange = { triggerHotspotBand = hotspotBands[it]; paint() }
+        v.tileTriggerPick.setOnClickListener { pickTriggerTile() }
+        v.tileTriggerLearn.setOnClickListener {
+            val component = triggerTile ?: return@setOnClickListener
+            lifecycleScope.launch {
+                runCatching { AppWatchService.enable(true) }
+                if (!AppWatchService.connected) {
+                    startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                    return@launch
+                }
+                TileClickWatch.learn(component) { label ->
+                    triggerTileLabel = label
+                    paint()
+                }
+                Snackbar.make(v.root, R.string.tile_click_learning, Snackbar.LENGTH_LONG).show()
+            }
+        }
+        v.tileTriggerAccess.setOnClickListener {
+            lifecycleScope.launch {
+                runCatching { AppWatchService.enable(true) }
+                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            }
+        }
         v.hotspotRoute.onChange = { triggerHotspotVia = hotspotRoutes[it]; paint() }
         v.wakeRow.title.setText(R.string.wake_wifi)
         v.wakeRow.root.setOnClickListener { v.wakeRow.toggle.toggle() }
@@ -591,6 +639,7 @@ class RuleEditActivity : AppCompatActivity() {
         get() = when (effectiveTrigger) {
             Trigger.TIME -> v.hasEnd.isChecked
             Trigger.WIFI_LEFT -> true
+            Trigger.TILE_CLICK -> false
             else -> v.releaseOnLeave.isChecked
         }
 
@@ -646,6 +695,11 @@ class RuleEditActivity : AppCompatActivity() {
         v.hotspotRoute.setItems(listOf(R.string.hotspot_trigger_any, R.string.hotspot_trigger_vpn,
             R.string.hotspot_trigger_proxy, R.string.ap_route_direct).map { getString(it) },
             hotspotRoutes.indexOf(triggerHotspotVia))
+        v.hotspotBand.setItems(hotspotBands.map { it?.let(ApRadio::label) ?: getString(R.string.hotspot_band_any) }, hotspotBands.indexOf(triggerHotspotBand))
+        show(v.tileTriggerBlock, t == Trigger.TILE_CLICK)
+        v.tileTriggerLearn.isEnabled = triggerTile != null
+        v.tileTriggerPick.text = triggerTileLabel ?: triggerTile?.let { Tiles.label(it) } ?: getString(R.string.choose)
+        v.tileTriggerAccess.setText(if (AppWatchService.connected) R.string.tile_click_access_on else R.string.tile_click_access)
         show(v.leftEndBlock, wifiLeft)
         show(v.wakeRow.root, t == Trigger.WIFI && !wifiLeft)
         show(v.wakeForget, t == Trigger.WIFI && !wifiLeft && v.wakeRow.toggle.isChecked && cells.isNotEmpty())
@@ -908,6 +962,25 @@ class RuleEditActivity : AppCompatActivity() {
         add((Toggle.OFF to null) to getString(R.string.turn_off))
     }
 
+    private fun hotspotBandChoice(current: String?, done: (String?) -> Unit): View =
+        choice(hotspotBands.map { it?.let(ApRadio::label) ?: getString(R.string.hotspot_band_keep) },
+            hotspotBands.indexOf(current).coerceAtLeast(0)) { done(hotspotBands[it]) }
+
+    private fun pickTriggerTile() {
+        val all = Tiles.list(includeOwn = true).filterNot { it.component.contains(".RuleTile") }
+        if (all.isEmpty()) {
+            Snackbar.make(v.root, R.string.tile_click_none, Snackbar.LENGTH_LONG).show()
+            return
+        }
+        MaterialAlertDialogBuilder(this).setTitle(R.string.trigger_tile_click)
+            .setSingleChoiceItems(all.map { it.label }.toTypedArray(), all.indexOfFirst { it.component == triggerTile }) { dialog, i ->
+                triggerTile = all[i].component
+                triggerTileLabel = all[i].tileLabel
+                dialog.dismiss()
+                paint()
+            }.setNegativeButton(R.string.cancel, null).show()
+    }
+
     private fun netTargetLabel(): String = when {
         trigger == Trigger.NET_MODE -> "SIM ${otherSlot() + 1}"
         netSlot == SLOT_ALL -> getString(R.string.all_sims_short)
@@ -978,7 +1051,12 @@ class RuleEditActivity : AppCompatActivity() {
                     if (hotspot.first == null) hotspot = opts.first().first
                     val c = choice(opts.map { it.second }, opts.indexOfFirst { it.first == hotspot }.coerceAtLeast(0)) { hotspot = opts[it].first }
                     rowChoices[a] = c
-                    row(box, a, getString(a.title), c, remove)
+                    row(box, a, getString(a.title), null, remove)
+                    sub(box, c)
+                    if (hotspot.first == Toggle.ON) {
+                        sub(box, hotspotBandChoice(hotspotBand) { hotspotBand = it })
+                        sub(box, hint(getString(R.string.hotspot_band_action_hint)))
+                    }
                 }
                 Act.VPN -> {
                     if (vpn == null) vpn = Toggle.ON
@@ -986,6 +1064,10 @@ class RuleEditActivity : AppCompatActivity() {
                     rowChoices[a] = c
                     row(box, a, getString(a.title), c, remove)
                     if (vpn == Toggle.ON) sub(box, vpnAppButton())
+                    if (vpn == Toggle.OFF) {
+                        sub(box, vpnOffAppButton(vpnOffApp) { vpnOffApp = it })
+                        sub(box, hint(getString(R.string.vpn_off_hint)))
+                    }
                 }
                 Act.DATASIM -> {
                     if (dataSim == null) dataSim = simSlots.first()
@@ -1075,6 +1157,15 @@ class RuleEditActivity : AppCompatActivity() {
         v.addAction.visibility = if (Act.entries.any { allowed(it) && it !in shown }) View.VISIBLE else View.GONE
     }
 
+    private fun vpnOffAppButton(chosen: String?, done: (String?) -> Unit) =
+        MaterialButton(this, null, android.R.attr.borderlessButtonStyle).apply {
+            isAllCaps = false
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
+            text = chosen?.let { getString(R.string.vpn_app_x, AppPickerActivity.labels(listOf(it)).first()) }
+                ?: getString(R.string.vpn_off_any)
+            setOnClickListener { pickVpnOffApp(chosen) { done(it); paint() } }
+        }
+
     private fun vpnAppButton() = MaterialButton(this, null, android.R.attr.borderlessButtonStyle).apply {
         isAllCaps = false
         gravity = Gravity.START or Gravity.CENTER_VERTICAL
@@ -1131,13 +1222,21 @@ class RuleEditActivity : AppCompatActivity() {
                 }
                 Act.HOTSPOT -> {
                     val opts = listOf((null to null) to keep) + hotspotOptions(st.hotspot)
-                    row(box, a, getString(a.title),
-                        choice(opts.map { it.second }, opts.indexOfFirst { it.first == st.hotspot }.coerceAtLeast(0)) { st.hotspot = opts[it].first }, remove)
+                    row(box, a, getString(a.title), null, remove)
+                    sub(box, choice(opts.map { it.second }, opts.indexOfFirst { it.first == st.hotspot }.coerceAtLeast(0)) { st.hotspot = opts[it].first })
+                    if (st.hotspot.first == Toggle.ON) {
+                        sub(box, hotspotBandChoice(st.hotspotBand) { st.hotspotBand = it })
+                        sub(box, hint(getString(R.string.hotspot_band_action_hint)))
+                    }
                 }
                 Act.VPN -> {
                     val values = listOf(null, Toggle.ON, Toggle.OFF)
                     row(box, a, getString(a.title), choice(listOf(keep) + onOff, values.indexOf(st.vpn)) { st.vpn = values[it] }, remove)
                     if (st.vpn == Toggle.ON && vpn != Toggle.ON) sub(box, vpnAppButton())
+                    if (st.vpn == Toggle.OFF) {
+                        sub(box, vpnOffAppButton(st.vpnOffApp) { st.vpnOffApp = it })
+                        sub(box, hint(getString(R.string.vpn_off_hint)))
+                    }
                 }
                 Act.DATASIM -> {
                     val values = listOf<Int?>(null) + simSlots
@@ -1344,7 +1443,7 @@ class RuleEditActivity : AppCompatActivity() {
         shown -= a
         when (a) {
             Act.NET -> netMode = null; Act.DATA -> data = null; Act.WIFI -> wifi = null
-            Act.HOTSPOT -> hotspot = null to null; Act.VPN -> vpn = null; Act.DATASIM -> dataSim = null
+            Act.HOTSPOT -> { hotspot = null to null; hotspotBand = null }; Act.VPN -> { vpn = null; vpnOffApp = null }; Act.DATASIM -> dataSim = null
             Act.AIRPLANE -> airplane = null; Act.POWERSAVE -> powerSave = null; Act.BT -> btOff = false
             Act.LOC -> locOff = false; Act.TILES -> tiles = emptyMap(); Act.APPS -> packages = emptyList()
             Act.LAUNCH -> launchApps = emptyList()
@@ -1771,6 +1870,7 @@ class RuleEditActivity : AppCompatActivity() {
             wifi = wifi.takeIf { Act.WIFI in shown },
             hotspot = hotspot.first.takeIf { Act.HOTSPOT in shown },
             hotspotVia = hotspot.second.takeIf { Act.HOTSPOT in shown && hotspot.first == Toggle.ON },
+            hotspotBand = hotspotBand.takeIf { Act.HOTSPOT in shown && hotspot.first == Toggle.ON },
             mobileData = data.takeIf { Act.DATA in shown },
             netMode = netMode.takeIf { Act.NET in shown },
             // A "network mode" rule may only change the other SIM: touching the SIM it
@@ -1780,18 +1880,24 @@ class RuleEditActivity : AppCompatActivity() {
             triggerSlot = simSlots.getOrElse(v.tSlot.selectedItemPosition) { 0 },
             triggerMode = NetMode.entries[v.tMode.selectedItemPosition].takeIf { t == Trigger.NET_MODE },
             triggerHotspotVia = triggerHotspotVia.takeIf { t == Trigger.HOTSPOT },
+            triggerHotspotBand = triggerHotspotBand.takeIf { t == Trigger.HOTSPOT },
+            triggerTile = triggerTile.takeIf { t == Trigger.TILE_CLICK },
+            triggerTileLabel = triggerTileLabel.takeIf { t == Trigger.TILE_CLICK },
             keepStopped = keepStopped.filter { it in packages }.toSet(),
             tiles = tiles.takeIf { Act.TILES in shown }.orEmpty(),
             endTiles = e(Act.TILES, atEnd.tiles).orEmpty(),
             vpnApp = vpnApp,
             vpn = vpn.takeIf { Act.VPN in shown },
+            vpnOffApp = vpnOffApp.takeIf { Act.VPN in shown && vpn == Toggle.OFF },
             endVpn = e(Act.VPN, atEnd.vpn),
+            endVpnOffApp = e(Act.VPN, atEnd.vpnOffApp).takeIf { atEnd.vpn == Toggle.OFF },
             endCustom = custom,
             endNet = e(Act.NET, atEnd.net),
             endData = e(Act.DATA, atEnd.data),
             endWifi = e(Act.WIFI, atEnd.wifi),
             endHotspot = e(Act.HOTSPOT, atEnd.hotspot.first),
             endHotspotVia = e(Act.HOTSPOT, atEnd.hotspot.second),
+            endHotspotBand = e(Act.HOTSPOT, atEnd.hotspotBand).takeIf { atEnd.hotspot.first == Toggle.ON },
             endBt = e(Act.BT, atEnd.bt),
             endLoc = e(Act.LOC, atEnd.loc),
             level = when (t) {
@@ -1873,7 +1979,9 @@ class RuleEditActivity : AppCompatActivity() {
             keepApps = v.unlockKeepApps.isChecked && packages.isNotEmpty(),
             net = e(Act.NET, u.net), data = e(Act.DATA, u.data), wifi = e(Act.WIFI, u.wifi),
             hotspot = e(Act.HOTSPOT, u.hotspot.first), hotspotVia = e(Act.HOTSPOT, u.hotspot.second),
+            hotspotBand = e(Act.HOTSPOT, u.hotspotBand).takeIf { u.hotspot.first == Toggle.ON },
             bt = e(Act.BT, u.bt), loc = e(Act.LOC, u.loc), vpn = e(Act.VPN, u.vpn),
+            vpnOffApp = e(Act.VPN, u.vpnOffApp).takeIf { u.vpn == Toggle.OFF },
             airplane = e(Act.AIRPLANE, u.airplane), powerSave = e(Act.POWERSAVE, u.powerSave),
             dataSim = e(Act.DATASIM, u.dataSim), tiles = e(Act.TILES, u.tiles).orEmpty(),
             stopApps = stop, appMethods = u.appMethods.filterKeys { it in stop },
@@ -1894,6 +2002,7 @@ class RuleEditActivity : AppCompatActivity() {
             v.ssidLayout.error = getString(R.string.ssid_required)
             R.string.ssid_required to v.ssidLayout
         }
+        rule.trigger == Trigger.TILE_CLICK && rule.triggerTile == null -> R.string.tile_click_required to v.tileTriggerPick
         rule.trigger == Trigger.BLUETOOTH && rule.btAddress == null -> R.string.device_required to v.btDevice
         rule.trigger == Trigger.WIFI_LEFT && v.leftEndBtOn.isChecked && rule.endBtAddress == null -> R.string.device_required to v.leftEndBt
         (rule.trigger == Trigger.APP_OPEN || rule.trigger == Trigger.NOTIFY_APP) && rule.triggerApps.isEmpty() ->

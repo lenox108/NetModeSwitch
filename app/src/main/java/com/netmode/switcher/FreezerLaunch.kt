@@ -4,6 +4,7 @@ import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
 import android.graphics.Bitmap
@@ -190,6 +191,13 @@ object IceShortcuts {
  */
 class ThawActivity : AppCompatActivity() {
 
+    private var renderFolder: (() -> Unit)? = null
+    private val folderPrefs = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == Prefs.KEY_ICE_APPS || key == "ice_sort" || key == "ice_order" || key in IceGrid.preferenceKeys) {
+            runOnUiThread { renderFolder?.invoke() }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val key = intent.getStringExtra(IceShortcuts.EXTRA_KEY)
@@ -199,6 +207,17 @@ class ThawActivity : AppCompatActivity() {
             key != null -> if (Prefs.iceNoConfirm) open(key) else confirm(key)
             else -> finish()
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        renderFolder?.invoke()
+    }
+
+    override fun onDestroy() {
+        Prefs.unlisten(folderPrefs)
+        renderFolder = null
+        super.onDestroy()
     }
 
     private fun toast(text: String) = Toast.makeText(applicationContext, text, Toast.LENGTH_SHORT).show()
@@ -245,11 +264,10 @@ class ThawActivity : AppCompatActivity() {
     /**
      * The "Морозилка" folder, full screen: a search, the apps in their own colours — a frozen
      * one has the snowflake rather than being greyed out — "Настроить" and "Заморозить всё".
-     * A tap opens the app, thawing it first.
+     * A tap opens the app, thawing it first; a long press opens its actions in this folder.
      */
     private fun folder() {
-        val all = IceOrder.sort(Freezer.apps, Prefs.iceSort, Prefs.iceOrder, Freezer::label).map { it to Freezer.label(it.key) }
-        if (all.isEmpty()) {
+        if (Freezer.apps.isEmpty()) {
             toast(getString(R.string.ice_empty_short))
             startActivity(Intent(this, FreezerActivity::class.java))
             finish()
@@ -266,7 +284,7 @@ class ThawActivity : AppCompatActivity() {
 
         val pm = packageManager
         val icons = mutableMapOf<String, Drawable>()
-        var shown = all
+        var shown = emptyList<Pair<IceApp, String>>()
         val adapter = object : BaseAdapter() {
             override fun getCount() = shown.size
             override fun getItem(position: Int) = shown[position]
@@ -278,20 +296,70 @@ class ThawActivity : AppCompatActivity() {
                 c.label.text = if (a.favorite) getString(R.string.ice_favorite_name, name) else name
                 c.icon.setImageDrawable(icons.getOrPut(a.key) { Freezer.info(pm, a.key)?.loadIcon(pm) ?: pm.defaultActivityIcon })
                 c.badge.visibility = if (a.frozen) View.VISIBLE else View.GONE
-                c.root.contentDescription = getString(R.string.ice_open_named, name)
+                c.root.contentDescription = name + ", " + IceStatus.text(this@ThawActivity, a)
                 c.root.setOnClickListener { open(a.key) }
+                c.root.setOnLongClickListener { folderAppActions(a.key); true }
                 return c.root
             }
         }
         ui.grid.adapter = adapter
         IceGrid.apply(ui.grid, list = false)
         IceGrid.watchBounds(ui.grid)
-        ui.search.doAfterTextChanged { text ->
-            val q = text?.toString()?.trim().orEmpty()
+        renderFolder = {
+            val all = IceOrder.sort(Freezer.apps, Prefs.iceSort, Prefs.iceOrder, Freezer::label).map { it to Freezer.label(it.key) }
+            val q = ui.search.text?.toString()?.trim().orEmpty()
             shown = if (q.isEmpty()) all else all.filter { (a, name) -> name.contains(q, true) || a.key.contains(q, true) }
             ui.empty.visibility = if (shown.isEmpty()) View.VISIBLE else View.GONE
+            ui.empty.setText(if (all.isEmpty()) R.string.ice_empty else R.string.ice_nothing_found)
+            ui.freezeAll.isEnabled = all.isNotEmpty()
+            IceGrid.apply(ui.grid, list = false)
             adapter.notifyDataSetChanged()
         }
+        ui.search.doAfterTextChanged { renderFolder?.invoke() }
+        Prefs.listen(folderPrefs)
+        renderFolder?.invoke()
+    }
+
+    private fun folderAppActions(key: String) {
+        IceAppMenu.show(this, key,
+            open = { open(key) },
+            freeze = { folderPerform(key, it) },
+            thawFor = { folderThawFor(key) },
+            card = {
+                startActivity(Intent(this, FreezerActivity::class.java).putExtra(FreezerActivity.EXTRA_APP_KEY, key))
+            },
+            remove = {
+                MaterialAlertDialogBuilder(this)
+                    .setTitle(Freezer.label(key))
+                    .setMessage(R.string.ice_remove_confirm)
+                    .setPositiveButton(R.string.ice_remove) { _, _ -> App.scope.launch { Freezer.remove(listOf(key)) } }
+                    .setNegativeButton(R.string.cancel, null)
+                    .show()
+            })
+    }
+
+    private fun folderPerform(key: String, freeze: Boolean, minutes: Int? = null) {
+        val work = App.scope.async { runCatching { Freezer.manual(listOf(key), freeze, "из папки морозилки", minutes) } }
+        lifecycleScope.launch {
+            val result = work.await().getOrElse { toast(getString(R.string.ice_tile_failed)); return@launch }
+            toast(when {
+                result.changed < 0 -> getString(R.string.ice_no_access)
+                result.requested == 0 -> getString(R.string.ice_no_changes)
+                result.changed < result.requested -> getString(R.string.ice_tile_partial, result.changed, result.requested)
+                result.freeze -> getString(R.string.ice_frozen_n, result.changed)
+                else -> getString(R.string.ice_thawed_n, result.changed)
+            })
+        }
+    }
+
+    private fun folderThawFor(key: String) {
+        val options = listOf(15, 60, 240, -1)
+        val labels = options.map { if (it < 0) getString(R.string.ice_until_manual) else Steps.words(it * 60) } + getString(R.string.ice_delay_own)
+        MaterialAlertDialogBuilder(this).setTitle(R.string.ice_thaw_for)
+            .setItems(labels.toTypedArray()) { _, index ->
+                if (index == options.size) FreezerActivity.askDelay(this) { folderPerform(key, false, it) }
+                else folderPerform(key, false, options[index])
+            }.setNegativeButton(R.string.cancel, null).show()
     }
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
