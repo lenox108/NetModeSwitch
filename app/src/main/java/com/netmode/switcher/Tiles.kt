@@ -3,6 +3,8 @@ package com.netmode.switcher
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 
 /** A Quick Settings tile of another app, addressed as "pkg/.Service". */
 data class TileApp(val component: String, val pkg: String, val label: String, val vpn: Boolean, val tileLabel: String = label)
@@ -15,13 +17,16 @@ data class TileApp(val component: String, val pkg: String, val label: String, va
  *  - a tile that is not in the shade ignores the click, so it is added first (add-tile);
  *  - the shade's own tile state is stale while the shade is closed ("tile not listening"), so
  *    the real state is read elsewhere: for the VPN row, whether the app owns a connected VPN
- *    network; for any other tile, whether the app runs a foreground service (Happ in proxy
- *    mode: 1 on, 0 off — it has a VPN component too, so "is a VPN app" cannot decide this);
+ *    network (also for Amnezia tiles); for other tiles, whether the app runs a foreground
+ *    service (Happ in proxy mode: 1 on, 0 off — it has a VPN component too, so "is a VPN app"
+ *    cannot decide this);
  *  - a VPN app handles the click a few seconds late and ignores clicks while it is still
  *    connecting (AdGuard: off in ~1 s, on in ~15 s), so there is exactly one click per change;
  *  - a tile click toggles, so it is only clicked when the state differs from the target.
  */
 object Tiles {
+
+    private val transitions = TileTransitions()
 
     private const val ACTION_QS_TILE = "android.service.quicksettings.action.QS_TILE"
     private const val ACTION_VPN = "android.net.VpnService"
@@ -68,25 +73,27 @@ object Tiles {
     }
 
     /**
-     * Reads the real on/off state of each tile's app in one shell call; components in [vpn]
-     * are judged by their VPN connection.
+     * Amnezia and explicit [vpn] targets use their connected VPN, not a background service.
+     * An absent entry means unknown, including permission errors and unsupported dump formats.
      */
     suspend fun states(components: Collection<String>, vpn: Set<String> = emptySet()): Map<String, Boolean> {
         val targets = components.filter { valid(it) }
         if (targets.isEmpty()) return emptyMap()
-        val script = targets.joinToString("\n") { c ->
-            val p = pkg(c)
-            val probe = if (c in vpn) "dumpsys connectivity 2>/dev/null | grep -c 'VPN CONNECTED extra: VPN:$p'"
-            else "dumpsys activity services $p 2>/dev/null | grep -c 'isForeground=true'"
-            "echo \"@T $c \$($probe)\""
-        }
-        return Privileged.exec(script).lineSequence()
-            .filter { it.startsWith("@T ") }
-            .associate { line ->
-                val parts = line.removePrefix("@T ").trim().split(' ')
-                parts[0] to ((parts.getOrNull(1)?.toIntOrNull() ?: 0) > 0)
-            }
+        val vpnTargets = targets.filter { TileStateProbe.usesVpn(it, vpn) }.toSet()
+        val network = if (vpnTargets.isEmpty()) null else readDump("dumpsys connectivity 2>&1")
+        return targets.mapNotNull { c ->
+            val state = if (c in vpnTargets) {
+                val uid = runCatching { App.ctx.packageManager.getApplicationInfo(pkg(c), 0).uid }.getOrNull()
+                network?.let { TileStateProbe.vpn(it, pkg(c), uid) }
+            } else readDump("dumpsys activity services ${pkg(c)} 2>&1")?.let(TileStateProbe::foreground)
+            state?.let { c to it }
+        }.toMap()
     }
+
+    private suspend fun readDump(command: String): String? = try {
+        Privileged.exec(command)
+    } catch (e: CancellationException) { throw e }
+    catch (_: Exception) { null }
 
     /**
      * Brings each tile's app to the wanted state, clicking only where it differs, and waits for
@@ -100,55 +107,45 @@ object Tiles {
     ): List<String> {
         val targets = wanted.filterKeys { valid(it) }
         if (targets.isEmpty()) return emptyList()
-        val now = states(targets.keys, vpn)
-        targets.forEach { (c, _) -> now[c]?.let { before(c, it) } }
-        val out = mutableListOf<String>()
-        fun name(c: String) = (if (c in vpn) "VPN " else "") + label(c)
-        targets.filter { (c, want) -> now[c] == want }.forEach { (c, want) ->
-            out += "${name(c)} уже ${if (want) "вкл" else "выкл"}"
-        }
-        var pending = targets.filter { (c, want) -> now[c] != want }
-        if (pending.isEmpty()) return out
-
-        // One click, a wait long enough for the slowest case (a VPN connecting), and one more
-        // click only for what still has not changed: an app busy with a previous change
-        // drops the click, while a second click on a change still in flight would undo it.
-        val added = mutableSetOf<String>()
-        val confirmed = mutableSetOf<String>()
-        repeat(2) {
-            added += click(pending.keys)
-            val window = if (pending.keys.any { it in vpn }) VPN_WAIT_MS else APP_WAIT_MS
-            val deadline = System.currentTimeMillis() + window
-            var result = states(pending.keys, vpn)
-            while (System.currentTimeMillis() < deadline && pending.any { (c, w) -> result[c] != w }) {
-                kotlinx.coroutines.delay(2_000)
-                result = states(pending.keys, vpn)
+        return transitions.set(targets,
+            read = { c -> states(listOf(c), vpn)[c] },
+            prepare = ::ensureAdded,
+            click = { c ->
+                TileClickWatch.suppress(listOf(c))
+                Privileged.exec("cmd statusbar click-tile '$c' 2>&1")
+                // Simultaneous clicks can interfere while SystemUI binds another service.
+                delay(2_000)
+            },
+            await = { c, want ->
+                val window = if (TileStateProbe.usesVpn(c, vpn)) VPN_WAIT_MS else APP_WAIT_MS
+                val deadline = android.os.SystemClock.elapsedRealtime() + window
+                var state = states(listOf(c), vpn)[c]
+                while (state != want && android.os.SystemClock.elapsedRealtime() < deadline) {
+                    delay(2_000)
+                    state = states(listOf(c), vpn)[c]
+                }
+                state == want
+            },
+            before = before,
+        ).map { result ->
+            val c = result.component
+            val name = (if (TileStateProbe.usesVpn(c, vpn)) "VPN " else "") + label(c) +
+                if (result.added) " (плитка добавлена в шторку)" else ""
+            val state = if (targets[c] == true) "вкл" else "выкл"
+            when (result.outcome) {
+                TileTransitions.Outcome.ALREADY -> "$name уже $state"
+                TileTransitions.Outcome.CHANGED -> "$name $state"
+                TileTransitions.Outcome.UNKNOWN -> "$name: состояние неизвестно, нажатие пропущено"
+                TileTransitions.Outcome.UNCONFIRMED -> "$name: изменение не подтвердилось, повторного нажатия нет"
             }
-            confirmed += pending.filter { (c, w) -> result[c] == w }.keys
-            pending = pending.filter { (c, w) -> result[c] != w }
-            if (pending.isEmpty()) return@repeat
         }
-        targets.filterKeys { it !in now || now[it] != targets[it] }.forEach { (c, want) ->
-            val n = name(c) + if (c in added) " (плитка добавлена в шторку)" else ""
-            out += if (c in confirmed) "$n ${if (want) "вкл" else "выкл"}"
-            else "$n: нажатие плитки не подтвердилось"
-        }
-        return out
     }
 
-    /** Clicks each tile, adding it to the shade first if needed. Returns the tiles added. */
-    private suspend fun click(components: Collection<String>): Set<String> {
-        // Two tiles clicked in the same instant interfere — the shade binds one tile's service
-        // while the other click arrives, and one of them is dropped. Measured on OxygenOS 16.
-        TileClickWatch.suppress(components)
-        val script = components.joinToString("\nsleep 2\n") { c ->
-            "t='$c'; settings get secure sysui_qs_tiles | grep -qF \"custom(\$t)\" || " +
-                "{ cmd statusbar add-tile \"\$t\" >/dev/null 2>&1; echo \"@ADD \$t\"; sleep 1; }; " +
-                "cmd statusbar click-tile \"\$t\" >/dev/null 2>&1"
-        }
-        return Privileged.exec(script).lineSequence()
-            .filter { it.startsWith("@ADD ") }.map { it.removePrefix("@ADD ").trim() }.toSet()
-    }
+    /** Prepare separately so the app state can be rechecked before the actual toggle. */
+    private suspend fun ensureAdded(component: String): Boolean =
+        Privileged.exec("t='$component'; settings get secure sysui_qs_tiles | grep -qF \"custom(\$t)\" || " +
+            "{ cmd statusbar add-tile \"\$t\" >/dev/null 2>&1 && echo '@ADD'; sleep 1; }")
+            .lineSequence().any { it == "@ADD" }
 
     private const val VPN_WAIT_MS = 25_000L
     private const val APP_WAIT_MS = 10_000L

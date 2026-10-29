@@ -1,0 +1,53 @@
+{
+  "date": "2026-10-29",
+  "base": "3ee4d02541a2afd951e3426b4ce10d04e4dd96f5",
+  "version": "3.4",
+  "version_code": 86,
+  "source": {
+    "files": 332,
+    "sha256": "96e8014148d9ab5a8f1f20ab5c2b82409306c4544ba32462b49bb6fea02e0052"
+  },
+  "source_unchanged_during_checks": true,
+  "offline": true,
+  "tests": {
+    "modern": {
+      "tests": 176,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "a10": {
+      "tests": 176,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "release": {
+    "modern": {
+      "assembled": true,
+      "r8": true,
+      "lint_vital": true,
+      "file": "NetModeSwitch-3.4-amnezia-cloud-preview.apk",
+      "size": 3148911,
+      "sha256": "9fcd17ef49ad962e02a77f904670dd46f6d968ccc73c5a223e3ad1727c3206a3",
+      "version_name": "3.4",
+      "version_code": 86,
+      "certificate_sha256": "87b781bb57324cb5ce77eb6bc35dbb305d7eda39fd321e95528718db759a73e2",
+      "matches_published_signature": false
+    },
+    "a10": {
+      "assembled": true,
+      "r8": true,
+      "lint_vital": true,
+      "file": "NetModeSwitch-3.4-a10-amnezia-cloud-preview.apk",
+      "size": 3255297,
+      "sha256": "5fd429fc15e675f29b8cb7d291ec9407ad34cb332c41d74667d3c549126bf41c",
+      "version_name": "3.4-a10",
+      "version_code": 86,
+      "certificate_sha256": "87b781bb57324cb5ce77eb6bc35dbb305d7eda39fd321e95528718db759a73e2",
+      "matches_published_signature": false
+    }
+  },
+  "device_tested": false
+}
