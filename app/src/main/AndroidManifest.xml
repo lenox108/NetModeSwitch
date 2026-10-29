@@ -121,7 +121,17 @@
             android:exported="false"
             android:parentActivityName=".FreezerActivity" />
 
-        <!-- The freezer's shortcuts: thaw and open an app, the folder, freeze all. Shortcuts
+        <activity
+            android:name=".IceFolderActivity"
+            android:exported="false"
+            android:label="@string/ice_title"
+            android:icon="@drawable/ic_ice_shortcut"
+            android:launchMode="singleTask"
+            android:taskAffinity="com.netmode.switcher.freezer"
+            android:windowSoftInputMode="stateHidden|adjustResize"
+            android:theme="@style/Theme.NetModeSwitch" />
+
+        <!-- The freezer's transient shortcuts and legacy folder router. Shortcuts
              start it as this app, so it needs no export. -->
         <activity
             android:name=".ThawActivity"

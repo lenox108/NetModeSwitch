@@ -16,7 +16,8 @@
         android:title="@string/ice_view"
         app:showAsAction="never" />
     <item android:id="@+id/action_thaw_for" android:title="@string/ice_thaw_for" app:showAsAction="never" />
-    <item android:id="@+id/action_order" android:title="@string/ice_order" app:showAsAction="never" />
+    <item android:id="@+id/action_order" android:title="@string/sort_title" app:showAsAction="never" />
+    <item android:id="@+id/action_group_order" android:title="@string/ice_group_order" app:showAsAction="never" />
     <item android:id="@+id/action_undo" android:title="@string/ice_undo" app:showAsAction="never" />
     <item
         android:id="@+id/action_folder"

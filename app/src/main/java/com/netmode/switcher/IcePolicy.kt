@@ -18,15 +18,21 @@ object IcePolicy {
 }
 
 enum class IceSort(val title: Int) {
-    NAME(R.string.sort_name), MANUAL(R.string.sort_manual), STATE(R.string.ice_sort_state)
+    NAME(R.string.sort_name), NEWEST(R.string.ice_sort_newest), OLDEST(R.string.ice_sort_oldest),
+    STATE(R.string.ice_sort_state), MANUAL(R.string.sort_manual)
 }
 
 object IceOrder {
     fun sort(apps: List<IceApp>, sort: IceSort, order: List<String>, label: (String) -> String): List<IceApp> {
         val positions = order.withIndex().associate { it.value to it.index }
+        // Older versions kept insertion order but did not record the date. Use that order
+        // for legacy apps and apps added in the same batch; freezing never changes it.
+        val addedPositions = apps.withIndex().associate { it.value.key to it.index }
         val base = compareBy<IceApp> { !it.favorite }
         val comparator = when (sort) {
             IceSort.NAME -> base.thenBy { label(it.key).lowercase() }
+            IceSort.NEWEST -> base.thenByDescending { it.addedAt }.thenByDescending { addedPositions[it.key] }
+            IceSort.OLDEST -> base.thenBy { it.addedAt }.thenBy { addedPositions[it.key] }
             IceSort.STATE -> base.thenBy { it.frozen }.thenBy { label(it.key).lowercase() }
             IceSort.MANUAL -> base.thenBy { positions[it.key] ?: Int.MAX_VALUE }
         }

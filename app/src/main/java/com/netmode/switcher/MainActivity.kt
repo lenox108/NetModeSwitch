@@ -110,8 +110,7 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, HotspotActivity::class.java))
         }
         if (tile == FreezerTileService::class.java.name) {
-            startActivity(Intent(this, ThawActivity::class.java).setAction(Intent.ACTION_VIEW)
-                .putExtra(IceShortcuts.EXTRA_FOLDER, true))
+            startActivity(IceShortcuts.folderIntent(this))
             return true
         }
         return false

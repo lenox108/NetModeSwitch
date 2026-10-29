@@ -64,6 +64,8 @@ class AppPickerActivity : AppCompatActivity() {
         ui.hideSystem.setOnCheckedChangeListener { _, on -> Prefs.hideSystemApps = on; filter() }
         ui.search.doAfterTextChanged { filter() }
         ui.list.adapter = adapter
+        if (savedInstanceState == null && intent.getBooleanExtra(EXTRA_UNSELECTED, false))
+            ui.filter.check(R.id.showUnselected)
         ui.filter.setOnCheckedStateChangeListener { _, _ -> filter() }
         ui.clear.setOnClickListener {
             selected.clear()
@@ -251,6 +253,8 @@ class AppPickerActivity : AppCompatActivity() {
         const val EXTRA_METHODS = "methods"
         const val EXTRA_PLAIN = "plain"
         const val EXTRA_DEFAULT = "default_method"
+        /** Start on "Unselected" when adding to the freezer; other callers keep "All". */
+        const val EXTRA_UNSELECTED = "unselected"
 
         /** Labels for a list of packages, for the rules screen summary. */
         fun labels(pkgs: List<String>): List<String> {

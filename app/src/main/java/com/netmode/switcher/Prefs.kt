@@ -359,7 +359,7 @@ object Prefs {
         get() = decodeList(sp.getString(KEY_ICE_APPS, "[]")!!, IceApp::fromJson)
         set(value) = sp.edit().putString(KEY_ICE_APPS, encodeList(value) { it.toJson() }).commit().let { }
 
-    /** Groups made by hand, kept while no app is in them yet. */
+    /** Shared group order; groups remain present even while empty. Included in backups. */
     var iceGroups: List<String>
         get() = runCatching {
             val a = JSONArray(sp.getString("ice_groups", "[]"))

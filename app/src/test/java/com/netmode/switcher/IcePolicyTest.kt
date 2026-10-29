@@ -90,4 +90,37 @@ class IcePolicyTest {
             IceOrder.sort(apps, IceSort.MANUAL, listOf("removed", "b", "a")) { it }.map { it.key })
         assertEquals(listOf("b", "c", "a"), IceOrder.move(listOf("a", "b", "c"), 0, 2))
     }
+
+    @Test fun additionDateUsesSavedDatesRatherThanNamesOrRuntimeState() {
+        val apps = listOf(
+            IceApp("Alpha", addedAt = 300, thawedAt = 1),
+            IceApp("Charlie", addedAt = 100, launchedAt = 999),
+            IceApp("Bravo", addedAt = 200, frozenAs = IceMode.DEEP),
+        )
+        assertEquals(listOf("Alpha", "Bravo", "Charlie"),
+            IceOrder.sort(apps, IceSort.NEWEST, listOf("Charlie", "Bravo", "Alpha")) { it }.map { it.key })
+        assertEquals(listOf("Charlie", "Bravo", "Alpha"),
+            IceOrder.sort(apps, IceSort.OLDEST, emptyList()) { it }.map { it.key })
+    }
+
+    @Test fun legacyEntriesAndEqualDatesKeepTheirInsertionOrder() {
+        val apps = listOf(IceApp("z"), IceApp("a"),
+            IceApp("y", addedAt = 100), IceApp("b", addedAt = 100))
+        assertEquals(listOf("b", "y", "a", "z"),
+            IceOrder.sort(apps, IceSort.NEWEST, emptyList()) { it }.map { it.key })
+        assertEquals(listOf("z", "a", "y", "b"),
+            IceOrder.sort(apps, IceSort.OLDEST, emptyList()) { it }.map { it.key })
+        assertEquals(listOf("b", "z"),
+            IceOrder.sort(apps.filter { it.key in setOf("z", "b") }, IceSort.NEWEST, emptyList()) { it }.map { it.key })
+    }
+
+    @Test fun dateSortKeepsFavoritesFirstAndSortsEachSection() {
+        val apps = listOf(IceApp("new", addedAt = 300), IceApp("old", addedAt = 100),
+            IceApp("star-old", favorite = true, addedAt = 50),
+            IceApp("star-new", favorite = true, addedAt = 200))
+        assertEquals(listOf("star-new", "star-old", "new", "old"),
+            IceOrder.sort(apps, IceSort.NEWEST, emptyList()) { it }.map { it.key })
+        assertEquals(listOf("star-old", "star-new", "old", "new"),
+            IceOrder.sort(apps, IceSort.OLDEST, emptyList()) { it }.map { it.key })
+    }
 }

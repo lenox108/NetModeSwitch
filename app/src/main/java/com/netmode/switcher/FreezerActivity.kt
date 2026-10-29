@@ -56,8 +56,7 @@ class FreezerActivity : AppCompatActivity() {
     private lateinit var ui: ActivityFreezerBinding
     private var filter = Filter.ALL
     private var modeFilter = ModeFilter.ALL
-    /** The group shown; null: all of them. */
-    private var group: String? = null
+    private lateinit var groupControls: IceGroupControls
     private var shown = listOf<IceApp>()
     private var labels = mapOf<String, String>()
     private val icons = LruCache<String, Drawable>(120)
@@ -113,9 +112,15 @@ class FreezerActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         filter = Filter.entries.firstOrNull { it.name == savedInstanceState?.getString("filter") } ?: Filter.ALL
         modeFilter = ModeFilter.entries.firstOrNull { it.name == savedInstanceState?.getString("modeFilter") } ?: ModeFilter.ALL
-        group = savedInstanceState?.getString("group")
         ui = ActivityFreezerBinding.inflate(layoutInflater)
         setContentView(ui.root)
+        val initialGroup = if (savedInstanceState != null)
+            IceGroupSelection(savedInstanceState.getString("group"), savedInstanceState.getBoolean("ungrouped"))
+        else IceGroupSelection(intent.getStringExtra(IceShortcuts.EXTRA_GROUP), intent.getBooleanExtra(EXTRA_UNGROUPED, false))
+        groupControls = IceGroupControls(this, ui.groupControls,
+            initialGroup,
+            changed = { clearSelection(); render() },
+            perform = { keys, freeze -> perform(keys, freeze) }, thawFor = ::chooseThawFor)
         ui.toolbar.setNavigationOnClickListener { if (selecting) clearSelection() else finish() }
         ui.toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
@@ -125,6 +130,7 @@ class FreezerActivity : AppCompatActivity() {
                 R.id.action_tile -> addTile(this)
                 R.id.action_view -> IceGrid.settings(this)
                 R.id.action_order -> chooseOrder()
+                R.id.action_group_order -> IceGroupOrderDialog.show(this)
                 R.id.action_undo -> undoLast()
                 R.id.action_thaw_for -> chooseThawFor(Freezer.apps.map { it.key })
                 R.id.sel_thaw_for -> { val keys = selected.toList(); clearSelection(); chooseThawFor(keys) }
@@ -141,7 +147,6 @@ class FreezerActivity : AppCompatActivity() {
             }
             true
         }
-        ui.groupActions.setOnClickListener { group?.let { groupActions(it) } }
         ui.selAll.setOnClickListener { selected += shown.map { it.key }; paintSelection() }
         ui.selThaw.setOnClickListener { bulkFreeze(false) }
         ui.selFreeze.setOnClickListener { bulkFreeze(true) }
@@ -163,12 +168,6 @@ class FreezerActivity : AppCompatActivity() {
             (g.findViewById<Chip>(g.checkedChipId)?.tag as? Filter)?.let { filter = it; render() }
         }
         ui.modeFilter.setOnClickListener { showModeFilter() }
-        ui.groups.setOnCheckedStateChangeListener { g, _ ->
-            if (painting) return@setOnCheckedStateChangeListener
-            val c = g.findViewById<Chip>(g.checkedChipId)
-            group = c?.tag as? String
-            render()
-        }
         Prefs.listen(prefs)
         render()
         if (savedInstanceState == null) intent.getStringExtra(EXTRA_APP_KEY)?.let { openSheet(it) }
@@ -177,7 +176,8 @@ class FreezerActivity : AppCompatActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putString("filter", filter.name)
         outState.putString("modeFilter", modeFilter.name)
-        outState.putString("group", group)
+        outState.putString("group", groupControls.selection.name)
+        outState.putBoolean("ungrouped", groupControls.selection.ungrouped)
         super.onSaveInstanceState(outState)
     }
 
@@ -216,6 +216,7 @@ class FreezerActivity : AppCompatActivity() {
     private fun pick() {
         picker.launch(Intent(this, AppPickerActivity::class.java)
             .putExtra(AppPickerActivity.EXTRA_PLAIN, true)
+            .putExtra(AppPickerActivity.EXTRA_UNSELECTED, true)
             .putExtra(AppPickerActivity.EXTRA_PACKAGES, Freezer.apps.map { it.key }.toTypedArray()))
     }
 
@@ -251,30 +252,16 @@ class FreezerActivity : AppCompatActivity() {
             if (activeMode) com.google.android.material.R.attr.colorSecondaryContainer else com.google.android.material.R.attr.colorSurfaceContainerLow))
         val all = Freezer.apps
         labels = all.associate { it.key to Freezer.label(it.key) }
-        val groups = Freezer.groups()
-        if (group != null && group !in groups) group = null
-        painting = true
-        ui.groups.removeAllViews()
-        ui.groupsBox.visibility = if (groups.isEmpty()) View.GONE else View.VISIBLE
-        ui.groups.addView(chip(ui.groups, getString(R.string.ice_groups_all)).apply { tag = null; isChecked = group == null })
-        groups.forEach { g ->
-            ui.groups.addView(chip(ui.groups, g).apply {
-                tag = g
-                isChecked = g == group
-                setOnLongClickListener { groupActions(g); true }
-            })
-        }
-        painting = false
-        ui.groupActions.visibility = if (group == null) View.GONE else View.VISIBLE
-        ui.groupActions.text = group?.let { getString(R.string.ice_group_n, it, all.count { a -> a.group == it }) }
-        val frozen = all.count { it.frozen }
+        groupControls.render(all)
+        val members = groupControls.selection.apps(all)
+        val frozen = members.count { it.frozen }
         ui.filters.children().forEach { c ->
             val f = c.tag as Filter
             c.text = getString(f.title) + " · " + when (f) {
-                Filter.ALL -> all.size
+                Filter.ALL -> members.size
                 Filter.FROZEN -> frozen
-                Filter.THAWED -> all.size - frozen
-                Filter.FAVORITES -> all.count { it.favorite }
+                Filter.THAWED -> members.size - frozen
+                Filter.FAVORITES -> members.count { it.favorite }
             }
         }
         val q = ui.search.text?.toString()?.trim().orEmpty()
@@ -285,14 +272,18 @@ class FreezerActivity : AppCompatActivity() {
                 Filter.THAWED -> !a.frozen
                 Filter.FAVORITES -> a.favorite
             } && (modeFilter.mode == null || (a.frozenAs ?: Freezer.modeOf(a)) == modeFilter.mode) &&
-                (group == null || a.group == group) &&
+                groupControls.selection.contains(a) &&
                 (q.isEmpty() || labels[a.key].orEmpty().contains(q, true) || a.key.contains(q, true))
         }, Prefs.iceSort, Prefs.iceOrder) { labels[it].orEmpty() }
         // Picked apps that are gone from the freezer are no longer picked.
         selected.retainAll(all.map { it.key }.toSet())
         paintToolbar()
         ui.empty.visibility = if (shown.isEmpty()) View.VISIBLE else View.GONE
-        ui.empty.setText(if (all.isEmpty()) R.string.ice_empty else R.string.ice_nothing_found)
+        ui.empty.setText(when {
+            all.isEmpty() && groupControls.selection.isAll -> R.string.ice_empty
+            members.isEmpty() && !groupControls.selection.isAll -> R.string.ice_group_empty
+            else -> R.string.ice_nothing_found
+        })
         adapter.notifyDataSetChanged()
         sheetKey?.let { k -> Freezer.find(k)?.let { paintSheet(it) } ?: sheet?.dismiss() }
     }
@@ -356,6 +347,7 @@ class FreezerActivity : AppCompatActivity() {
             IceGrid.style(row, ui.list, compact, selecting)
             row.label.setTextColor(if (compact) statusColor(a) else MaterialColors.getColor(row.root, com.google.android.material.R.attr.colorOnSurface))
             loadIcon(a, row.icon)
+            row.open.contentDescription = name + ", " + status(a)
             row.open.setOnClickListener { if (selecting) flip(a.key) else openSheet(a.key) }
             row.open.setOnLongClickListener { appActions(a.key); true }
             row.root.setOnClickListener { if (selecting) flip(a.key) else openSheet(a.key) }
@@ -366,13 +358,8 @@ class FreezerActivity : AppCompatActivity() {
                 MaterialColors.getColor(row.root, com.google.android.material.R.attr.colorSecondaryContainer)
             else android.graphics.Color.TRANSPARENT)
             // While picking, a tap picks: the row's own buttons step aside.
-            row.toggle.contentDescription = getString(if (a.frozen) R.string.ice_thaw_named else R.string.ice_freeze_named, name)
-            val tint = MaterialColors.getColor(row.root,
-                if (a.frozen) androidx.appcompat.R.attr.colorPrimary else com.google.android.material.R.attr.colorOnSurfaceVariant)
-            row.toggle.iconTint = android.content.res.ColorStateList.valueOf(tint)
-            row.toggle.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                if (a.frozen) MaterialColors.getColor(row.root, com.google.android.material.R.attr.colorSecondaryContainer)
-                else android.graphics.Color.TRANSPARENT)
+            row.toggle.contentDescription = getString(if (a.frozen) R.string.ice_thaw_named else R.string.ice_freeze_named, name) + ", " + status(a)
+            IceModeIndicator.bind(row, a, compact)
             row.toggle.setOnClickListener { toggle(a.key) }
             row.launch.contentDescription = getString(R.string.ice_open_named, name)
             row.launch.setOnClickListener { launch(a.key) }
@@ -383,8 +370,8 @@ class FreezerActivity : AppCompatActivity() {
     /** The icon view: a tap opens the app (or picks), a long press opens its actions. */
     private fun cell(position: Int, convertView: View?, parent: ViewGroup): View {
         val c = convertView?.let { CellIceBinding.bind(it) } ?: CellIceBinding.inflate(layoutInflater, parent, false)
-        IceGrid.style(c, ui.list)
         val a = shown[position]
+        IceGrid.style(c, ui.list, a)
         val name = labels[a.key] ?: a.key
         c.label.text = displayName(a, name)
         loadIcon(a, c.icon)
@@ -447,10 +434,11 @@ class FreezerActivity : AppCompatActivity() {
         if (picking) ui.toolbar.setNavigationIcon(R.drawable.ic_close) else ui.toolbar.navigationIcon = upIcon
         ui.toolbar.subtitle = if (picking || Freezer.apps.isEmpty()) null else
             getString(R.string.ice_toolbar_summary, Freezer.apps.size, Freezer.apps.count { it.frozen })
-        ui.selectionHint.visibility = if (!picking && Freezer.apps.isNotEmpty()) View.VISIBLE else View.GONE
+        ui.selectionHint.visibility = if (!picking && Freezer.apps.isNotEmpty() && groupControls.selection.isAll) View.VISIBLE else View.GONE
         ui.selectionHint.setText(if (look == Look.GRID) R.string.ice_grid_hint else R.string.ice_selection_tip)
         ui.toolbar.menu.findItem(R.id.sel_card)?.isVisible = selected.size == 1
         ui.toolbar.menu.findItem(R.id.action_undo)?.isEnabled = Freezer.undoAvailable()
+        ui.toolbar.menu.findItem(R.id.action_group_order)?.isEnabled = Freezer.groups().size > 1
         if (picking) ui.add.hide() else ui.add.show()
         ui.selectBar.visibility = if (picking) View.VISIBLE else View.GONE
         // The selection bar is below the list; only the floating Add button needs an inset.
@@ -511,7 +499,7 @@ class FreezerActivity : AppCompatActivity() {
 
     private fun chooseOrder() {
         val options = IceSort.entries
-        MaterialAlertDialogBuilder(this).setTitle(R.string.ice_order)
+        MaterialAlertDialogBuilder(this).setTitle(R.string.sort_title)
             .setSingleChoiceItems(options.map { getString(it.title) }.toTypedArray(), options.indexOf(Prefs.iceSort)) { d, i ->
                 if (options[i] == IceSort.MANUAL && Prefs.iceOrder.isEmpty())
                     Prefs.iceOrder = IceOrder.sort(Freezer.apps, Prefs.iceSort, Prefs.iceOrder, Freezer::label).map { it.key }
@@ -519,22 +507,6 @@ class FreezerActivity : AppCompatActivity() {
                 d.dismiss()
             }.setNeutralButton(R.string.ice_reorder) { _, _ -> IceOrderDialog.show(this) }
             .setNegativeButton(R.string.cancel, null).show()
-    }
-
-    private fun groupActions(name: String) {
-        val keys = Freezer.apps.filter { it.group == name }.map { it.key }
-        val actions = intArrayOf(R.string.ice_freeze_all, R.string.ice_thaw_all, R.string.ice_thaw_for,
-            R.string.ice_resume_auto, R.string.delete)
-        MaterialAlertDialogBuilder(this).setTitle(getString(R.string.ice_group_n, name, keys.size))
-            .setItems(actions.map { getString(it) }.toTypedArray()) { _, index ->
-                when (index) {
-                    0 -> perform(keys, true)
-                    1 -> perform(keys, false)
-                    2 -> chooseThawFor(keys)
-                    3 -> App.scope.launch { Freezer.resumeAuto(keys) }
-                    4 -> askRemoveGroup(name)
-                }
-            }.setNegativeButton(R.string.cancel, null).show()
     }
 
     private fun bulkGroup() {
@@ -766,15 +738,6 @@ class FreezerActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun askRemoveGroup(name: String) {
-        MaterialAlertDialogBuilder(this)
-            .setTitle(getString(R.string.ice_group_remove_title, name))
-            .setMessage(R.string.ice_group_remove_text)
-            .setPositiveButton(R.string.delete) { _, _ -> Freezer.removeGroup(name) }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
-    }
-
     private fun toast(text: String) = Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
@@ -782,6 +745,7 @@ class FreezerActivity : AppCompatActivity() {
     companion object {
         /** Open the chosen app's card from the folder without searching for it again. */
         const val EXTRA_APP_KEY = "ice_app_card"
+        const val EXTRA_UNGROUPED = "ice_ungrouped"
 
         /** The "as in the settings" delay chip; a delay is never this. */
         private const val DEFAULT_TAG = -100

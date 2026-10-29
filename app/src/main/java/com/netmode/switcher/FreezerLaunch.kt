@@ -4,7 +4,6 @@ import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
 import android.graphics.Bitmap
@@ -14,18 +13,13 @@ import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.Icon
+import android.net.Uri
 import android.os.Bundle
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
-import android.view.View
-import android.view.ViewGroup
-import android.widget.BaseAdapter
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.lifecycleScope
-import com.netmode.switcher.databinding.ActivityIceFolderBinding
-import com.netmode.switcher.databinding.CellIceBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.Dispatchers
@@ -46,10 +40,13 @@ object IceShortcuts {
     const val EXTRA_KEY = "key"
     const val EXTRA_FOLDER = "folder"
     const val EXTRA_ALL = "freeze_all"
+    const val EXTRA_GROUP = "ice_group"
+    const val EXTRA_GROUP_ACTION = "ice_group_action"
 
     private const val PREFIX = "ice-"
     private const val FOLDER_ID = "ice-folder"
     private const val ALL_ID = "ice-all"
+    private const val GROUP_PREFIX = "ice-group-"
 
     /** Whether each pinned shortcut was last painted with the snowflake: only a change is sent. */
     private val painted = ConcurrentHashMap<String, Boolean>()
@@ -60,6 +57,10 @@ object IceShortcuts {
 
     fun thawIntent(ctx: Context, key: String): Intent =
         Intent(ctx, ThawActivity::class.java).setAction(Intent.ACTION_VIEW).putExtra(EXTRA_KEY, key)
+
+    fun folderIntent(ctx: Context, name: String? = null): Intent =
+        Intent(ctx, IceFolderActivity::class.java).setAction(Intent.ACTION_VIEW)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).apply { name?.let { putExtra(EXTRA_GROUP, it) } }
 
     private fun info(ctx: Context, a: IceApp): ShortcutInfo {
         val label = Freezer.label(a.key)
@@ -76,7 +77,7 @@ object IceShortcuts {
     private fun folder(ctx: Context): ShortcutInfo = ShortcutInfo.Builder(ctx, FOLDER_ID)
         .setShortLabel(ctx.getString(R.string.ice_title))
         .setIcon(Icon.createWithResource(ctx, R.drawable.ic_ice_shortcut))
-        .setIntent(Intent(ctx, ThawActivity::class.java).setAction(Intent.ACTION_VIEW).putExtra(EXTRA_FOLDER, true))
+        .setIntent(folderIntent(ctx))
         .build()
 
     private fun freezeAll(ctx: Context): ShortcutInfo = ShortcutInfo.Builder(ctx, ALL_ID)
@@ -99,6 +100,28 @@ object IceShortcuts {
         val sm = manager(ctx) ?: return false
         if (!sm.isRequestPinShortcutSupported) return false
         return runCatching { sm.requestPinShortcut(folder(ctx), null) }.getOrDefault(false)
+    }
+
+    private fun group(ctx: Context, name: String, action: IceGroupShortcutAction): ShortcutInfo {
+        val label = when (action) {
+            IceGroupShortcutAction.OPEN -> name
+            IceGroupShortcutAction.FREEZE -> ctx.getString(R.string.ice_group_shortcut_freeze_label, name)
+            IceGroupShortcutAction.THAW -> ctx.getString(R.string.ice_group_shortcut_thaw_label, name)
+        }
+        return ShortcutInfo.Builder(ctx, GROUP_PREFIX + action.name + "-" + Uri.encode(name))
+            .setShortLabel(label.take(25)).setLongLabel(label)
+            .setIcon(Icon.createWithResource(ctx, R.drawable.ic_ice_shortcut))
+            .setIntent(if (action == IceGroupShortcutAction.OPEN) folderIntent(ctx, name)
+                else Intent(ctx, ThawActivity::class.java).setAction(Intent.ACTION_VIEW)
+                    .putExtra(EXTRA_GROUP, name).putExtra(EXTRA_GROUP_ACTION, action.name))
+            .build()
+    }
+
+    fun pinGroup(ctx: Context, name: String, action: IceGroupShortcutAction): Boolean {
+        if (name !in Freezer.groups()) return false
+        val sm = manager(ctx) ?: return false
+        if (!sm.isRequestPinShortcutSupported) return false
+        return runCatching { sm.requestPinShortcut(group(ctx, name, action), null) }.getOrDefault(false)
     }
 
     fun isPinned(ctx: Context, key: String): Boolean =
@@ -124,7 +147,8 @@ object IceShortcuts {
             val sm = manager(ctx) ?: return@launch
             runCatching {
                 val byId = Freezer.apps.associateBy { id(it.key) }
-                val pinned = sm.pinnedShortcuts.filter { it.id.startsWith(PREFIX) && it.id != FOLDER_ID && it.id != ALL_ID }
+                val allPinned = sm.pinnedShortcuts
+                val pinned = allPinned.filter { it.id.startsWith(PREFIX) && !it.id.startsWith(GROUP_PREFIX) && it.id != FOLDER_ID && it.id != ALL_ID }
                 val stale = pinned.mapNotNull { s -> byId[s.id]?.takeIf { painted[s.id] != (Prefs.iceBadge && it.frozen) || !s.isEnabled } }
                 if (stale.isNotEmpty()) {
                     sm.enableShortcuts(stale.map { id(it.key) })
@@ -132,6 +156,12 @@ object IceShortcuts {
                 }
                 val gone = pinned.map { it.id }.filter { it !in byId }
                 if (gone.isNotEmpty()) sm.disableShortcuts(gone, ctx.getString(R.string.ice_gone))
+                val groupIds = Freezer.groups().flatMap { name -> IceGroupShortcutAction.entries.map { group(ctx, name, it).id } }.toSet()
+                val groupPins = allPinned.filter { it.id.startsWith(GROUP_PREFIX) }
+                val keptGroups = groupPins.filter { it.id in groupIds && !it.isEnabled }.map { it.id }
+                if (keptGroups.isNotEmpty()) sm.enableShortcuts(keptGroups)
+                val goneGroups = groupPins.filter { it.id !in groupIds && it.isEnabled }.map { it.id }
+                if (goneGroups.isNotEmpty()) sm.disableShortcuts(goneGroups, ctx.getString(R.string.ice_group_gone))
             }
             runCatching { Scenes.publishMenu(ctx) }
         }
@@ -175,7 +205,7 @@ object IceShortcuts {
         val out = d.mutate()
         if (frozen) {
             // Dimmed enough to tell, not so much that the icon cannot be made out.
-            out.colorFilter = ColorMatrixColorFilter(ColorMatrix().apply { setSaturation(0.35f) })
+            out.colorFilter = ColorMatrixColorFilter(ColorMatrix().apply { setSaturation(0f) })
             out.alpha = 200
         } else {
             out.colorFilter = null
@@ -191,33 +221,29 @@ object IceShortcuts {
  */
 class ThawActivity : AppCompatActivity() {
 
-    private var renderFolder: (() -> Unit)? = null
-    private val folderPrefs = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key == Prefs.KEY_ICE_APPS || key == "ice_sort" || key == "ice_order" || key in IceGrid.preferenceKeys) {
-            runOnUiThread { renderFolder?.invoke() }
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val key = intent.getStringExtra(IceShortcuts.EXTRA_KEY)
         when {
+            intent.hasExtra(IceShortcuts.EXTRA_GROUP) -> {
+                val name = intent.getStringExtra(IceShortcuts.EXTRA_GROUP)
+                if (name == null || name !in Freezer.groups()) {
+                    toast(getString(R.string.ice_group_gone))
+                    finish()
+                    return
+                }
+                when (intent.getStringExtra(IceShortcuts.EXTRA_GROUP_ACTION)) {
+                    null, IceGroupShortcutAction.OPEN.name -> openFolder(name)
+                    IceGroupShortcutAction.FREEZE.name -> groupShortcut(name, true)
+                    IceGroupShortcutAction.THAW.name -> groupShortcut(name, false)
+                    else -> finish()
+                }
+            }
             intent.getBooleanExtra(IceShortcuts.EXTRA_ALL, false) -> freezeAll()
-            intent.getBooleanExtra(IceShortcuts.EXTRA_FOLDER, false) -> folder()
+            intent.getBooleanExtra(IceShortcuts.EXTRA_FOLDER, false) -> openFolder()
             key != null -> if (Prefs.iceNoConfirm) open(key) else confirm(key)
             else -> finish()
         }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        renderFolder?.invoke()
-    }
-
-    override fun onDestroy() {
-        Prefs.unlisten(folderPrefs)
-        renderFolder = null
-        super.onDestroy()
     }
 
     private fun toast(text: String) = Toast.makeText(applicationContext, text, Toast.LENGTH_SHORT).show()
@@ -261,108 +287,33 @@ class ThawActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * The "Морозилка" folder, full screen: a search, the apps in their own colours — a frozen
-     * one has the snowflake rather than being greyed out — "Настроить" and "Заморозить всё".
-     * A tap opens the app, thawing it first; a long press opens its actions in this folder.
-     */
-    private fun folder() {
-        if (Freezer.apps.isEmpty()) {
-            toast(getString(R.string.ice_empty_short))
-            startActivity(Intent(this, FreezerActivity::class.java))
+    private fun openFolder(name: String? = null) {
+        startActivity(IceShortcuts.folderIntent(this, name))
+        finish()
+    }
+
+    private fun groupShortcut(name: String, freeze: Boolean) {
+        val keys = IceGroupSelection(name).apps(Freezer.apps).map { it.key }
+        if (keys.isEmpty()) {
+            toast(getString(R.string.ice_group_empty))
             finish()
             return
         }
-        val ui = ActivityIceFolderBinding.inflate(layoutInflater)
-        setContentView(ui.root)
-        ui.toolbar.setNavigationOnClickListener { finish() }
-        ui.manage.setOnClickListener {
-            startActivity(Intent(this, FreezerActivity::class.java))
-            finish()
-        }
-        ui.freezeAll.setOnClickListener { freezeAll() }
-
-        val pm = packageManager
-        val icons = mutableMapOf<String, Drawable>()
-        var shown = emptyList<Pair<IceApp, String>>()
-        val adapter = object : BaseAdapter() {
-            override fun getCount() = shown.size
-            override fun getItem(position: Int) = shown[position]
-            override fun getItemId(position: Int) = position.toLong()
-            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-                val c = convertView?.let { CellIceBinding.bind(it) } ?: CellIceBinding.inflate(layoutInflater, parent, false)
-                IceGrid.style(c, ui.grid)
-                val (a, name) = shown[position]
-                c.label.text = if (a.favorite) getString(R.string.ice_favorite_name, name) else name
-                c.icon.setImageDrawable(icons.getOrPut(a.key) { Freezer.info(pm, a.key)?.loadIcon(pm) ?: pm.defaultActivityIcon })
-                c.badge.visibility = if (a.frozen) View.VISIBLE else View.GONE
-                c.root.contentDescription = name + ", " + IceStatus.text(this@ThawActivity, a)
-                c.root.setOnClickListener { open(a.key) }
-                c.root.setOnLongClickListener { folderAppActions(a.key); true }
-                return c.root
-            }
-        }
-        ui.grid.adapter = adapter
-        IceGrid.apply(ui.grid, list = false)
-        IceGrid.watchBounds(ui.grid)
-        renderFolder = {
-            val all = IceOrder.sort(Freezer.apps, Prefs.iceSort, Prefs.iceOrder, Freezer::label).map { it to Freezer.label(it.key) }
-            val q = ui.search.text?.toString()?.trim().orEmpty()
-            shown = if (q.isEmpty()) all else all.filter { (a, name) -> name.contains(q, true) || a.key.contains(q, true) }
-            ui.empty.visibility = if (shown.isEmpty()) View.VISIBLE else View.GONE
-            ui.empty.setText(if (all.isEmpty()) R.string.ice_empty else R.string.ice_nothing_found)
-            ui.freezeAll.isEnabled = all.isNotEmpty()
-            IceGrid.apply(ui.grid, list = false)
-            adapter.notifyDataSetChanged()
-        }
-        ui.search.doAfterTextChanged { renderFolder?.invoke() }
-        Prefs.listen(folderPrefs)
-        renderFolder?.invoke()
-    }
-
-    private fun folderAppActions(key: String) {
-        IceAppMenu.show(this, key,
-            open = { open(key) },
-            freeze = { folderPerform(key, it) },
-            thawFor = { folderThawFor(key) },
-            card = {
-                startActivity(Intent(this, FreezerActivity::class.java).putExtra(FreezerActivity.EXTRA_APP_KEY, key))
-            },
-            remove = {
-                MaterialAlertDialogBuilder(this)
-                    .setTitle(Freezer.label(key))
-                    .setMessage(R.string.ice_remove_confirm)
-                    .setPositiveButton(R.string.ice_remove) { _, _ -> App.scope.launch { Freezer.remove(listOf(key)) } }
-                    .setNegativeButton(R.string.cancel, null)
-                    .show()
-            })
-    }
-
-    private fun folderPerform(key: String, freeze: Boolean, minutes: Int? = null) {
-        val work = App.scope.async { runCatching { Freezer.manual(listOf(key), freeze, "из папки морозилки", minutes) } }
+        val work = App.scope.async { runCatching { Freezer.manual(keys, freeze, "ярлык группы") } }
         lifecycleScope.launch {
-            val result = work.await().getOrElse { toast(getString(R.string.ice_tile_failed)); return@launch }
+            val result = work.await().getOrNull()
             toast(when {
+                result == null -> getString(R.string.ice_tile_failed)
                 result.changed < 0 -> getString(R.string.ice_no_access)
                 result.requested == 0 -> getString(R.string.ice_no_changes)
                 result.changed < result.requested -> getString(R.string.ice_tile_partial, result.changed, result.requested)
                 result.freeze -> getString(R.string.ice_frozen_n, result.changed)
                 else -> getString(R.string.ice_thawed_n, result.changed)
             })
+            finish()
         }
     }
 
-    private fun folderThawFor(key: String) {
-        val options = listOf(15, 60, 240, -1)
-        val labels = options.map { if (it < 0) getString(R.string.ice_until_manual) else Steps.words(it * 60) } + getString(R.string.ice_delay_own)
-        MaterialAlertDialogBuilder(this).setTitle(R.string.ice_thaw_for)
-            .setItems(labels.toTypedArray()) { _, index ->
-                if (index == options.size) FreezerActivity.askDelay(this) { folderPerform(key, false, it) }
-                else folderPerform(key, false, options[index])
-            }.setNegativeButton(R.string.cancel, null).show()
-    }
-
-    private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 }
 
 /** Lit when everything is frozen. A tap thaws it all, or freezes any remaining thawed apps. */

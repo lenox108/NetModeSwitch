@@ -35,7 +35,12 @@
             android:maxLines="1" />
     </com.google.android.material.textfield.TextInputLayout>
 
+    <include
+        android:id="@+id/groupControls"
+        layout="@layout/ice_groups" />
+
     <TextView
+        android:id="@+id/folderHint"
         style="@style/NMS.Hint"
         android:layout_marginStart="20dp"
         android:layout_marginTop="8dp"

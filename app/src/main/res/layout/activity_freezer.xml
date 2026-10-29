@@ -81,33 +81,9 @@
                 app:singleSelection="true" />
         </HorizontalScrollView>
 
-        <HorizontalScrollView
-            android:id="@+id/groupsBox"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:clipToPadding="false"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:scrollbars="none">
-
-            <com.google.android.material.chip.ChipGroup
-                android:id="@+id/groups"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                app:selectionRequired="true"
-                app:singleLine="true"
-                app:singleSelection="true" />
-        </HorizontalScrollView>
-
-        <!-- No root or Shizuku: nothing can be frozen or thawed. -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/groupActions"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="@string/ice_group_actions"
-            android:visibility="gone" />
+        <include
+            android:id="@+id/groupControls"
+            layout="@layout/ice_groups" />
 
         <TextView
             android:id="@+id/selectionHint"

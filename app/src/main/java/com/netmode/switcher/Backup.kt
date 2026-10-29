@@ -41,7 +41,7 @@ object Backup {
                 .put("apps", JSONArray(Freezer.apps.map { a ->
                     JSONObject().put("key", a.key).put("mode", a.mode.name)
                         .put("delay", a.delay ?: JSONObject.NULL).put("group", a.group ?: JSONObject.NULL)
-                        .put("favorite", a.favorite)
+                        .put("favorite", a.favorite).put("addedAt", a.addedAt)
                 }))
                 .put("groups", JSONArray(Prefs.iceGroups))
                 .put("mode", Prefs.iceDefaultMode.name).put("delay", Prefs.iceDefaultDelay)
@@ -87,7 +87,8 @@ object Backup {
                 val mode = runCatching { IceMode.valueOf(o.getString("mode")) }.getOrDefault(IceMode.DEFAULT)
                 val delay = if (o.isNull("delay")) null else o.getInt("delay")
                 val group = o.optString("group").takeIf { !o.isNull("group") && it.isNotEmpty() }
-                (have[key] ?: IceApp(key, thawedAt = now)).copy(mode = mode, delay = delay, group = group,
+                (have[key] ?: IceApp(key, thawedAt = now,
+                    addedAt = o.optLong("addedAt", 0L).coerceAtLeast(0L))).copy(mode = mode, delay = delay, group = group,
                     favorite = if (o.has("favorite")) o.getBoolean("favorite") else have[key]?.favorite ?: false)
             }.getOrNull()
         }

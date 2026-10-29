@@ -57,4 +57,16 @@
         android:maxLines="2"
         android:textColor="?attr/colorOnSurface"
         android:textSize="12sp" />
+
+    <TextView
+        android:id="@+id/state"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:gravity="center"
+        android:maxLines="2"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:textSize="11sp"
+        android:importantForAccessibility="no"
+        android:visibility="gone" />
 </LinearLayout>

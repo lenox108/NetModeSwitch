@@ -47,6 +47,8 @@ data class IceApp(
     val favorite: Boolean = false,
     /** Changes to runtime state invalidate an older undo even after a freeze/thaw round trip. */
     val revision: Long = 0L,
+    /** When added to the freezer (wall clock); 0 for entries saved by older versions. */
+    val addedAt: Long = 0L,
 ) {
     val frozen: Boolean get() = frozenAs != null
 
@@ -55,6 +57,7 @@ data class IceApp(
         .put("group", group ?: JSONObject.NULL).put("as", frozenAs?.name ?: JSONObject.NULL)
         .put("thawed", thawedAt).put("held", heldBy).put("launched", launchedAt)
         .put("keepUntil", keepUntil).put("favorite", favorite).put("revision", revision)
+        .put("addedAt", addedAt)
 
     companion object {
         fun fromJson(o: JSONObject) = IceApp(
@@ -69,6 +72,7 @@ data class IceApp(
             keepUntil = o.optLong("keepUntil", 0L).coerceAtLeast(-1L),
             favorite = o.optBoolean("favorite", false),
             revision = o.optLong("revision", 0L),
+            addedAt = o.optLong("addedAt", 0L).coerceAtLeast(0L),
         )
     }
 }
@@ -158,8 +162,12 @@ object Freezer {
     fun protectedKeys(now: Long = System.currentTimeMillis()): Set<String> =
         apps.filter { IcePolicy.protected(it, now) }.map { it.key }.toSet()
 
-    /** Groups in use and those made by hand, in the order they were made. */
-    fun groups(): List<String> = (Prefs.iceGroups + apps.mapNotNull { it.group }).distinct()
+    /** Shared chip order, including groups saved by older versions only on their apps. */
+    fun groups(): List<String> = IceGroups.ordered(Prefs.iceGroups, apps)
+
+    fun orderGroups(order: List<String>) {
+        Prefs.iceGroups = IceGroups.reconcile(order, groups())
+    }
 
     /** The freezer apps a rule's targets name: every app of a group, or the app itself. */
     fun keysOf(targets: List<String>): List<String> {
@@ -220,7 +228,7 @@ object Freezer {
     fun addGroup(name: String) {
         val n = name.trim()
         if (n.isEmpty() || n in groups()) return
-        Prefs.iceGroups = Prefs.iceGroups + n
+        Prefs.iceGroups = groups() + n
     }
 
     fun removeGroup(name: String) {
@@ -243,7 +251,7 @@ object Freezer {
         val fresh = keys.filter { it !in have && AppKey.valid(it) && AppKey.pkg(it) !in guarded }
         if (fresh.isEmpty()) return 0
         val now = System.currentTimeMillis()
-        edit { it + fresh.map { k -> IceApp(k, thawedAt = now) } }
+        edit { it + fresh.map { k -> IceApp(k, thawedAt = now, addedAt = now) } }
         ConditionWatch.grantUsageAccess()
         lock.withLock { if (Privileged.available()) freezeLocked(fresh, why) }
         ensureInstant()
@@ -756,6 +764,7 @@ object Freezer {
     // --- following changes --------------------------------------------------------------------
 
     private val prefs = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == "ice_groups") IceShortcuts.refresh()
         if (key == Prefs.KEY_ICE_APPS) {
             FreezerTile.refresh()
             IceShortcuts.refresh()
@@ -766,6 +775,7 @@ object Freezer {
     /** From the process start: the tile, the shortcuts and the watch follow the record. */
     fun watch() {
         Prefs.listen(prefs)
+        IceShortcuts.refresh()
         if (apps.isEmpty()) return
         App.scope.launch {
             runCatching { sync() }

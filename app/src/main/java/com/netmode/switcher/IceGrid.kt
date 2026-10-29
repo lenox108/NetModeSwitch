@@ -109,23 +109,29 @@ object IceGrid {
         ((grid.width - grid.paddingLeft - grid.paddingRight - (grid.numColumns.coerceAtLeast(1) - 1) * grid.horizontalSpacing) /
             grid.numColumns.coerceAtLeast(1)).coerceAtLeast(1)
 
-    fun style(c: CellIceBinding, grid: GridView) {
+    fun style(c: CellIceBinding, grid: GridView, app: IceApp, showState: Boolean = true) {
         val ctx = grid.context
         val s = size
         val labels = Prefs.iceLabels
         c.label.textSize = s.text
         c.label.visibility = if (labels) View.VISIBLE else View.GONE
+        c.state.visibility = if (labels && showState) View.VISIBLE else View.GONE
+        c.state.textSize = (s.text - 1f).coerceAtLeast(10f)
+        c.state.setText(if (app.frozen) R.string.ice_cell_frozen else R.string.ice_cell_thawed)
+        c.state.setTextColor(com.google.android.material.color.MaterialColors.getColor(c.root,
+            if (app.frozen) com.google.android.material.R.attr.colorOnSurfaceVariant else com.google.android.material.R.attr.colorTertiary))
+        val stateHeight = if (labels && showState) ceil(c.state.paint.fontSpacing.toDouble()).toInt() * 2 + dp(ctx, 2) else 0
         val line = ceil(c.label.paint.fontSpacing.toDouble()).toInt()
-        val minHeight = dp(ctx, 40) + if (labels) line + dp(ctx, 4) else 0
+        val minHeight = dp(ctx, 40) + (if (labels) line + dp(ctx, 4) else 0) + stateHeight
         val h = height(grid, minHeight)
         val fixed = h > 0
         val pad = dp(ctx, if (fixed || !labels) 4 else 10)
-        val room = if (fixed) h - pad * 2 - if (labels) line + dp(ctx, 8) else 0 else Int.MAX_VALUE
+        val room = if (fixed) h - pad * 2 - stateHeight - (if (labels) line + dp(ctx, 8) else 0) else Int.MAX_VALUE
         val icon = minOf(dp(ctx, s.icon), room - dp(ctx, 8),
             if (grid.width > 0) width(grid) - dp(ctx, 16) else dp(ctx, s.icon)).coerceAtLeast(dp(ctx, 16))
         c.iconBox.layoutParams = c.iconBox.layoutParams.apply { width = icon + dp(ctx, 8); height = width }
         c.icon.layoutParams = c.icon.layoutParams.apply { width = icon; height = width }
-        c.label.maxLines = if (fixed && h < icon + dp(ctx, 24) + line * 2) 1 else 2
+        c.label.maxLines = if (fixed && h < icon + dp(ctx, 24) + line * 2 + stateHeight) 1 else 2
         c.label.minLines = c.label.maxLines
         c.root.gravity = Gravity.CENTER
         c.root.minimumHeight = minHeight

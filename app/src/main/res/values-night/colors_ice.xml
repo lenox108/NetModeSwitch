@@ -1,0 +1,6 @@
+<resources>
+    <color name="ice_soft_foreground">#8BD2F4</color>
+    <color name="ice_soft_container">#19303D</color>
+    <color name="ice_deep_foreground">#352052</color>
+    <color name="ice_deep_container">#D3B8FA</color>
+</resources>
