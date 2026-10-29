@@ -1,0 +1,41 @@
+PASS installed test APK {'apk': '/Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/store/NetModeSwitch-3.4-freezer-indicator-a10.apk'}
+/tmp/nms-freezer-sort-prefs.xml: 1 file pushed, 0 skipped. 1.0 MB/s (1013 bytes in 0.001s)
+SELinux: Loaded file_contexts
+/Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/store/qa-freezer-indicator-2026-10-29/check-ui.py:82: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  whole = list(image.crop((cx-radius, cy-radius, cx+radius, cy+radius)).getdata())
+/Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/store/qa-freezer-indicator-2026-10-29/check-ui.py:84: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  centre = list(image.crop((cx-inset, cy-inset, cx+inset, cy+inset)).getdata())
+PASS compact-light {'columns': 1, 'selecting': False, 'buttons': 4, 'accessible_modes': ['Chrome, Заморожено глубоко · иконка скрыта', 'Gmail, Заморожено мягко', 'Maps, Разморожено до ручной заморозки', 'Photos, Разморожено до ручной заморозки']}
+PASS observed state survives a different configured mode {}
+/tmp/nms-freezer-sort-prefs.xml: 1 file pushed, 0 skipped. 1.4 MB/s (1013 bytes in 0.001s)
+SELinux: Loaded file_contexts
+PASS two-columns-light {'columns': 2, 'selecting': False, 'buttons': 0, 'accessible_modes': ['Chrome, Заморожено глубоко · иконка скрыта', 'Gmail, Заморожено мягко', 'Maps, Разморожено до ручной заморозки', 'Photos, Разморожено до ручной заморозки']}
+/tmp/nms-freezer-sort-prefs.xml: 1 file pushed, 0 skipped. 1.5 MB/s (1013 bytes in 0.001s)
+SELinux: Loaded file_contexts
+ERROR: null root node returned by UiTestAutomationBridge.
+PASS three-columns-light {'columns': 3, 'selecting': False, 'buttons': 0, 'accessible_modes': ['Chrome, Заморожено глубоко · иконка скрыта', 'Gmail, Заморожено мягко', 'Maps, Разморожено до ручной заморозки', 'Photos, Разморожено до ручной заморозки']}
+/tmp/nms-freezer-sort-prefs.xml: 1 file pushed, 0 skipped. 0.5 MB/s (1013 bytes in 0.002s)
+SELinux: Loaded file_contexts
+ERROR: null root node returned by UiTestAutomationBridge.
+ERROR: null root node returned by UiTestAutomationBridge.
+PASS selection-light {'columns': 1, 'selecting': True, 'buttons': 0, 'accessible_modes': ['Chrome, Заморожено глубоко · иконка скрыта', 'Gmail, Заморожено мягко', 'Maps, Разморожено до ручной заморозки', 'Photos, Разморожено до ручной заморозки']}
+PASS selection-ended-light {'columns': 1, 'selecting': False, 'buttons': 4, 'accessible_modes': ['Chrome, Заморожено глубоко · иконка скрыта', 'Gmail, Заморожено мягко', 'Maps, Разморожено до ручной заморозки', 'Photos, Разморожено до ручной заморозки']}
+ERROR: null root node returned by UiTestAutomationBridge.
+PASS compact-dark-large {'columns': 1, 'selecting': False, 'buttons': 4, 'accessible_modes': ['Chrome, Заморожено глубоко · иконка скрыта', 'Gmail, Заморожено мягко', 'Maps, Разморожено до ручной заморозки', 'Photos, Разморожено до ручной заморозки']}
+/tmp/nms-freezer-sort-prefs.xml: 1 file pushed, 0 skipped. 1.5 MB/s (1013 bytes in 0.001s)
+SELinux: Loaded file_contexts
+PASS two-columns-dark-large {'columns': 2, 'selecting': False, 'buttons': 0, 'accessible_modes': ['Chrome, Заморожено глубоко · иконка скрыта', 'Gmail, Заморожено мягко', 'Maps, Разморожено до ручной заморозки', 'Photos, Разморожено до ручной заморозки']}
+/tmp/nms-freezer-sort-prefs.xml: 1 file pushed, 0 skipped. 0.7 MB/s (1013 bytes in 0.001s)
+SELinux: Loaded file_contexts
+PASS three-columns-dark-large {'columns': 3, 'selecting': False, 'buttons': 0, 'accessible_modes': ['Chrome, Заморожено глубоко · иконка скрыта', 'Gmail, Заморожено мягко', 'Maps, Разморожено до ручной заморозки', 'Photos, Разморожено до ручной заморозки']}
+/tmp/nms-freezer-sort-prefs.xml: 1 file pushed, 0 skipped. 0.7 MB/s (1013 bytes in 0.001s)
+SELinux: Loaded file_contexts
+Warning: Activity not started, its current task has been brought to the front
+/Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/store/qa-freezer-indicator-2026-10-29/check-ui.py:206: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  pixels = list(Image.open(u.OUT / 'after-thaw-dark-large.png').convert('RGB').crop(bounds(chrome)).getdata())
+PASS external thaw updates action and clears deep mode {}
+/tmp/nms-freezer-sort-prefs.xml: 1 file pushed, 0 skipped. 0.1 MB/s (1473 bytes in 0.011s)
+SELinux: Loaded file_contexts
+PASS regular list retains detailed status {}
+PASS no runtime crashes {}
+ALL INDICATOR UI CHECKS PASSED

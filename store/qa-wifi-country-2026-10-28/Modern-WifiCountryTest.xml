@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.netmode.switcher.WifiCountryTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-10-28T19:00:26.770Z" hostname="MacBook-Pro-John.local" time="0.013">
+  <properties/>
+  <testcase name="separatesTheSelectedCountryFromTheDriver" classname="com.netmode.switcher.WifiCountryTest" time="0.004"/>
+  <testcase name="ignoresDumpHistoryAndMalformedValues" classname="com.netmode.switcher.WifiCountryTest" time="0.001"/>
+  <testcase name="zeroExitWithoutReadbackIsNotSuccess" classname="com.netmode.switcher.WifiCountryTest" time="0.001"/>
+  <testcase name="automaticReadbackMayKeepThePreviousDriverCountry" classname="com.netmode.switcher.WifiCountryTest" time="0.001"/>
+  <testcase name="missingFieldsNeverMeanAutomaticOrSuccessful" classname="com.netmode.switcher.WifiCountryTest" time="0.001"/>
+  <testcase name="shellShizukuCannotReachTheMutation" classname="com.netmode.switcher.WifiCountryTest" time="0.0"/>
+  <testcase name="olderDriverFieldRemainsReadable" classname="com.netmode.switcher.WifiCountryTest" time="0.0"/>
+  <testcase name="rootIsCheckedAgainInsideTheMutationScript" classname="com.netmode.switcher.WifiCountryTest" time="0.0"/>
+  <testcase name="commandFailureDoesNotClaimSuccessFromACachedCountry" classname="com.netmode.switcher.WifiCountryTest" time="0.001"/>
+  <testcase name="unsupportedFirmwareCannotReachTheMutation" classname="com.netmode.switcher.WifiCountryTest" time="0.001"/>
+  <testcase name="normalizesWithoutDependingOnThePhoneLocale" classname="com.netmode.switcher.WifiCountryTest" time="0.0"/>
+  <testcase name="automaticModeIsNotWorldMode" classname="com.netmode.switcher.WifiCountryTest" time="0.001"/>
+  <testcase name="rejectsShellInputAndNonCountryValues" classname="com.netmode.switcher.WifiCountryTest" time="0.0"/>
+  <testcase name="automaticModeNeedsConfirmationOfTheClearedOverride" classname="com.netmode.switcher.WifiCountryTest" time="0.001"/>
+  <testcase name="acceptedOverrideCanStillBePendingInTheDriver" classname="com.netmode.switcher.WifiCountryTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

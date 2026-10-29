@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.netmode.switcher.IcePolicyTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-10-28T20:32:55.265Z" hostname="MacBook-Pro-John.local" time="0.004">
+  <properties/>
+  <testcase name="restartingTheProcessDoesNotExtendTheSavedTimer" classname="com.netmode.switcher.IcePolicyTest" time="0.0"/>
+  <testcase name="changingFavoriteOrGroupDoesNotPreventUndoOfRuntimeState" classname="com.netmode.switcher.IcePolicyTest" time="0.0"/>
+  <testcase name="manualOrderKeepsFavoritesFirstAndNewAppsLastWithinTheirSection" classname="com.netmode.switcher.IcePolicyTest" time="0.001"/>
+  <testcase name="manualHoldHasNoDeadlineEvenWithImmediateDefault" classname="com.netmode.switcher.IcePolicyTest" time="0.0"/>
+  <testcase name="frozenAppNeverSchedulesOrClaimsProtection" classname="com.netmode.switcher.IcePolicyTest" time="0.0"/>
+  <testcase name="ruleAndUserHoldsCoexist" classname="com.netmode.switcher.IcePolicyTest" time="0.0"/>
+  <testcase name="undoExpiresAndRejectsABackwardsClock" classname="com.netmode.switcher.IcePolicyTest" time="0.0"/>
+  <testcase name="legacyEntriesAndEqualDatesKeepTheirInsertionOrder" classname="com.netmode.switcher.IcePolicyTest" time="0.001"/>
+  <testcase name="additionDateUsesSavedDatesRatherThanNamesOrRuntimeState" classname="com.netmode.switcher.IcePolicyTest" time="0.0"/>
+  <testcase name="dateSortKeepsFavoritesFirstAndSortsEachSection" classname="com.netmode.switcher.IcePolicyTest" time="0.0"/>
+  <testcase name="alphabeticalOrderDoesNotJumpWhenAnAppFreezes" classname="com.netmode.switcher.IcePolicyTest" time="0.001"/>
+  <testcase name="timedThawOverridesImmediateAndDisabledAutoFreeze" classname="com.netmode.switcher.IcePolicyTest" time="0.0"/>
+  <testcase name="normalDelayStartsFromMostRecentUseAndExplicitThaw" classname="com.netmode.switcher.IcePolicyTest" time="0.0"/>
+  <testcase name="undoSkipsApplicationsOpenedOrChangedSinceTheOperation" classname="com.netmode.switcher.IcePolicyTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,47 @@
+[
+  {
+    "check": "date sort including old entries",
+    "order": [
+      "Maps",
+      "Photos",
+      "Gmail",
+      "Chrome"
+    ]
+  },
+  {
+    "check": "oldest and preference after process restart"
+  },
+  {
+    "check": "shared folder order"
+  },
+  {
+    "check": "add starts on unselected and hides existing apps",
+    "first_apps": [
+      "Android System Angle",
+      "Calendar",
+      "Camera",
+      "Clock",
+      "Contacts"
+    ]
+  },
+  {
+    "check": "selection disappears and can be undone in selected filter",
+    "app": "Android System Angle"
+  },
+  {
+    "check": "new addition saves timestamp, legacy dates survive serialization and new app sorts first",
+    "app": "com.google.android.angle"
+  },
+  {
+    "check": "picker filter, search and selection survive activity recreation"
+  },
+  {
+    "check": "dark theme at 320 dp and 150 percent font"
+  },
+  {
+    "check": "other picker callers keep all-apps default"
+  },
+  {
+    "check": "final A10 release APK sorting and default unselected filter"
+  }
+]

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.netmode.switcher.IceGroupsTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-29T07:16:53.909Z" hostname="MacBook-Pro-John.local" time="0.002">
+  <properties/>
+  <testcase name="savingOrderDoesNotReviveDeletedGroupsOrLoseNewGroups" classname="com.netmode.switcher.IceGroupsTest" time="0.001"/>
+  <testcase name="ordinaryGroupNamesCannotCollideWithSpecialFilterLabels" classname="com.netmode.switcher.IceGroupsTest" time="0.001"/>
+  <testcase name="savedOrderKeepsEmptyGroupsAndAppOnlyLegacyGroupsFollowIt" classname="com.netmode.switcher.IceGroupsTest" time="0.0"/>
+  <testcase name="reorderingChipsDoesNotReorderAppsOrChangeTheMembership" classname="com.netmode.switcher.IceGroupsTest" time="0.0"/>
+  <testcase name="selectedGroupIncludesBothFrozenAndThawedAppsAndExcludesOtherGroups" classname="com.netmode.switcher.IceGroupsTest" time="0.0"/>
+  <testcase name="shortcutSelectionUsesCurrentMembersInsteadOfASavedAppSnapshot" classname="com.netmode.switcher.IceGroupsTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

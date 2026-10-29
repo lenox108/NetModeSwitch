@@ -1,0 +1,38 @@
+[
+  {
+    "check": "manager group filter and explicit actions"
+  },
+  {
+    "check": "group action includes members hidden by search and excludes other groups"
+  },
+  {
+    "check": "manual chip order saves and cancel preserves it"
+  },
+  {
+    "check": "folder has same picker, explicit actions and group menu"
+  },
+  {
+    "check": "group shortcut intent opens current group after process restart"
+  },
+  {
+    "check": "folder selected group survives activity recreation"
+  },
+  {
+    "check": "dark theme at 320 dp and 150 percent font"
+  },
+  {
+    "check": "launcher accepted OPEN group shortcut"
+  },
+  {
+    "check": "launcher accepted FREEZE group shortcut"
+  },
+  {
+    "check": "launcher accepted THAW group shortcut"
+  },
+  {
+    "check": "real home screen group shortcut opens group"
+  },
+  {
+    "check": "group removal keeps its apps and refreshes pinned shortcuts"
+  }
+]

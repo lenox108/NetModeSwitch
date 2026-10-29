@@ -1,0 +1,2 @@
+ca2cb4a1304c837d7ec4875fe5662b2179b7a084e44c66bd935a0d1138bd58e3  store/NetModeSwitch-3.30-dialog-buttons.apk
+3b21c281b031693f35d22c4f7a6415e39e959bd21b4c338a537e731818854413  store/NetModeSwitch-3.30-dialog-buttons-a10.apk

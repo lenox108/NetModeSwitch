@@ -1,0 +1,2 @@
+f041e4c287c218c00a65282e34cfcb619e50ecf4e0ec37256d0806ed140795e7  NetModeSwitch-3.4-freezer-groups.apk
+cb7cf6e5e6df609c9e0dcaf2124fdbbeefb90cd20ba9918d46e20c9a1152f555  NetModeSwitch-3.4-freezer-groups-a10.apk

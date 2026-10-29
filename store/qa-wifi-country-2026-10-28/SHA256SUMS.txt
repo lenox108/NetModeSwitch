@@ -1,0 +1,2 @@
+0d4fa5831a5c1269e5127bf7e749d18aa461f39e3c807b5332be77c45cb8db0d  store/NetModeSwitch-3.30-wifi-region.apk
+8021ec6ac8e93c73c6a719ad81a17e59b22ea5b24fbfc1e5a48fc9eed0073a9e  store/NetModeSwitch-3.30-wifi-region-a10.apk

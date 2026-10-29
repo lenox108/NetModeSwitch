@@ -1,0 +1,18 @@
+{
+  "modern": {
+    "apk": "/Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/store/NetModeSwitch-3.4-freezer-indicator.apk",
+    "sha256": "242b6730f5fadd210090e21132907419a9aec4db0b986d4fb964d19d8314cc71",
+    "certificate_sha256": "40ed2e2df70aec2d7072ff3d3437364de80928691b6d632a95f008c9b98308f2",
+    "versionName": "3.4",
+    "versionCode": 86,
+    "minSdk": 34
+  },
+  "a10": {
+    "apk": "/Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/store/NetModeSwitch-3.4-freezer-indicator-a10.apk",
+    "sha256": "29e3b5fccaa31c3dadfc705a9f4edd660074ac290af5288348f83f888c210fe1",
+    "certificate_sha256": "40ed2e2df70aec2d7072ff3d3437364de80928691b6d632a95f008c9b98308f2",
+    "versionName": "3.4-a10",
+    "versionCode": 86,
+    "minSdk": 29
+  }
+}

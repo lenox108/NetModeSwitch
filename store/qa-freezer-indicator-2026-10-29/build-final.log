@@ -1,0 +1,182 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.6.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preModernDebugBuild UP-TO-DATE
+> Task :app:compileModernDebugAidl UP-TO-DATE
+> Task :app:dataBindingMergeDependencyArtifactsModernDebug UP-TO-DATE
+> Task :app:generateModernDebugResources
+> Task :app:packageModernDebugResources
+> Task :app:mergeModernDebugResources
+> Task :app:processModernDebugNavigationResources
+> Task :app:generateModernDebugBuildConfig UP-TO-DATE
+> Task :app:javaPreCompileModernDebug UP-TO-DATE
+> Task :app:checkModernDebugAarMetadata UP-TO-DATE
+> Task :app:mapModernDebugSourceSetPaths
+> Task :app:compileModernDebugNavigationResources UP-TO-DATE
+> Task :app:createModernDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksModernDebug UP-TO-DATE
+> Task :app:parseModernDebugLocalResources
+> Task :app:processModernDebugMainManifest UP-TO-DATE
+> Task :app:dataBindingGenBaseClassesModernDebug
+> Task :app:generateModernDebugRFile UP-TO-DATE
+> Task :app:compileModernDebugKotlin UP-TO-DATE
+> Task :app:compileModernDebugJavaWithJavac UP-TO-DATE
+> Task :app:processModernDebugManifest UP-TO-DATE
+> Task :app:processModernDebugManifestForPackage UP-TO-DATE
+> Task :app:preModernDebugUnitTestBuild UP-TO-DATE
+> Task :app:javaPreCompileModernDebugUnitTest UP-TO-DATE
+> Task :app:processModernDebugJavaRes UP-TO-DATE
+> Task :app:preA10DebugBuild UP-TO-DATE
+> Task :app:compileA10DebugAidl UP-TO-DATE
+> Task :app:dataBindingMergeDependencyArtifactsA10Debug UP-TO-DATE
+> Task :app:generateA10DebugResources FROM-CACHE
+> Task :app:processModernDebugResources
+> Task :app:bundleModernDebugClassesToRuntimeJar UP-TO-DATE
+> Task :app:mergeA10DebugResources
+> Task :app:bundleModernDebugClassesToCompileJar UP-TO-DATE
+> Task :app:compileModernDebugUnitTestKotlin UP-TO-DATE
+> Task :app:compileModernDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processModernDebugUnitTestJavaRes UP-TO-DATE
+> Task :app:testModernDebugUnitTest UP-TO-DATE
+> Task :app:packageA10DebugResources
+> Task :app:processA10DebugNavigationResources FROM-CACHE
+> Task :app:parseA10DebugLocalResources FROM-CACHE
+> Task :app:dataBindingGenBaseClassesA10Debug FROM-CACHE
+> Task :app:generateA10DebugBuildConfig UP-TO-DATE
+> Task :app:generateA10DebugRFile UP-TO-DATE
+> Task :app:compileA10DebugKotlin UP-TO-DATE
+> Task :app:javaPreCompileA10Debug UP-TO-DATE
+> Task :app:compileA10DebugJavaWithJavac UP-TO-DATE
+> Task :app:checkA10DebugAarMetadata UP-TO-DATE
+> Task :app:mapA10DebugSourceSetPaths
+> Task :app:compileA10DebugNavigationResources UP-TO-DATE
+> Task :app:createA10DebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksA10Debug UP-TO-DATE
+> Task :app:processA10DebugMainManifest UP-TO-DATE
+> Task :app:processA10DebugManifest UP-TO-DATE
+> Task :app:processA10DebugManifestForPackage UP-TO-DATE
+> Task :app:preA10DebugUnitTestBuild UP-TO-DATE
+> Task :app:javaPreCompileA10DebugUnitTest UP-TO-DATE
+> Task :app:processA10DebugJavaRes UP-TO-DATE
+> Task :app:preModernReleaseBuild UP-TO-DATE
+> Task :app:mergeModernReleaseJniLibFolders UP-TO-DATE
+> Task :app:mergeModernReleaseNativeLibs UP-TO-DATE
+> Task :app:stripModernReleaseDebugSymbols UP-TO-DATE
+> Task :app:extractModernReleaseNativeSymbolTables UP-TO-DATE
+> Task :app:mergeModernReleaseNativeDebugMetadata NO-SOURCE
+> Task :app:checkModernReleaseDuplicateClasses UP-TO-DATE
+> Task :app:compileModernReleaseAidl UP-TO-DATE
+> Task :app:dataBindingMergeDependencyArtifactsModernRelease UP-TO-DATE
+> Task :app:generateModernReleaseResources FROM-CACHE
+> Task :app:processA10DebugResources
+> Task :app:bundleA10DebugClassesToRuntimeJar UP-TO-DATE
+> Task :app:bundleA10DebugClassesToCompileJar UP-TO-DATE
+> Task :app:compileA10DebugUnitTestKotlin UP-TO-DATE
+> Task :app:compileA10DebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processA10DebugUnitTestJavaRes UP-TO-DATE
+> Task :app:testA10DebugUnitTest UP-TO-DATE
+> Task :app:packageModernReleaseResources
+> Task :app:processModernReleaseNavigationResources FROM-CACHE
+> Task :app:parseModernReleaseLocalResources FROM-CACHE
+> Task :app:generateModernReleaseBuildConfig UP-TO-DATE
+> Task :app:generateModernReleaseRFile UP-TO-DATE
+> Task :app:mergeModernReleaseResources
+> Task :app:javaPreCompileModernRelease UP-TO-DATE
+> Task :app:dataBindingGenBaseClassesModernRelease FROM-CACHE
+> Task :app:compileModernReleaseKotlin UP-TO-DATE
+> Task :app:compileModernReleaseJavaWithJavac UP-TO-DATE
+> Task :app:mergeModernReleaseArtProfile UP-TO-DATE
+> Task :app:checkModernReleaseAarMetadata UP-TO-DATE
+> Task :app:mapModernReleaseSourceSetPaths
+> Task :app:compileModernReleaseNavigationResources UP-TO-DATE
+> Task :app:createModernReleaseCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksModernRelease UP-TO-DATE
+> Task :app:processModernReleaseMainManifest UP-TO-DATE
+> Task :app:processModernReleaseManifest UP-TO-DATE
+> Task :app:processModernReleaseManifestForPackage UP-TO-DATE
+> Task :app:extractProguardFiles UP-TO-DATE
+> Task :app:processModernReleaseJavaRes UP-TO-DATE
+> Task :app:mergeModernReleaseJavaResource UP-TO-DATE
+> Task :app:mergeModernReleaseStartupProfile UP-TO-DATE
+> Task :app:generateModernReleaseAssets UP-TO-DATE
+> Task :app:mergeModernReleaseAssets UP-TO-DATE
+> Task :app:compressModernReleaseAssets UP-TO-DATE
+> Task :app:extractModernReleaseVersionControlInfo UP-TO-DATE
+> Task :app:processModernReleaseResources
+> Task :app:generateModernReleaseLintVitalReportModel
+> Task :app:expandModernReleaseArtProfileWildcards UP-TO-DATE
+> Task :app:mergeModernReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :app:minifyModernReleaseWithR8
+> Task :app:lintVitalAnalyzeModernRelease
+> Task :app:compileModernReleaseArtProfile UP-TO-DATE
+> Task :app:convertShrunkResourcesToBinaryModernRelease
+> Task :app:optimizeModernReleaseResources
+> Task :app:collectModernReleaseDependencies UP-TO-DATE
+> Task :app:sdkModernReleaseDependencyData UP-TO-DATE
+> Task :app:validateSigningModernRelease UP-TO-DATE
+> Task :app:writeModernReleaseAppMetadata UP-TO-DATE
+> Task :app:writeModernReleaseSigningConfigVersions UP-TO-DATE
+> Task :app:preA10ReleaseBuild UP-TO-DATE
+> Task :app:mergeA10ReleaseJniLibFolders UP-TO-DATE
+> Task :app:mergeA10ReleaseNativeLibs UP-TO-DATE
+> Task :app:stripA10ReleaseDebugSymbols UP-TO-DATE
+> Task :app:extractA10ReleaseNativeSymbolTables UP-TO-DATE
+> Task :app:mergeA10ReleaseNativeDebugMetadata NO-SOURCE
+> Task :app:checkA10ReleaseDuplicateClasses UP-TO-DATE
+> Task :app:compileA10ReleaseAidl UP-TO-DATE
+> Task :app:dataBindingMergeDependencyArtifactsA10Release UP-TO-DATE
+> Task :app:generateA10ReleaseResources FROM-CACHE
+> Task :app:mergeA10ReleaseResources
+> Task :app:packageA10ReleaseResources
+> Task :app:processA10ReleaseNavigationResources FROM-CACHE
+> Task :app:parseA10ReleaseLocalResources FROM-CACHE
+> Task :app:dataBindingGenBaseClassesA10Release FROM-CACHE
+> Task :app:generateA10ReleaseBuildConfig UP-TO-DATE
+> Task :app:generateA10ReleaseRFile UP-TO-DATE
+> Task :app:compileA10ReleaseKotlin UP-TO-DATE
+> Task :app:javaPreCompileA10Release UP-TO-DATE
+> Task :app:compileA10ReleaseJavaWithJavac UP-TO-DATE
+> Task :app:mergeA10ReleaseArtProfile UP-TO-DATE
+> Task :app:checkA10ReleaseAarMetadata UP-TO-DATE
+> Task :app:mapA10ReleaseSourceSetPaths
+> Task :app:compileA10ReleaseNavigationResources UP-TO-DATE
+> Task :app:createA10ReleaseCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksA10Release UP-TO-DATE
+> Task :app:processA10ReleaseMainManifest UP-TO-DATE
+> Task :app:processA10ReleaseManifest UP-TO-DATE
+> Task :app:processA10ReleaseManifestForPackage UP-TO-DATE
+> Task :app:processA10ReleaseResources
+> Task :app:expandA10ReleaseArtProfileWildcards UP-TO-DATE
+> Task :app:mergeA10ReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :app:processA10ReleaseJavaRes UP-TO-DATE
+> Task :app:mergeA10ReleaseJavaResource UP-TO-DATE
+> Task :app:mergeA10ReleaseStartupProfile UP-TO-DATE
+> Task :app:minifyA10ReleaseWithR8
+> Task :app:compileA10ReleaseArtProfile
+> Task :app:generateA10ReleaseAssets UP-TO-DATE
+> Task :app:mergeA10ReleaseAssets
+> Task :app:compressA10ReleaseAssets FROM-CACHE
+> Task :app:extractA10ReleaseVersionControlInfo
+> Task :app:generateA10ReleaseLintVitalReportModel
+> Task :app:lintVitalAnalyzeA10Release
+> Task :app:lintVitalReportModernRelease
+> Task :app:lintVitalModernRelease
+> Task :app:packageModernRelease
+> Task :app:createModernReleaseApkListingFileRedirect
+> Task :app:assembleModernRelease
+> Task :app:convertShrunkResourcesToBinaryA10Release
+> Task :app:optimizeA10ReleaseResources
+> Task :app:collectA10ReleaseDependencies
+> Task :app:sdkA10ReleaseDependencyData
+> Task :app:validateSigningA10Release
+> Task :app:writeA10ReleaseAppMetadata
+> Task :app:writeA10ReleaseSigningConfigVersions
+> Task :app:lintVitalReportA10Release
+> Task :app:lintVitalA10Release
+> Task :app:packageA10Release
+> Task :app:createA10ReleaseApkListingFileRedirect
+> Task :app:assembleA10Release
+
+BUILD SUCCESSFUL in 11m 54s
+161 actionable tasks: 46 executed, 13 from cache, 102 up-to-date
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.1/userguide/configuration_cache_enabling.html

@@ -1,0 +1,129 @@
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preModernDebugBuild UP-TO-DATE
+> Task :app:mergeModernDebugNativeDebugMetadata NO-SOURCE
+> Task :app:compileModernDebugAidl UP-TO-DATE
+> Task :app:dataBindingMergeDependencyArtifactsModernDebug UP-TO-DATE
+> Task :app:generateModernDebugResources UP-TO-DATE
+> Task :app:mergeModernDebugResources UP-TO-DATE
+> Task :app:packageModernDebugResources UP-TO-DATE
+> Task :app:processModernDebugNavigationResources UP-TO-DATE
+> Task :app:parseModernDebugLocalResources UP-TO-DATE
+> Task :app:dataBindingGenBaseClassesModernDebug UP-TO-DATE
+> Task :app:generateModernDebugBuildConfig UP-TO-DATE
+> Task :app:generateModernDebugRFile UP-TO-DATE
+> Task :app:compileModernDebugKotlin
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/debug/java/com/netmode/switcher/DialogActionsLab.kt:76:124 'static field SHOW_IMPLICIT: Int' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/Calibration.kt:194:12 'val allNetworks: Array<(out) Network!>' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/ChannelCli.kt:71:37 Type argument for reified type parameter 'T' was inferred to the intersection of ['Comparable<Nothing>?' & 'Serializable?']. Reification of an intersection type results in the common supertype being used. This may lead to subtle issues and an explicit type argument is encouraged. This will become an error in a future release.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/HotspotReadCli.kt:17:56 'static fun prepareMainLooper(): Unit' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/ModeWidget.kt:365:46 'fun notifyAppWidgetViewDataChanged(p0: Int, p1: Int): Unit' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/PermissionsActivity.kt:155:73 'fun unsafeCheckOpNoThrow(p0: String, p1: Int, p2: String): Int' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/VpnCli.kt:51:19 Type argument for reified type parameter 'T' was inferred to the intersection of ['Comparable<Nothing>?' & 'Serializable?']. Reification of an intersection type results in the common supertype being used. This may lead to subtle issues and an explicit type argument is encouraged. This will become an error in a future release.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/WifiWake.kt:210:12 'val allNetworks: Array<(out) Network!>' is deprecated. Deprecated in Java.
+
+> Task :app:javaPreCompileModernDebug UP-TO-DATE
+> Task :app:compileModernDebugJavaWithJavac
+> Task :app:generateModernDebugAssets UP-TO-DATE
+> Task :app:mergeModernDebugAssets UP-TO-DATE
+> Task :app:compressModernDebugAssets UP-TO-DATE
+> Task :app:generateModernDebugGlobalSynthetics UP-TO-DATE
+> Task :app:checkModernDebugDuplicateClasses UP-TO-DATE
+> Task :app:desugarModernDebugFileDependencies UP-TO-DATE
+> Task :app:mergeExtDexModernDebug UP-TO-DATE
+> Task :app:mergeLibDexModernDebug UP-TO-DATE
+> Task :app:processModernDebugJavaRes UP-TO-DATE
+> Task :app:mergeModernDebugJavaResource UP-TO-DATE
+> Task :app:checkModernDebugAarMetadata UP-TO-DATE
+> Task :app:mapModernDebugSourceSetPaths UP-TO-DATE
+> Task :app:compileModernDebugNavigationResources UP-TO-DATE
+> Task :app:createModernDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksModernDebug UP-TO-DATE
+> Task :app:processModernDebugMainManifest UP-TO-DATE
+> Task :app:processModernDebugManifest UP-TO-DATE
+> Task :app:processModernDebugManifestForPackage UP-TO-DATE
+> Task :app:processModernDebugResources UP-TO-DATE
+> Task :app:dexBuilderModernDebug
+> Task :app:mergeProjectDexModernDebug
+> Task :app:mergeModernDebugJniLibFolders UP-TO-DATE
+> Task :app:mergeModernDebugNativeLibs UP-TO-DATE
+> Task :app:stripModernDebugDebugSymbols UP-TO-DATE
+> Task :app:validateSigningModernDebug UP-TO-DATE
+> Task :app:writeModernDebugAppMetadata UP-TO-DATE
+> Task :app:writeModernDebugSigningConfigVersions UP-TO-DATE
+> Task :app:packageModernDebug
+> Task :app:createModernDebugApkListingFileRedirect UP-TO-DATE
+> Task :app:assembleModernDebug
+> Task :app:preA10DebugBuild UP-TO-DATE
+> Task :app:mergeA10DebugNativeDebugMetadata NO-SOURCE
+> Task :app:compileA10DebugAidl UP-TO-DATE
+> Task :app:dataBindingMergeDependencyArtifactsA10Debug UP-TO-DATE
+> Task :app:generateA10DebugResources UP-TO-DATE
+> Task :app:mergeA10DebugResources UP-TO-DATE
+> Task :app:packageA10DebugResources UP-TO-DATE
+> Task :app:processA10DebugNavigationResources UP-TO-DATE
+> Task :app:parseA10DebugLocalResources UP-TO-DATE
+> Task :app:dataBindingGenBaseClassesA10Debug UP-TO-DATE
+> Task :app:generateA10DebugBuildConfig UP-TO-DATE
+> Task :app:generateA10DebugRFile UP-TO-DATE
+> Task :app:compileA10DebugKotlin
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/debug/java/com/netmode/switcher/DialogActionsLab.kt:76:124 'static field SHOW_IMPLICIT: Int' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/Calibration.kt:194:12 'val allNetworks: Array<(out) Network!>' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/ChannelCli.kt:71:37 Type argument for reified type parameter 'T' was inferred to the intersection of ['Comparable<Nothing>?' & 'Serializable?']. Reification of an intersection type results in the common supertype being used. This may lead to subtle issues and an explicit type argument is encouraged. This will become an error in a future release.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/HotspotReadCli.kt:17:56 'static fun prepareMainLooper(): Unit' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/ModeWidget.kt:365:46 'fun notifyAppWidgetViewDataChanged(p0: Int, p1: Int): Unit' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/PermissionsActivity.kt:155:73 'fun unsafeCheckOpNoThrow(p0: String, p1: Int, p2: String): Int' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/VpnCli.kt:51:19 Type argument for reified type parameter 'T' was inferred to the intersection of ['Comparable<Nothing>?' & 'Serializable?']. Reification of an intersection type results in the common supertype being used. This may lead to subtle issues and an explicit type argument is encouraged. This will become an error in a future release.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/WifiWake.kt:210:12 'val allNetworks: Array<(out) Network!>' is deprecated. Deprecated in Java.
+
+> Task :app:javaPreCompileA10Debug UP-TO-DATE
+> Task :app:compileA10DebugJavaWithJavac
+> Task :app:generateA10DebugAssets UP-TO-DATE
+> Task :app:mergeA10DebugAssets UP-TO-DATE
+> Task :app:compressA10DebugAssets UP-TO-DATE
+> Task :app:generateA10DebugGlobalSynthetics UP-TO-DATE
+> Task :app:processA10DebugJavaRes UP-TO-DATE
+> Task :app:mergeA10DebugJavaResource UP-TO-DATE
+> Task :app:checkA10DebugDuplicateClasses UP-TO-DATE
+> Task :app:desugarA10DebugFileDependencies UP-TO-DATE
+> Task :app:mergeExtDexA10Debug UP-TO-DATE
+> Task :app:mergeLibDexA10Debug UP-TO-DATE
+> Task :app:checkA10DebugAarMetadata UP-TO-DATE
+> Task :app:mapA10DebugSourceSetPaths UP-TO-DATE
+> Task :app:compileA10DebugNavigationResources UP-TO-DATE
+> Task :app:createA10DebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksA10Debug UP-TO-DATE
+> Task :app:processA10DebugMainManifest UP-TO-DATE
+> Task :app:processA10DebugManifest UP-TO-DATE
+> Task :app:processA10DebugManifestForPackage UP-TO-DATE
+> Task :app:processA10DebugResources UP-TO-DATE
+> Task :app:dexBuilderA10Debug
+> Task :app:mergeProjectDexA10Debug
+> Task :app:mergeA10DebugJniLibFolders UP-TO-DATE
+> Task :app:mergeA10DebugNativeLibs UP-TO-DATE
+> Task :app:stripA10DebugDebugSymbols UP-TO-DATE
+> Task :app:validateSigningA10Debug UP-TO-DATE
+> Task :app:writeA10DebugAppMetadata UP-TO-DATE
+> Task :app:writeA10DebugSigningConfigVersions UP-TO-DATE
+> Task :app:packageA10Debug
+> Task :app:createA10DebugApkListingFileRedirect UP-TO-DATE
+> Task :app:assembleA10Debug
+> Task :app:bundleModernDebugClassesToRuntimeJar
+> Task :app:bundleModernDebugClassesToCompileJar
+> Task :app:preModernDebugUnitTestBuild UP-TO-DATE
+> Task :app:compileModernDebugUnitTestKotlin
+> Task :app:javaPreCompileModernDebugUnitTest UP-TO-DATE
+> Task :app:compileModernDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processModernDebugUnitTestJavaRes UP-TO-DATE
+> Task :app:testModernDebugUnitTest
+> Task :app:bundleA10DebugClassesToRuntimeJar
+> Task :app:bundleA10DebugClassesToCompileJar
+> Task :app:preA10DebugUnitTestBuild UP-TO-DATE
+> Task :app:compileA10DebugUnitTestKotlin
+> Task :app:javaPreCompileA10DebugUnitTest UP-TO-DATE
+> Task :app:compileA10DebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processA10DebugUnitTestJavaRes UP-TO-DATE
+> Task :app:testA10DebugUnitTest
+
+BUILD SUCCESSFUL in 2m 2s
+94 actionable tasks: 18 executed, 76 up-to-date
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.1/userguide/configuration_cache_enabling.html

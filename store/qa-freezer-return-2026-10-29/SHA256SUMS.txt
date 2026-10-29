@@ -1,0 +1,2 @@
+e17b28a179077204bc65267216dc53b669d24c4ee2b299e82062f162a3f4b6ce  NetModeSwitch-3.4-freezer-return.apk
+056624334d82b5cb44d3e4b67389338ad41f6d355e5e855b24d7688a741918cd  NetModeSwitch-3.4-freezer-return-a10.apk

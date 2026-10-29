@@ -1,0 +1,20 @@
+{
+  "Modern": {
+    "tests": 137,
+    "failures": 0,
+    "errors": 0
+  },
+  "A10": {
+    "tests": 137,
+    "failures": 0,
+    "errors": 0
+  },
+  "NetModeSwitch-3.30-rule-tiles-bands.apk": {
+    "sha256": "121943604122a5067f263e1fcc15a21b97288a5cc5039f4cc48720a6631e1b12",
+    "bytes": 3118750
+  },
+  "NetModeSwitch-3.30-rule-tiles-bands-a10.apk": {
+    "sha256": "26cd6da48c58f52036b9de9b3b2f27e00cef8d02fa6bfc84355b48da976a0d68",
+    "bytes": 3223572
+  }
+}

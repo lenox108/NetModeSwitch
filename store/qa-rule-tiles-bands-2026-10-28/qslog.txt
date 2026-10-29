@@ -1,0 +1,12 @@
+    10-28 18:43:58.183 D QSLog: [custom(com.netmode.switcher/.RuleBandQaTile)][0] Tile clicked. StatusBarState=KEYGUARD. TileState=inactive
+    10-28 18:44:00.359 D QSLog: [custom(com.netmode.switcher/.RuleBandQaTile)][1] Tile clicked. StatusBarState=KEYGUARD. TileState=active
+    10-28 18:46:22.695 D QSLog: [custom(com.netmode.switcher/.RuleBandQaTile)][2] Tile clicked. StatusBarState=SHADE. TileState=inactive
+    10-28 18:47:03.452 D QSLog: [custom(com.netmode.switcher/.RuleBandQaTile)][3] Tile clicked. StatusBarState=SHADE. TileState=active
+    10-28 18:47:43.320 D QSLog: [custom(com.netmode.switcher/.RuleBandQaTile)][4] Tile clicked. StatusBarState=SHADE. TileState=inactive
+    10-28 18:48:08.106 D QSLog: [custom(com.netmode.switcher/.RuleBandQaTile)][5] Tile clicked. StatusBarState=SHADE. TileState=active
+    10-28 18:49:49.072 D QSLog: [custom(com.netmode.switcher/.RuleBandQaTile)][6] Tile clicked. StatusBarState=SHADE. TileState=inactive
+    10-28 18:50:39.153 D QSLog: [custom(com.netmode.switcher/.RuleBandQaTile)][7] Tile clicked. StatusBarState=SHADE. TileState=active
+    10-28 18:58:31.742 D QSLog: [custom(com.netmode.switcher/.RuleBandQaTile)][8] Tile clicked. StatusBarState=SHADE. TileState=inactive
+    10-28 18:58:36.628 D QSLog: [custom(com.netmode.switcher/.RuleBandQaTile)][9] Tile clicked. StatusBarState=SHADE. TileState=active
+    10-28 19:00:22.356 D QSLog: [custom(com.netmode.switcher/.RuleBandQaTile)][10] Tile clicked. StatusBarState=SHADE. TileState=inactive
+    10-28 19:00:27.207 D QSLog: [custom(com.netmode.switcher/.RuleBandQaTile)][11] Tile clicked. StatusBarState=SHADE. TileState=active

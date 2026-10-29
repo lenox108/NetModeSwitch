@@ -1,0 +1,2050 @@
+{
+  "name": "modern-large-light",
+  "size": "1080x2160",
+  "density": 480,
+  "font_scale": "1.5",
+  "theme": "no",
+  "cases": [
+    {
+      "case": 0,
+      "body": 0,
+      "buttons": [
+        {
+          "text": "Отмена",
+          "x": 657,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 0,
+      "body": 1,
+      "buttons": [
+        {
+          "text": "Отмена",
+          "x": 657,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 0,
+      "body": 2,
+      "buttons": [
+        {
+          "text": "Отмена",
+          "x": 657,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 1,
+      "body": 0,
+      "buttons": [
+        {
+          "text": "Изменить порядок…",
+          "x": 135,
+          "y": 1599,
+          "width": 522,
+          "height": 213,
+          "lines": 2
+        },
+        {
+          "text": "Отмена",
+          "x": 657,
+          "y": 1633,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 1,
+      "body": 1,
+      "buttons": [
+        {
+          "text": "Изменить порядок…",
+          "x": 135,
+          "y": 1599,
+          "width": 522,
+          "height": 213,
+          "lines": 2
+        },
+        {
+          "text": "Отмена",
+          "x": 657,
+          "y": 1633,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 1,
+      "body": 2,
+      "buttons": [
+        {
+          "text": "Изменить порядок…",
+          "x": 135,
+          "y": 1599,
+          "width": 522,
+          "height": 213,
+          "lines": 2
+        },
+        {
+          "text": "Отмена",
+          "x": 657,
+          "y": 1633,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 2,
+      "body": 0,
+      "buttons": [
+        {
+          "text": "Сохранить файл",
+          "x": 612,
+          "y": 1599,
+          "width": 333,
+          "height": 213,
+          "lines": 2
+        },
+        {
+          "text": "Поделиться",
+          "x": 135,
+          "y": 1599,
+          "width": 333,
+          "height": 213,
+          "lines": 2
+        },
+        {
+          "text": "ОК",
+          "x": 468,
+          "y": 1633,
+          "width": 144,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 2,
+      "body": 1,
+      "buttons": [
+        {
+          "text": "Сохранить файл",
+          "x": 612,
+          "y": 1599,
+          "width": 333,
+          "height": 213,
+          "lines": 2
+        },
+        {
+          "text": "Поделиться",
+          "x": 135,
+          "y": 1599,
+          "width": 333,
+          "height": 213,
+          "lines": 2
+        },
+        {
+          "text": "ОК",
+          "x": 468,
+          "y": 1633,
+          "width": 144,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 2,
+      "body": 2,
+      "buttons": [
+        {
+          "text": "Сохранить файл",
+          "x": 612,
+          "y": 1599,
+          "width": 333,
+          "height": 213,
+          "lines": 2
+        },
+        {
+          "text": "Поделиться",
+          "x": 135,
+          "y": 1599,
+          "width": 333,
+          "height": 213,
+          "lines": 2
+        },
+        {
+          "text": "ОК",
+          "x": 468,
+          "y": 1633,
+          "width": 144,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 3,
+      "body": 0,
+      "buttons": [
+        {
+          "text": "Загрузить",
+          "x": 579,
+          "y": 1668,
+          "width": 366,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 291,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 3,
+      "body": 1,
+      "buttons": [
+        {
+          "text": "Загрузить",
+          "x": 579,
+          "y": 1668,
+          "width": 366,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 291,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 3,
+      "body": 2,
+      "buttons": [
+        {
+          "text": "Загрузить",
+          "x": 579,
+          "y": 1668,
+          "width": 366,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 291,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 4,
+      "body": 0,
+      "buttons": [
+        {
+          "text": "Проверить",
+          "x": 556,
+          "y": 1668,
+          "width": 389,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 268,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 4,
+      "body": 1,
+      "buttons": [
+        {
+          "text": "Проверить",
+          "x": 556,
+          "y": 1668,
+          "width": 389,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 268,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 4,
+      "body": 2,
+      "buttons": [
+        {
+          "text": "Проверить",
+          "x": 556,
+          "y": 1668,
+          "width": 389,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 268,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 5,
+      "body": 0,
+      "buttons": [
+        {
+          "text": "Проверить",
+          "x": 556,
+          "y": 1668,
+          "width": 389,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Позже",
+          "x": 299,
+          "y": 1668,
+          "width": 257,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 5,
+      "body": 1,
+      "buttons": [
+        {
+          "text": "Проверить",
+          "x": 556,
+          "y": 1668,
+          "width": 389,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Позже",
+          "x": 299,
+          "y": 1668,
+          "width": 257,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 5,
+      "body": 2,
+      "buttons": [
+        {
+          "text": "Проверить",
+          "x": 556,
+          "y": 1668,
+          "width": 389,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Позже",
+          "x": 299,
+          "y": 1668,
+          "width": 257,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 6,
+      "body": 0,
+      "buttons": [
+        {
+          "text": "Удалить",
+          "x": 632,
+          "y": 1668,
+          "width": 313,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 344,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 6,
+      "body": 1,
+      "buttons": [
+        {
+          "text": "Удалить",
+          "x": 632,
+          "y": 1668,
+          "width": 313,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 344,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 6,
+      "body": 2,
+      "buttons": [
+        {
+          "text": "Удалить",
+          "x": 632,
+          "y": 1668,
+          "width": 313,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 344,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 7,
+      "body": 0,
+      "buttons": [
+        {
+          "text": "Готово",
+          "x": 684,
+          "y": 1668,
+          "width": 261,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 396,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 7,
+      "body": 1,
+      "buttons": [
+        {
+          "text": "Готово",
+          "x": 684,
+          "y": 1668,
+          "width": 261,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 396,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 7,
+      "body": 2,
+      "buttons": [
+        {
+          "text": "Готово",
+          "x": 684,
+          "y": 1668,
+          "width": 261,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 396,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 8,
+      "body": 0,
+      "buttons": [
+        {
+          "text": "Отключить",
+          "x": 544,
+          "y": 1668,
+          "width": 401,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 256,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 8,
+      "body": 1,
+      "buttons": [
+        {
+          "text": "Отключить",
+          "x": 544,
+          "y": 1668,
+          "width": 401,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 256,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 8,
+      "body": 2,
+      "buttons": [
+        {
+          "text": "Отключить",
+          "x": 544,
+          "y": 1668,
+          "width": 401,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 256,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 9,
+      "body": 0,
+      "buttons": [
+        {
+          "text": "Удалить правило",
+          "x": 423,
+          "y": 1599,
+          "width": 522,
+          "height": 213,
+          "lines": 2
+        },
+        {
+          "text": "Отмена",
+          "x": 135,
+          "y": 1633,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 9,
+      "body": 1,
+      "buttons": [
+        {
+          "text": "Удалить правило",
+          "x": 423,
+          "y": 1599,
+          "width": 522,
+          "height": 213,
+          "lines": 2
+        },
+        {
+          "text": "Отмена",
+          "x": 135,
+          "y": 1633,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 9,
+      "body": 2,
+      "buttons": [
+        {
+          "text": "Удалить правило",
+          "x": 423,
+          "y": 1599,
+          "width": 522,
+          "height": 213,
+          "lines": 2
+        },
+        {
+          "text": "Отмена",
+          "x": 135,
+          "y": 1633,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 10,
+      "body": 0,
+      "buttons": [
+        {
+          "text": "Включить",
+          "x": 580,
+          "y": 1668,
+          "width": 365,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 292,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 10,
+      "body": 1,
+      "buttons": [
+        {
+          "text": "Включить",
+          "x": 580,
+          "y": 1668,
+          "width": 365,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 292,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 10,
+      "body": 2,
+      "buttons": [
+        {
+          "text": "Включить",
+          "x": 580,
+          "y": 1668,
+          "width": 365,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 292,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 11,
+      "body": 0,
+      "buttons": [
+        {
+          "text": "Открыть",
+          "x": 621,
+          "y": 1668,
+          "width": 324,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 333,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 11,
+      "body": 1,
+      "buttons": [
+        {
+          "text": "Открыть",
+          "x": 621,
+          "y": 1668,
+          "width": 324,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 333,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 11,
+      "body": 2,
+      "buttons": [
+        {
+          "text": "Открыть",
+          "x": 621,
+          "y": 1668,
+          "width": 324,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 333,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 12,
+      "body": 0,
+      "buttons": [
+        {
+          "text": "Убрать из морозилки",
+          "x": 423,
+          "y": 1599,
+          "width": 522,
+          "height": 213,
+          "lines": 2
+        },
+        {
+          "text": "Отмена",
+          "x": 135,
+          "y": 1633,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 12,
+      "body": 1,
+      "buttons": [
+        {
+          "text": "Убрать из морозилки",
+          "x": 423,
+          "y": 1599,
+          "width": 522,
+          "height": 213,
+          "lines": 2
+        },
+        {
+          "text": "Отмена",
+          "x": 135,
+          "y": 1633,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 12,
+      "body": 2,
+      "buttons": [
+        {
+          "text": "Убрать из морозилки",
+          "x": 423,
+          "y": 1599,
+          "width": 522,
+          "height": 213,
+          "lines": 2
+        },
+        {
+          "text": "Отмена",
+          "x": 135,
+          "y": 1633,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 13,
+      "body": 0,
+      "buttons": [
+        {
+          "text": "Готово",
+          "x": 684,
+          "y": 1668,
+          "width": 261,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 396,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 13,
+      "body": 1,
+      "buttons": [
+        {
+          "text": "Готово",
+          "x": 684,
+          "y": 1668,
+          "width": 261,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 396,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 13,
+      "body": 2,
+      "buttons": [
+        {
+          "text": "Готово",
+          "x": 684,
+          "y": 1668,
+          "width": 261,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 396,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 14,
+      "body": 0,
+      "buttons": [
+        {
+          "text": "Очистить",
+          "x": 600,
+          "y": 1668,
+          "width": 345,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 312,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 14,
+      "body": 1,
+      "buttons": [
+        {
+          "text": "Очистить",
+          "x": 600,
+          "y": 1668,
+          "width": 345,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 312,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 14,
+      "body": 2,
+      "buttons": [
+        {
+          "text": "Очистить",
+          "x": 600,
+          "y": 1668,
+          "width": 345,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 312,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 15,
+      "body": 0,
+      "buttons": [
+        {
+          "text": "Вернуть",
+          "x": 641,
+          "y": 1668,
+          "width": 304,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 353,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 15,
+      "body": 1,
+      "buttons": [
+        {
+          "text": "Вернуть",
+          "x": 641,
+          "y": 1668,
+          "width": 304,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 353,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 15,
+      "body": 2,
+      "buttons": [
+        {
+          "text": "Вернуть",
+          "x": 641,
+          "y": 1668,
+          "width": 304,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 353,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 16,
+      "body": 0,
+      "buttons": [
+        {
+          "text": "Сохранить",
+          "x": 562,
+          "y": 1668,
+          "width": 383,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 274,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 16,
+      "body": 1,
+      "buttons": [
+        {
+          "text": "Сохранить",
+          "x": 562,
+          "y": 1668,
+          "width": 383,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 274,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 16,
+      "body": 2,
+      "buttons": [
+        {
+          "text": "Сохранить",
+          "x": 562,
+          "y": 1668,
+          "width": 383,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 274,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 17,
+      "body": 0,
+      "buttons": [
+        {
+          "text": "Сохранить",
+          "x": 675,
+          "y": 1599,
+          "width": 270,
+          "height": 213,
+          "lines": 2
+        },
+        {
+          "text": "Отмена",
+          "x": 405,
+          "y": 1599,
+          "width": 270,
+          "height": 213,
+          "lines": 2
+        },
+        {
+          "text": "Удалить",
+          "x": 135,
+          "y": 1599,
+          "width": 270,
+          "height": 213,
+          "lines": 2
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 17,
+      "body": 1,
+      "buttons": [
+        {
+          "text": "Сохранить",
+          "x": 675,
+          "y": 1599,
+          "width": 270,
+          "height": 213,
+          "lines": 2
+        },
+        {
+          "text": "Отмена",
+          "x": 405,
+          "y": 1599,
+          "width": 270,
+          "height": 213,
+          "lines": 2
+        },
+        {
+          "text": "Удалить",
+          "x": 135,
+          "y": 1599,
+          "width": 270,
+          "height": 213,
+          "lines": 2
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 17,
+      "body": 2,
+      "buttons": [
+        {
+          "text": "Сохранить",
+          "x": 675,
+          "y": 1599,
+          "width": 270,
+          "height": 213,
+          "lines": 2
+        },
+        {
+          "text": "Отмена",
+          "x": 405,
+          "y": 1599,
+          "width": 270,
+          "height": 213,
+          "lines": 2
+        },
+        {
+          "text": "Удалить",
+          "x": 135,
+          "y": 1599,
+          "width": 270,
+          "height": 213,
+          "lines": 2
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 18,
+      "body": 0,
+      "buttons": [
+        {
+          "text": "Готово",
+          "x": 684,
+          "y": 1668,
+          "width": 261,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 396,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 18,
+      "body": 1,
+      "buttons": [
+        {
+          "text": "Готово",
+          "x": 684,
+          "y": 1668,
+          "width": 261,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 396,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 18,
+      "body": 2,
+      "buttons": [
+        {
+          "text": "Готово",
+          "x": 684,
+          "y": 1668,
+          "width": 261,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 396,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 19,
+      "body": 0,
+      "buttons": [
+        {
+          "text": "Готово",
+          "x": 684,
+          "y": 1668,
+          "width": 261,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Сбросить",
+          "x": 338,
+          "y": 1668,
+          "width": 346,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 19,
+      "body": 1,
+      "buttons": [
+        {
+          "text": "Готово",
+          "x": 684,
+          "y": 1668,
+          "width": 261,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Сбросить",
+          "x": 338,
+          "y": 1668,
+          "width": 346,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 19,
+      "body": 2,
+      "buttons": [
+        {
+          "text": "Готово",
+          "x": 684,
+          "y": 1668,
+          "width": 261,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Сбросить",
+          "x": 338,
+          "y": 1668,
+          "width": 346,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 20,
+      "body": 0,
+      "buttons": [
+        {
+          "text": "Готово",
+          "x": 684,
+          "y": 1556,
+          "width": 261,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Ко всем виджетам",
+          "x": 135,
+          "y": 1445,
+          "width": 274,
+          "height": 367,
+          "lines": 4
+        },
+        {
+          "text": "Отмена",
+          "x": 409,
+          "y": 1522,
+          "width": 275,
+          "height": 213,
+          "lines": 2
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 20,
+      "body": 1,
+      "buttons": [
+        {
+          "text": "Готово",
+          "x": 684,
+          "y": 1556,
+          "width": 261,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Ко всем виджетам",
+          "x": 135,
+          "y": 1445,
+          "width": 274,
+          "height": 367,
+          "lines": 4
+        },
+        {
+          "text": "Отмена",
+          "x": 409,
+          "y": 1522,
+          "width": 275,
+          "height": 213,
+          "lines": 2
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 20,
+      "body": 2,
+      "buttons": [
+        {
+          "text": "Готово",
+          "x": 684,
+          "y": 1556,
+          "width": 261,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Ко всем виджетам",
+          "x": 135,
+          "y": 1445,
+          "width": 274,
+          "height": 367,
+          "lines": 4
+        },
+        {
+          "text": "Отмена",
+          "x": 409,
+          "y": 1522,
+          "width": 275,
+          "height": 213,
+          "lines": 2
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 21,
+      "body": 0,
+      "buttons": [
+        {
+          "text": "Забыть вышки",
+          "x": 423,
+          "y": 1599,
+          "width": 522,
+          "height": 213,
+          "lines": 2
+        },
+        {
+          "text": "Отмена",
+          "x": 135,
+          "y": 1633,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 21,
+      "body": 1,
+      "buttons": [
+        {
+          "text": "Забыть вышки",
+          "x": 423,
+          "y": 1599,
+          "width": 522,
+          "height": 213,
+          "lines": 2
+        },
+        {
+          "text": "Отмена",
+          "x": 135,
+          "y": 1633,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 21,
+      "body": 2,
+      "buttons": [
+        {
+          "text": "Забыть вышки",
+          "x": 423,
+          "y": 1599,
+          "width": 522,
+          "height": 213,
+          "lines": 2
+        },
+        {
+          "text": "Отмена",
+          "x": 135,
+          "y": 1633,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 22,
+      "body": 0,
+      "buttons": [
+        {
+          "text": "ОК",
+          "x": 801,
+          "y": 1668,
+          "width": 144,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 22,
+      "body": 1,
+      "buttons": [
+        {
+          "text": "ОК",
+          "x": 801,
+          "y": 1668,
+          "width": 144,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 22,
+      "body": 2,
+      "buttons": [
+        {
+          "text": "ОК",
+          "x": 801,
+          "y": 1668,
+          "width": 144,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 23,
+      "body": 0,
+      "buttons": [
+        {
+          "text": "ОК",
+          "x": 801,
+          "y": 1668,
+          "width": 144,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 513,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 23,
+      "body": 1,
+      "buttons": [
+        {
+          "text": "ОК",
+          "x": 801,
+          "y": 1668,
+          "width": 144,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 513,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 23,
+      "body": 2,
+      "buttons": [
+        {
+          "text": "ОК",
+          "x": 801,
+          "y": 1668,
+          "width": 144,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 513,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 24,
+      "body": 0,
+      "buttons": [
+        {
+          "text": "Копировать ссылку",
+          "x": 675,
+          "y": 1445,
+          "width": 270,
+          "height": 367,
+          "lines": 4
+        },
+        {
+          "text": "Сменить ключ",
+          "x": 135,
+          "y": 1483,
+          "width": 270,
+          "height": 290,
+          "lines": 3
+        },
+        {
+          "text": "Отмена",
+          "x": 405,
+          "y": 1522,
+          "width": 270,
+          "height": 213,
+          "lines": 2
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 24,
+      "body": 1,
+      "buttons": [
+        {
+          "text": "Копировать ссылку",
+          "x": 675,
+          "y": 1445,
+          "width": 270,
+          "height": 367,
+          "lines": 4
+        },
+        {
+          "text": "Сменить ключ",
+          "x": 135,
+          "y": 1483,
+          "width": 270,
+          "height": 290,
+          "lines": 3
+        },
+        {
+          "text": "Отмена",
+          "x": 405,
+          "y": 1522,
+          "width": 270,
+          "height": 213,
+          "lines": 2
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 24,
+      "body": 2,
+      "buttons": [
+        {
+          "text": "Копировать ссылку",
+          "x": 675,
+          "y": 1445,
+          "width": 270,
+          "height": 367,
+          "lines": 4
+        },
+        {
+          "text": "Сменить ключ",
+          "x": 135,
+          "y": 1483,
+          "width": 270,
+          "height": 290,
+          "lines": 3
+        },
+        {
+          "text": "Отмена",
+          "x": 405,
+          "y": 1522,
+          "width": 270,
+          "height": 213,
+          "lines": 2
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 25,
+      "body": 0,
+      "buttons": [
+        {
+          "text": "Открыть настройки",
+          "x": 392,
+          "y": 1599,
+          "width": 553,
+          "height": 213,
+          "lines": 2
+        },
+        {
+          "text": "Позже",
+          "x": 135,
+          "y": 1633,
+          "width": 257,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 25,
+      "body": 1,
+      "buttons": [
+        {
+          "text": "Открыть настройки",
+          "x": 392,
+          "y": 1599,
+          "width": 553,
+          "height": 213,
+          "lines": 2
+        },
+        {
+          "text": "Позже",
+          "x": 135,
+          "y": 1633,
+          "width": 257,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 25,
+      "body": 2,
+      "buttons": [
+        {
+          "text": "Открыть настройки",
+          "x": 392,
+          "y": 1599,
+          "width": 553,
+          "height": 213,
+          "lines": 2
+        },
+        {
+          "text": "Позже",
+          "x": 135,
+          "y": 1633,
+          "width": 257,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 26,
+      "body": 0,
+      "buttons": [
+        {
+          "text": "Сохранить",
+          "x": 562,
+          "y": 1668,
+          "width": 383,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 274,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 26,
+      "body": 1,
+      "buttons": [
+        {
+          "text": "Сохранить",
+          "x": 562,
+          "y": 1668,
+          "width": 383,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 274,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 26,
+      "body": 2,
+      "buttons": [
+        {
+          "text": "Сохранить",
+          "x": 562,
+          "y": 1668,
+          "width": 383,
+          "height": 144,
+          "lines": 1
+        },
+        {
+          "text": "Отмена",
+          "x": 274,
+          "y": 1668,
+          "width": 288,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 27,
+      "body": 0,
+      "buttons": [
+        {
+          "text": "Готово",
+          "x": 684,
+          "y": 1668,
+          "width": 261,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 27,
+      "body": 1,
+      "buttons": [
+        {
+          "text": "Готово",
+          "x": 684,
+          "y": 1668,
+          "width": 261,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    },
+    {
+      "case": 27,
+      "body": 2,
+      "buttons": [
+        {
+          "text": "Готово",
+          "x": 684,
+          "y": 1668,
+          "width": 261,
+          "height": 144,
+          "lines": 1
+        }
+      ],
+      "callback_ok": true,
+      "dismissed": true
+    }
+  ],
+  "failures": 0
+}

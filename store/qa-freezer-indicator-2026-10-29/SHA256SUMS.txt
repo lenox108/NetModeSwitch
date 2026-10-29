@@ -1,0 +1,2 @@
+242b6730f5fadd210090e21132907419a9aec4db0b986d4fb964d19d8314cc71  NetModeSwitch-3.4-freezer-indicator.apk
+29e3b5fccaa31c3dadfc705a9f4edd660074ac290af5288348f83f888c210fe1  NetModeSwitch-3.4-freezer-indicator-a10.apk

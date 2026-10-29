@@ -1,0 +1,36 @@
+{
+  "tests": {
+    "Modern": {
+      "tests": 158,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "A10": {
+      "tests": 158,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "certificateSHA256": "40ed2e2df70aec2d7072ff3d3437364de80928691b6d632a95f008c9b98308f2",
+  "sameCertificateAsPreviousApk": true,
+  "releaseScreensVerified": [
+    "Android 17",
+    "Android 10"
+  ],
+  "apks": [
+    {
+      "file": "store/NetModeSwitch-3.30-wifi-region.apk",
+      "versionName": "3.30",
+      "versionCode": 85,
+      "sha256": "0d4fa5831a5c1269e5127bf7e749d18aa461f39e3c807b5332be77c45cb8db0d"
+    },
+    {
+      "file": "store/NetModeSwitch-3.30-wifi-region-a10.apk",
+      "versionName": "3.30-a10",
+      "versionCode": 85,
+      "sha256": "8021ec6ac8e93c73c6a719ad81a17e59b22ea5b24fbfc1e5a48fc9eed0073a9e"
+    }
+  ]
+}

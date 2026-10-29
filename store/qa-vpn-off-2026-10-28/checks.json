@@ -1,0 +1,23 @@
+{
+  "modern": {
+    "tests": 143,
+    "failures": 0,
+    "errors": 0,
+    "apk": "NetModeSwitch-3.30-vpn-off.apk",
+    "sha256": "7a3ab34551a932e1bf9897e094345cc8172c6decd7526cc18796af209c483043"
+  },
+  "a10": {
+    "tests": 143,
+    "failures": 0,
+    "errors": 0,
+    "apk": "NetModeSwitch-3.30-vpn-off-a10.apk",
+    "sha256": "9209aa6c0d79a943bb71af03b1948aa3c5be801c9fd52ca301689f89abf2887f"
+  },
+  "emulator": {
+    "api": 37,
+    "readOnly": true,
+    "jsonCombinations": 8,
+    "pickerAndSave": true,
+    "vpnTrafficTested": false
+  }
+}

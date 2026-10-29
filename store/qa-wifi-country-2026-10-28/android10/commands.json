@@ -1,0 +1,21 @@
+{
+  "sdk": "29",
+  "serial": "emulator-5592",
+  "initial": {
+    "driver": "US",
+    "overrideKnown": false,
+    "override": null,
+    "supported": false,
+    "root": true
+  },
+  "unsupported": {
+    "error": "В этой прошивке нет команды смены страны Wi-Fi."
+  },
+  "after": {
+    "driver": "US",
+    "overrideKnown": false,
+    "override": null,
+    "supported": false,
+    "root": true
+  }
+}

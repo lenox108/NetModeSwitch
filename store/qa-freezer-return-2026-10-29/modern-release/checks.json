@@ -1,0 +1,17 @@
+[
+  {
+    "check": "legacy group shortcut opens persistent task; no order icon or extra state labels"
+  },
+  {
+    "check": "group order is available and saves from group menu"
+  },
+  {
+    "check": "tap without a privileged backend does not close folder"
+  },
+  {
+    "check": "back from launched app returns to same task, group and search"
+  },
+  {
+    "check": "freezer can be selected from native recent-apps UI"
+  }
+]

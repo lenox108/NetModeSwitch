@@ -1,0 +1,50 @@
+{
+  "sdk": "37",
+  "serial": "emulator-5590",
+  "initial": {
+    "country": "US",
+    "driver": "US",
+    "overrideKnown": true,
+    "override": null,
+    "supported": true,
+    "root": true
+  },
+  "RU": {
+    "country": "RU",
+    "driver": "US",
+    "overrideKnown": true,
+    "override": "RU",
+    "supported": true,
+    "root": true
+  },
+  "JP": {
+    "country": "JP",
+    "driver": "US",
+    "overrideKnown": true,
+    "override": "JP",
+    "supported": true,
+    "root": true
+  },
+  "00": {
+    "country": "00",
+    "driver": "US",
+    "overrideKnown": true,
+    "override": "00",
+    "supported": true,
+    "root": true
+  },
+  "shellDenied": {
+    "error": "Для смены региона Wi-Fi нужен root. Shizuku через ADB недостаточно."
+  },
+  "invalid": {
+    "error": "Required value was null."
+  },
+  "automatic": {
+    "country": "US",
+    "driver": "US",
+    "overrideKnown": true,
+    "override": null,
+    "supported": true,
+    "root": true
+  }
+}

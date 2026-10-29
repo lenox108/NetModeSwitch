@@ -1,0 +1,59 @@
+[
+  {
+    "check": "manager group filter and explicit actions"
+  },
+  {
+    "check": "group action includes members hidden by search and excludes other groups"
+  },
+  {
+    "check": "manual chip order saves and cancel preserves it"
+  },
+  {
+    "check": "folder has same picker, explicit actions and group menu"
+  },
+  {
+    "check": "group shortcut intent opens current group after process restart"
+  },
+  {
+    "check": "folder selected group survives activity recreation"
+  },
+  {
+    "check": "dark theme at 320 dp and 150 percent font"
+  },
+  {
+    "check": "launcher accepted OPEN group shortcut"
+  },
+  {
+    "check": "launcher accepted FREEZE group shortcut"
+  },
+  {
+    "check": "launcher accepted THAW group shortcut"
+  },
+  {
+    "check": "real home screen group shortcut opens group"
+  },
+  {
+    "check": "group removal keeps its apps and refreshes pinned shortcuts"
+  },
+  {
+    "check": "release manager mixed group state and scoped filter counts"
+  },
+  {
+    "check": "release folder frozen and thawed labels; icon and snowflake checked visually"
+  },
+  {
+    "check": "configure retains selected group"
+  },
+  {
+    "check": "ungrouped filter is independent from named groups"
+  },
+  {
+    "check": "empty group shortcut opens group with disabled actions"
+  },
+  {
+    "check": "selected chip scrolls into view at 320 dp and 150 percent font"
+  },
+  {
+    "check": "state labels remain reachable at large font"
+  }
+]

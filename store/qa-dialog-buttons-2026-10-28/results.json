@@ -1,0 +1,128 @@
+[
+  {
+    "case": "light-normal",
+    "size": "1080x2160",
+    "density": 480,
+    "font_scale": "1.0",
+    "buttons": [
+      {
+        "id": "button1",
+        "text": "Сохранить файл",
+        "bounds": [
+          570,
+          1668,
+          945,
+          1812
+        ],
+        "scrollable_ancestors": []
+      },
+      {
+        "id": "button2",
+        "text": "ОК",
+        "bounds": [
+          426,
+          1668,
+          570,
+          1812
+        ],
+        "scrollable_ancestors": []
+      },
+      {
+        "id": "button3",
+        "text": "Поделиться",
+        "bounds": [
+          136,
+          1668,
+          426,
+          1812
+        ],
+        "scrollable_ancestors": []
+      }
+    ],
+    "unchanged_after_report_scroll": true
+  },
+  {
+    "case": "light-large",
+    "size": "1080x2160",
+    "density": 480,
+    "font_scale": "1.5",
+    "buttons": [
+      {
+        "id": "button1",
+        "text": "Сохранить файл",
+        "bounds": [
+          612,
+          1599,
+          945,
+          1812
+        ],
+        "scrollable_ancestors": []
+      },
+      {
+        "id": "button2",
+        "text": "ОК",
+        "bounds": [
+          468,
+          1633,
+          612,
+          1777
+        ],
+        "scrollable_ancestors": []
+      },
+      {
+        "id": "button3",
+        "text": "Поделиться",
+        "bounds": [
+          135,
+          1599,
+          468,
+          1812
+        ],
+        "scrollable_ancestors": []
+      }
+    ],
+    "unchanged_after_report_scroll": true
+  },
+  {
+    "case": "dark-small-large",
+    "size": "960x1920",
+    "density": 480,
+    "font_scale": "1.5",
+    "buttons": [
+      {
+        "id": "button1",
+        "text": "Сохранить файл",
+        "bounds": [
+          552,
+          1282,
+          852,
+          1572
+        ],
+        "scrollable_ancestors": []
+      },
+      {
+        "id": "button2",
+        "text": "ОК",
+        "bounds": [
+          408,
+          1355,
+          552,
+          1499
+        ],
+        "scrollable_ancestors": []
+      },
+      {
+        "id": "button3",
+        "text": "Поделиться",
+        "bounds": [
+          108,
+          1320,
+          408,
+          1533
+        ],
+        "scrollable_ancestors": []
+      }
+    ],
+    "unchanged_after_report_scroll": true
+  }
+]

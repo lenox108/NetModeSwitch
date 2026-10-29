@@ -1,0 +1,29 @@
+[
+  {
+    "check": "legacy group shortcut opens persistent task; no order icon or extra state labels"
+  },
+  {
+    "check": "group order is available and saves from group menu"
+  },
+  {
+    "check": "tap without a privileged backend does not close folder"
+  },
+  {
+    "check": "back from launched app returns to same task, group and search"
+  },
+  {
+    "check": "freezer can be selected from native recent-apps UI"
+  },
+  {
+    "check": "legacy common folder shortcut reuses task and current filter"
+  },
+  {
+    "check": "another group shortcut updates existing task instead of duplicating it"
+  },
+  {
+    "check": "configure and back keep the folder"
+  },
+  {
+    "check": "selected group survives recreation at 320 dp and 150 percent font"
+  }
+]

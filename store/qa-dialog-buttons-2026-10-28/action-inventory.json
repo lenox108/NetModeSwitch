@@ -1,0 +1,764 @@
+[
+  {
+    "file": "app/src/main/java/com/netmode/switcher/AppPickerActivity.kt",
+    "line": 225,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/AppRulesActivity.kt",
+    "line": 72,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/AppRulesActivity.kt",
+    "line": 221,
+    "role": "Positive",
+    "label": "R.string.delete"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/AppRulesActivity.kt",
+    "line": 226,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/AppRulesActivity.kt",
+    "line": 241,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/AppRulesActivity.kt",
+    "line": 354,
+    "role": "Positive",
+    "label": "R.string.delete"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/AppRulesActivity.kt",
+    "line": 355,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/AppRulesActivity.kt",
+    "line": 375,
+    "role": "Positive",
+    "label": "R.string.return_selected"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/AppRulesActivity.kt",
+    "line": 381,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/CheckActivity.kt",
+    "line": 125,
+    "role": "Positive",
+    "label": "R.string.check_start"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/CheckActivity.kt",
+    "line": 126,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/Compat.kt",
+    "line": 55,
+    "role": "Positive",
+    "label": "android.R.string.ok"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/FreezerActivity.kt",
+    "line": 497,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/FreezerActivity.kt",
+    "line": 520,
+    "role": "Neutral",
+    "label": "R.string.ice_reorder"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/FreezerActivity.kt",
+    "line": 521,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/FreezerActivity.kt",
+    "line": 537,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/FreezerActivity.kt",
+    "line": 554,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/FreezerActivity.kt",
+    "line": 568,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/FreezerActivity.kt",
+    "line": 584,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/FreezerActivity.kt",
+    "line": 593,
+    "role": "Positive",
+    "label": "R.string.ice_remove"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/FreezerActivity.kt",
+    "line": 597,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/FreezerActivity.kt",
+    "line": 610,
+    "role": "Positive",
+    "label": "R.string.ice_remove"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/FreezerActivity.kt",
+    "line": 614,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/FreezerActivity.kt",
+    "line": 654,
+    "role": "Positive",
+    "label": "android.R.string.ok"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/FreezerActivity.kt",
+    "line": 761,
+    "role": "Positive",
+    "label": "android.R.string.ok"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/FreezerActivity.kt",
+    "line": 765,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/FreezerActivity.kt",
+    "line": 773,
+    "role": "Positive",
+    "label": "R.string.delete"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/FreezerActivity.kt",
+    "line": 774,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/FreezerActivity.kt",
+    "line": 824,
+    "role": "Positive",
+    "label": "android.R.string.ok"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/FreezerActivity.kt",
+    "line": 828,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/FreezerLaunch.kt",
+    "line": 230,
+    "role": "Positive",
+    "label": "R.string.ice_open"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/FreezerLaunch.kt",
+    "line": 231,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/FreezerLaunch.kt",
+    "line": 335,
+    "role": "Positive",
+    "label": "R.string.ice_remove"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/FreezerLaunch.kt",
+    "line": 336,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/FreezerLaunch.kt",
+    "line": 362,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/HotspotActivity.kt",
+    "line": 282,
+    "role": "Positive",
+    "label": "android.R.string.ok"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/HotspotActivity.kt",
+    "line": 350,
+    "role": "Positive",
+    "label": "R.string.save"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/HotspotActivity.kt",
+    "line": 365,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/HotspotActivity.kt",
+    "line": 421,
+    "role": "Positive",
+    "label": "R.string.save"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/HotspotActivity.kt",
+    "line": 422,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/HotspotPanel.kt",
+    "line": 157,
+    "role": "Positive",
+    "label": "R.string.save"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/HotspotPanel.kt",
+    "line": 162,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/HotspotPanel.kt",
+    "line": 188,
+    "role": "Positive",
+    "label": "\"Сохранить файл\""
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/HotspotPanel.kt",
+    "line": 192,
+    "role": "Neutral",
+    "label": "\"Поделиться\""
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/HotspotPanel.kt",
+    "line": 196,
+    "role": "Negative",
+    "label": "android.R.string.ok"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/HotspotPresetTiles.kt",
+    "line": 115,
+    "role": "Positive",
+    "label": "android.R.string.ok"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/HotspotPresetsUi.kt",
+    "line": 107,
+    "role": "Positive",
+    "label": "R.string.save"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/HotspotPresetsUi.kt",
+    "line": 108,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/HotspotPresetsUi.kt",
+    "line": 109,
+    "role": "Neutral",
+    "label": "\"Удалить\""
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/IceAppMenu.kt",
+    "line": 46,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/IceGrid.kt",
+    "line": 69,
+    "role": "Positive",
+    "label": "R.string.ice_view_done"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/IceGrid.kt",
+    "line": 76,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/IceOrderDialog.kt",
+    "line": 50,
+    "role": "Positive",
+    "label": "R.string.ice_view_done"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/IceOrderDialog.kt",
+    "line": 55,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/LogActivity.kt",
+    "line": 32,
+    "role": "Positive",
+    "label": "R.string.log_clear"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/LogActivity.kt",
+    "line": 33,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/MainActivity.kt",
+    "line": 140,
+    "role": "Positive",
+    "label": "R.string.check_start"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/MainActivity.kt",
+    "line": 143,
+    "role": "Negative",
+    "label": "R.string.check_offer_later"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/MainActivity.kt",
+    "line": 229,
+    "role": "Positive",
+    "label": "R.string.w_cfg_save"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/MainActivity.kt",
+    "line": 236,
+    "role": "Neutral",
+    "label": "R.string.pair_default"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/MainActivity.kt",
+    "line": 391,
+    "role": "Positive",
+    "label": "android.R.string.ok"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/NotifHideActivity.kt",
+    "line": 253,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/NotifHideActivity.kt",
+    "line": 260,
+    "role": "Positive",
+    "label": "R.string.hide_remove_rule"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/NotifHideActivity.kt",
+    "line": 261,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/NotifHideActivity.kt",
+    "line": 328,
+    "role": "Positive",
+    "label": "R.string.hide_unblock"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/NotifHideActivity.kt",
+    "line": 329,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/NotifHideActivity.kt",
+    "line": 353,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/NotifHideActivity.kt",
+    "line": 370,
+    "role": "Positive",
+    "label": "R.string.hide_block_do"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/NotifHideActivity.kt",
+    "line": 371,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleDialogs.kt",
+    "line": 72,
+    "role": "Positive",
+    "label": "R.string.done_btn"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleDialogs.kt",
+    "line": 73,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleDialogs.kt",
+    "line": 86,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleDialogs.kt",
+    "line": 103,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleDialogs.kt",
+    "line": 121,
+    "role": "Positive",
+    "label": "R.string.done_btn"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleDialogs.kt",
+    "line": 122,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 495,
+    "role": "Positive",
+    "label": "R.string.wake_forget"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 500,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 614,
+    "role": "Positive",
+    "label": "R.string.done_btn"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 618,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 981,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 1433,
+    "role": "Positive",
+    "label": "R.string.w_cfg_save"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 1438,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 1478,
+    "role": "Positive",
+    "label": "android.R.string.ok"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 1483,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 1535,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 1561,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 1578,
+    "role": "Positive",
+    "label": "android.R.string.ok"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 1579,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 1646,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 1675,
+    "role": "Positive",
+    "label": "android.R.string.ok"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 1678,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 1686,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 1708,
+    "role": "Positive",
+    "label": "android.R.string.ok"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 1715,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 1735,
+    "role": "Positive",
+    "label": "android.R.string.ok"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 1739,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 1771,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 1829,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 2041,
+    "role": "Positive",
+    "label": "R.string.save_anyway"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 2042,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 2052,
+    "role": "Positive",
+    "label": "R.string.open_settings"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 2058,
+    "role": "Negative",
+    "label": "R.string.later"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 2095,
+    "role": "Positive",
+    "label": "R.string.api_copy"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 2099,
+    "role": "Neutral",
+    "label": "R.string.api_new_key"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 2103,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 2123,
+    "role": "Positive",
+    "label": "android.R.string.ok"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 2144,
+    "role": "Positive",
+    "label": "R.string.delete"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleEditActivity.kt",
+    "line": 2148,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RuleTiles.kt",
+    "line": 262,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RulesActivity.kt",
+    "line": 38,
+    "role": "Positive",
+    "label": "R.string.backup_import"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RulesActivity.kt",
+    "line": 48,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/RulesActivity.kt",
+    "line": 73,
+    "role": "Positive",
+    "label": "android.R.string.ok"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/WidgetConfigActivity.kt",
+    "line": 52,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/WidgetConfigActivity.kt",
+    "line": 64,
+    "role": "Positive",
+    "label": "R.string.w_cfg_save"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/WidgetConfigActivity.kt",
+    "line": 68,
+    "role": "Neutral",
+    "label": "R.string.w_opacity_all"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/WidgetConfigActivity.kt",
+    "line": 72,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/WidgetConfigActivity.kt",
+    "line": 84,
+    "role": "Positive",
+    "label": "R.string.w_cfg_save"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/WidgetConfigActivity.kt",
+    "line": 88,
+    "role": "Neutral",
+    "label": "R.string.w_opacity_all"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/WidgetConfigActivity.kt",
+    "line": 92,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/WidgetConfigActivity.kt",
+    "line": 104,
+    "role": "Positive",
+    "label": "R.string.w_cfg_save"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/WidgetConfigActivity.kt",
+    "line": 108,
+    "role": "Neutral",
+    "label": "R.string.w_opacity_all"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/WidgetConfigActivity.kt",
+    "line": 112,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/WidgetConfigActivity.kt",
+    "line": 151,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/WidgetConfigActivity.kt",
+    "line": 172,
+    "role": "Positive",
+    "label": "R.string.w_cfg_save"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/WidgetConfigActivity.kt",
+    "line": 175,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/WidgetConfigActivity.kt",
+    "line": 188,
+    "role": "Positive",
+    "label": "R.string.w_cfg_save"
+  },
+  {
+    "file": "app/src/main/java/com/netmode/switcher/WidgetConfigActivity.kt",
+    "line": 191,
+    "role": "Negative",
+    "label": "R.string.cancel"
+  }
+]

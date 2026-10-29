@@ -1,0 +1,52 @@
+[
+  {
+    "flavor": "modern",
+    "three_buttons_visible": true,
+    "no_scroll_ancestors": true,
+    "bounds": [
+      [
+        108,
+        1320,
+        408,
+        1533
+      ],
+      [
+        408,
+        1355,
+        552,
+        1499
+      ],
+      [
+        552,
+        1282,
+        852,
+        1572
+      ]
+    ]
+  },
+  {
+    "flavor": "a10",
+    "three_buttons_visible": true,
+    "no_scroll_ancestors": true,
+    "bounds": [
+      [
+        108,
+        1294,
+        408,
+        1500
+      ],
+      [
+        408,
+        1325,
+        552,
+        1469
+      ],
+      [
+        552,
+        1294,
+        852,
+        1500
+      ]
+    ]
+  }
+]

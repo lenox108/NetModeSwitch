@@ -1,0 +1,5 @@
+{
+  "disabled_when_empty": true,
+  "enabled_after_typing": true,
+  "callback_and_dismissal": true
+}

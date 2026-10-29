@@ -1,0 +1,219 @@
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preModernDebugBuild UP-TO-DATE
+> Task :app:compileModernDebugAidl UP-TO-DATE
+> Task :app:dataBindingMergeDependencyArtifactsModernDebug UP-TO-DATE
+> Task :app:generateModernDebugResources
+> Task :app:packageModernDebugResources
+> Task :app:processModernDebugNavigationResources
+
+> Task :app:mergeModernDebugResources
+/Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/res/values/strings.xml: Multiple substitutions specified in non-positional format of string resource string/rule_tile_by_hand. Did you mean to add the formatted="false" attribute?
+
+> Task :app:parseModernDebugLocalResources
+> Task :app:generateModernDebugBuildConfig UP-TO-DATE
+> Task :app:generateModernDebugRFile
+> Task :app:javaPreCompileModernDebug UP-TO-DATE
+> Task :app:checkModernDebugAarMetadata UP-TO-DATE
+> Task :app:mapModernDebugSourceSetPaths
+> Task :app:compileModernDebugNavigationResources UP-TO-DATE
+> Task :app:createModernDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksModernDebug UP-TO-DATE
+> Task :app:processModernDebugMainManifest
+> Task :app:processModernDebugManifest
+> Task :app:processModernDebugManifestForPackage
+> Task :app:preModernDebugUnitTestBuild UP-TO-DATE
+> Task :app:javaPreCompileModernDebugUnitTest UP-TO-DATE
+> Task :app:preA10DebugBuild UP-TO-DATE
+> Task :app:compileA10DebugAidl UP-TO-DATE
+> Task :app:dataBindingMergeDependencyArtifactsA10Debug UP-TO-DATE
+> Task :app:generateA10DebugResources FROM-CACHE
+
+> Task :app:mergeA10DebugResources
+/Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/res/values/strings.xml: Multiple substitutions specified in non-positional format of string resource string/rule_tile_by_hand. Did you mean to add the formatted="false" attribute?
+
+> Task :app:dataBindingGenBaseClassesModernDebug
+> Task :app:processModernDebugResources
+> Task :app:packageA10DebugResources
+> Task :app:processA10DebugNavigationResources FROM-CACHE
+> Task :app:parseA10DebugLocalResources FROM-CACHE
+> Task :app:dataBindingGenBaseClassesA10Debug FROM-CACHE
+> Task :app:generateA10DebugBuildConfig UP-TO-DATE
+> Task :app:generateA10DebugRFile FROM-CACHE
+> Task :app:compileModernDebugKotlin
+> Task :app:compileA10DebugKotlin
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/debug/java/com/netmode/switcher/DialogActionsLab.kt:76:124 'static field SHOW_IMPLICIT: Int' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/Calibration.kt:194:12 'val allNetworks: Array<(out) Network!>' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/ChannelCli.kt:71:37 Type argument for reified type parameter 'T' was inferred to the intersection of ['Comparable<Nothing>?' & 'Serializable?']. Reification of an intersection type results in the common supertype being used. This may lead to subtle issues and an explicit type argument is encouraged. This will become an error in a future release.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/HotspotReadCli.kt:17:56 'static fun prepareMainLooper(): Unit' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/ModeWidget.kt:365:46 'fun notifyAppWidgetViewDataChanged(p0: Int, p1: Int): Unit' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/PermissionsActivity.kt:155:73 'fun unsafeCheckOpNoThrow(p0: String, p1: Int, p2: String): Int' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/VpnCli.kt:51:19 Type argument for reified type parameter 'T' was inferred to the intersection of ['Comparable<Nothing>?' & 'Serializable?']. Reification of an intersection type results in the common supertype being used. This may lead to subtle issues and an explicit type argument is encouraged. This will become an error in a future release.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/WifiCountryActivity.kt:169:81 'static field SOFT_INPUT_ADJUST_RESIZE: Int' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/WifiWake.kt:210:12 'val allNetworks: Array<(out) Network!>' is deprecated. Deprecated in Java.
+
+> Task :app:compileModernDebugKotlin
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/debug/java/com/netmode/switcher/DialogActionsLab.kt:76:124 'static field SHOW_IMPLICIT: Int' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/Calibration.kt:194:12 'val allNetworks: Array<(out) Network!>' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/ChannelCli.kt:71:37 Type argument for reified type parameter 'T' was inferred to the intersection of ['Comparable<Nothing>?' & 'Serializable?']. Reification of an intersection type results in the common supertype being used. This may lead to subtle issues and an explicit type argument is encouraged. This will become an error in a future release.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/HotspotReadCli.kt:17:56 'static fun prepareMainLooper(): Unit' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/ModeWidget.kt:365:46 'fun notifyAppWidgetViewDataChanged(p0: Int, p1: Int): Unit' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/PermissionsActivity.kt:155:73 'fun unsafeCheckOpNoThrow(p0: String, p1: Int, p2: String): Int' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/VpnCli.kt:51:19 Type argument for reified type parameter 'T' was inferred to the intersection of ['Comparable<Nothing>?' & 'Serializable?']. Reification of an intersection type results in the common supertype being used. This may lead to subtle issues and an explicit type argument is encouraged. This will become an error in a future release.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/WifiCountryActivity.kt:169:81 'static field SOFT_INPUT_ADJUST_RESIZE: Int' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/WifiWake.kt:210:12 'val allNetworks: Array<(out) Network!>' is deprecated. Deprecated in Java.
+
+> Task :app:compileModernDebugJavaWithJavac
+> Task :app:bundleModernDebugClassesToCompileJar
+> Task :app:bundleModernDebugClassesToRuntimeJar
+> Task :app:processModernDebugJavaRes UP-TO-DATE
+> Task :app:javaPreCompileA10Debug UP-TO-DATE
+> Task :app:compileA10DebugJavaWithJavac
+> Task :app:checkA10DebugAarMetadata UP-TO-DATE
+> Task :app:mapA10DebugSourceSetPaths
+> Task :app:compileA10DebugNavigationResources UP-TO-DATE
+> Task :app:createA10DebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksA10Debug UP-TO-DATE
+> Task :app:processA10DebugMainManifest
+> Task :app:processA10DebugManifest
+> Task :app:processA10DebugManifestForPackage
+> Task :app:processA10DebugResources
+> Task :app:bundleA10DebugClassesToRuntimeJar
+> Task :app:bundleA10DebugClassesToCompileJar
+> Task :app:preA10DebugUnitTestBuild UP-TO-DATE
+> Task :app:compileModernDebugUnitTestKotlin
+> Task :app:compileModernDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processModernDebugUnitTestJavaRes UP-TO-DATE
+> Task :app:compileA10DebugUnitTestKotlin
+> Task :app:testModernDebugUnitTest
+> Task :app:javaPreCompileA10DebugUnitTest UP-TO-DATE
+> Task :app:compileA10DebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processA10DebugJavaRes UP-TO-DATE
+> Task :app:processA10DebugUnitTestJavaRes UP-TO-DATE
+> Task :app:testA10DebugUnitTest
+> Task :app:mergeA10DebugNativeDebugMetadata NO-SOURCE
+> Task :app:generateA10DebugAssets UP-TO-DATE
+> Task :app:mergeA10DebugAssets UP-TO-DATE
+> Task :app:compressA10DebugAssets UP-TO-DATE
+> Task :app:generateA10DebugGlobalSynthetics UP-TO-DATE
+> Task :app:mergeA10DebugJavaResource UP-TO-DATE
+> Task :app:checkA10DebugDuplicateClasses UP-TO-DATE
+> Task :app:desugarA10DebugFileDependencies UP-TO-DATE
+> Task :app:mergeExtDexA10Debug UP-TO-DATE
+> Task :app:mergeLibDexA10Debug UP-TO-DATE
+> Task :app:dexBuilderA10Debug
+> Task :app:mergeA10DebugJniLibFolders UP-TO-DATE
+> Task :app:mergeA10DebugNativeLibs UP-TO-DATE
+> Task :app:stripA10DebugDebugSymbols UP-TO-DATE
+> Task :app:validateSigningA10Debug UP-TO-DATE
+> Task :app:writeA10DebugAppMetadata UP-TO-DATE
+> Task :app:writeA10DebugSigningConfigVersions UP-TO-DATE
+> Task :app:preModernReleaseBuild UP-TO-DATE
+> Task :app:mergeModernReleaseJniLibFolders UP-TO-DATE
+> Task :app:mergeModernReleaseNativeLibs UP-TO-DATE
+> Task :app:stripModernReleaseDebugSymbols UP-TO-DATE
+> Task :app:extractModernReleaseNativeSymbolTables UP-TO-DATE
+> Task :app:mergeModernReleaseNativeDebugMetadata NO-SOURCE
+> Task :app:checkModernReleaseDuplicateClasses UP-TO-DATE
+> Task :app:compileModernReleaseAidl UP-TO-DATE
+> Task :app:dataBindingMergeDependencyArtifactsModernRelease UP-TO-DATE
+> Task :app:generateModernReleaseResources FROM-CACHE
+
+> Task :app:mergeModernReleaseResources
+/Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/res/values/strings.xml: Multiple substitutions specified in non-positional format of string resource string/rule_tile_by_hand. Did you mean to add the formatted="false" attribute?
+
+> Task :app:mergeProjectDexA10Debug
+> Task :app:packageA10Debug
+> Task :app:createA10DebugApkListingFileRedirect UP-TO-DATE
+> Task :app:assembleA10Debug
+> Task :app:packageModernReleaseResources
+> Task :app:processModernReleaseNavigationResources FROM-CACHE
+> Task :app:parseModernReleaseLocalResources FROM-CACHE
+> Task :app:dataBindingGenBaseClassesModernRelease FROM-CACHE
+> Task :app:generateModernReleaseBuildConfig UP-TO-DATE
+> Task :app:generateModernReleaseRFile FROM-CACHE
+> Task :app:javaPreCompileModernRelease UP-TO-DATE
+> Task :app:mergeModernReleaseArtProfile UP-TO-DATE
+> Task :app:checkModernReleaseAarMetadata UP-TO-DATE
+> Task :app:mapModernReleaseSourceSetPaths
+> Task :app:compileModernReleaseNavigationResources UP-TO-DATE
+> Task :app:createModernReleaseCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksModernRelease UP-TO-DATE
+> Task :app:processModernReleaseMainManifest
+> Task :app:processModernReleaseManifest
+> Task :app:processModernReleaseManifestForPackage
+> Task :app:processModernReleaseResources
+> Task :app:extractProguardFiles UP-TO-DATE
+> Task :app:mergeModernReleaseStartupProfile UP-TO-DATE
+> Task :app:generateModernReleaseAssets UP-TO-DATE
+> Task :app:mergeModernReleaseAssets UP-TO-DATE
+> Task :app:compressModernReleaseAssets UP-TO-DATE
+> Task :app:extractModernReleaseVersionControlInfo UP-TO-DATE
+> Task :app:collectModernReleaseDependencies UP-TO-DATE
+> Task :app:sdkModernReleaseDependencyData UP-TO-DATE
+> Task :app:validateSigningModernRelease UP-TO-DATE
+> Task :app:writeModernReleaseAppMetadata UP-TO-DATE
+> Task :app:writeModernReleaseSigningConfigVersions UP-TO-DATE
+> Task :app:preA10ReleaseBuild UP-TO-DATE
+> Task :app:mergeA10ReleaseJniLibFolders UP-TO-DATE
+> Task :app:mergeA10ReleaseNativeLibs UP-TO-DATE
+> Task :app:stripA10ReleaseDebugSymbols UP-TO-DATE
+> Task :app:extractA10ReleaseNativeSymbolTables UP-TO-DATE
+> Task :app:mergeA10ReleaseNativeDebugMetadata NO-SOURCE
+> Task :app:checkA10ReleaseDuplicateClasses UP-TO-DATE
+> Task :app:compileA10ReleaseAidl UP-TO-DATE
+> Task :app:dataBindingMergeDependencyArtifactsA10Release UP-TO-DATE
+> Task :app:generateA10ReleaseResources FROM-CACHE
+
+> Task :app:mergeA10ReleaseResources
+/Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/res/values/strings.xml: Multiple substitutions specified in non-positional format of string resource string/rule_tile_by_hand. Did you mean to add the formatted="false" attribute?
+
+> Task :app:packageA10ReleaseResources
+> Task :app:processA10ReleaseNavigationResources FROM-CACHE
+> Task :app:parseA10ReleaseLocalResources FROM-CACHE
+> Task :app:dataBindingGenBaseClassesA10Release FROM-CACHE
+> Task :app:generateA10ReleaseBuildConfig UP-TO-DATE
+> Task :app:generateA10ReleaseRFile FROM-CACHE
+> Task :app:compileModernReleaseKotlin
+> Task :app:compileA10ReleaseKotlin
+
+> Task :app:compileModernReleaseKotlin
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/Calibration.kt:194:12 'val allNetworks: Array<(out) Network!>' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/ChannelCli.kt:71:37 Type argument for reified type parameter 'T' was inferred to the intersection of ['Comparable<Nothing>?' & 'Serializable?']. Reification of an intersection type results in the common supertype being used. This may lead to subtle issues and an explicit type argument is encouraged. This will become an error in a future release.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/HotspotReadCli.kt:17:56 'static fun prepareMainLooper(): Unit' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/ModeWidget.kt:365:46 'fun notifyAppWidgetViewDataChanged(p0: Int, p1: Int): Unit' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/PermissionsActivity.kt:155:73 'fun unsafeCheckOpNoThrow(p0: String, p1: Int, p2: String): Int' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/VpnCli.kt:51:19 Type argument for reified type parameter 'T' was inferred to the intersection of ['Comparable<Nothing>?' & 'Serializable?']. Reification of an intersection type results in the common supertype being used. This may lead to subtle issues and an explicit type argument is encouraged. This will become an error in a future release.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/WifiCountryActivity.kt:169:81 'static field SOFT_INPUT_ADJUST_RESIZE: Int' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/WifiWake.kt:210:12 'val allNetworks: Array<(out) Network!>' is deprecated. Deprecated in Java.
+
+> Task :app:compileA10ReleaseKotlin
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/Calibration.kt:194:12 'val allNetworks: Array<(out) Network!>' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/ChannelCli.kt:71:37 Type argument for reified type parameter 'T' was inferred to the intersection of ['Comparable<Nothing>?' & 'Serializable?']. Reification of an intersection type results in the common supertype being used. This may lead to subtle issues and an explicit type argument is encouraged. This will become an error in a future release.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/HotspotReadCli.kt:17:56 'static fun prepareMainLooper(): Unit' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/ModeWidget.kt:365:46 'fun notifyAppWidgetViewDataChanged(p0: Int, p1: Int): Unit' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/PermissionsActivity.kt:155:73 'fun unsafeCheckOpNoThrow(p0: String, p1: Int, p2: String): Int' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/VpnCli.kt:51:19 Type argument for reified type parameter 'T' was inferred to the intersection of ['Comparable<Nothing>?' & 'Serializable?']. Reification of an intersection type results in the common supertype being used. This may lead to subtle issues and an explicit type argument is encouraged. This will become an error in a future release.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/WifiCountryActivity.kt:169:81 'static field SOFT_INPUT_ADJUST_RESIZE: Int' is deprecated. Deprecated in Java.
+w: file:///Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/app/src/main/java/com/netmode/switcher/WifiWake.kt:210:12 'val allNetworks: Array<(out) Network!>' is deprecated. Deprecated in Java.
+
+> Task :app:compileModernReleaseJavaWithJavac
+> Task :app:mergeModernReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :app:processModernReleaseJavaRes UP-TO-DATE
+> Task :app:mergeModernReleaseJavaResource UP-TO-DATE
+> Task :app:generateModernReleaseLintVitalReportModel
+> Task :app:expandModernReleaseArtProfileWildcards
+> Task :app:lintVitalAnalyzeModernRelease
+> Task :app:minifyModernReleaseWithR8
+
+Daemon is stopping immediately stop command received
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Gradle build daemon has been stopped: stop command received
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.

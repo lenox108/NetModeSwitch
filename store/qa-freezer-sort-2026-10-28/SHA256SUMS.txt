@@ -1,0 +1,2 @@
+a3fac94205ef8b38ee4f150cb79e71ae938790817a06132cd3b9c92c2d010bdf  NetModeSwitch-3.4-freezer-sort.apk
+e5ba88706e0c08f7e491478e4cf125d4208ecc47c967a41b4bf16a8156f163ea  NetModeSwitch-3.4-freezer-sort-a10.apk

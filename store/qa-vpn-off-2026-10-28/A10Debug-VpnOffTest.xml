@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.netmode.switcher.VpnOffTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-28T17:25:53.289Z" hostname="MacBook-Pro-John.local" time="0.002">
+  <properties/>
+  <testcase name="oldOnAppNeverBecomesAnImplicitOffTarget" classname="com.netmode.switcher.VpnOffTest" time="0.0"/>
+  <testcase name="disconnectedTargetDoesNotRestoreAnAlwaysOnSettingOrClickATile" classname="com.netmode.switcher.VpnOffTest" time="0.002"/>
+  <testcase name="legacyAnyTargetStillReachesTheBackendIncludingAlwaysOnCleanup" classname="com.netmode.switcher.VpnOffTest" time="0.0"/>
+  <testcase name="hotspotEndingForAmneziaDoesNotTouchHappOrClaimItsState" classname="com.netmode.switcher.VpnOffTest" time="0.0"/>
+  <testcase name="startEndAndUnlockKeepIndependentDisconnectTargets" classname="com.netmode.switcher.VpnOffTest" time="0.0"/>
+  <testcase name="matchingOwnerIsPassedToTheDisconnectBackend" classname="com.netmode.switcher.VpnOffTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

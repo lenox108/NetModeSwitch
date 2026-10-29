@@ -1,0 +1,114 @@
+[
+  {
+    "check": "installed test APK",
+    "apk": "/Users/j.golt/Documents/NetworkSwitcher/NetModeSwitch/store/NetModeSwitch-3.4-freezer-indicator-a10.apk"
+  },
+  {
+    "check": "compact-light",
+    "columns": 1,
+    "selecting": false,
+    "buttons": 4,
+    "accessible_modes": [
+      "Chrome, Заморожено глубоко · иконка скрыта",
+      "Gmail, Заморожено мягко",
+      "Maps, Разморожено до ручной заморозки",
+      "Photos, Разморожено до ручной заморозки"
+    ]
+  },
+  {
+    "check": "observed state survives a different configured mode"
+  },
+  {
+    "check": "two-columns-light",
+    "columns": 2,
+    "selecting": false,
+    "buttons": 0,
+    "accessible_modes": [
+      "Chrome, Заморожено глубоко · иконка скрыта",
+      "Gmail, Заморожено мягко",
+      "Maps, Разморожено до ручной заморозки",
+      "Photos, Разморожено до ручной заморозки"
+    ]
+  },
+  {
+    "check": "three-columns-light",
+    "columns": 3,
+    "selecting": false,
+    "buttons": 0,
+    "accessible_modes": [
+      "Chrome, Заморожено глубоко · иконка скрыта",
+      "Gmail, Заморожено мягко",
+      "Maps, Разморожено до ручной заморозки",
+      "Photos, Разморожено до ручной заморозки"
+    ]
+  },
+  {
+    "check": "selection-light",
+    "columns": 1,
+    "selecting": true,
+    "buttons": 0,
+    "accessible_modes": [
+      "Chrome, Заморожено глубоко · иконка скрыта",
+      "Gmail, Заморожено мягко",
+      "Maps, Разморожено до ручной заморозки",
+      "Photos, Разморожено до ручной заморозки"
+    ]
+  },
+  {
+    "check": "selection-ended-light",
+    "columns": 1,
+    "selecting": false,
+    "buttons": 4,
+    "accessible_modes": [
+      "Chrome, Заморожено глубоко · иконка скрыта",
+      "Gmail, Заморожено мягко",
+      "Maps, Разморожено до ручной заморозки",
+      "Photos, Разморожено до ручной заморозки"
+    ]
+  },
+  {
+    "check": "compact-dark-large",
+    "columns": 1,
+    "selecting": false,
+    "buttons": 4,
+    "accessible_modes": [
+      "Chrome, Заморожено глубоко · иконка скрыта",
+      "Gmail, Заморожено мягко",
+      "Maps, Разморожено до ручной заморозки",
+      "Photos, Разморожено до ручной заморозки"
+    ]
+  },
+  {
+    "check": "two-columns-dark-large",
+    "columns": 2,
+    "selecting": false,
+    "buttons": 0,
+    "accessible_modes": [
+      "Chrome, Заморожено глубоко · иконка скрыта",
+      "Gmail, Заморожено мягко",
+      "Maps, Разморожено до ручной заморозки",
+      "Photos, Разморожено до ручной заморозки"
+    ]
+  },
+  {
+    "check": "three-columns-dark-large",
+    "columns": 3,
+    "selecting": false,
+    "buttons": 0,
+    "accessible_modes": [
+      "Chrome, Заморожено глубоко · иконка скрыта",
+      "Gmail, Заморожено мягко",
+      "Maps, Разморожено до ручной заморозки",
+      "Photos, Разморожено до ручной заморозки"
+    ]
+  },
+  {
+    "check": "external thaw updates action and clears deep mode"
+  },
+  {
+    "check": "regular list retains detailed status"
+  },
+  {
+    "check": "no runtime crashes"
+  }
+]
