@@ -8,7 +8,9 @@ import kotlinx.coroutines.delay
  * With root it goes through the system VPN service ([VpnCli]), which needs no tile, no screen
  * and no unlocked phone: "off" revokes whatever VPN is connected, "on" has the system start the
  * chosen app's VpnService by making it the always-on VPN. That setting is kept while the VPN is
- * on — any change of it revokes the running VPN — and put back on "off". Shell (Shizuku) is
+ * on — any change of it revokes the running VPN — and put back on "off". An app whose tile is
+ * its VPN switch (Amnezia) is switched on by the tile even with root, always-on is only the
+ * fallback: under it the app's tile shows a wrong state and cannot switch it off. Shell (Shizuku) is
  * refused both calls (measured: "does not belong to uid 2000", "no CONTROL_ALWAYS_ON_VPN"), so
  * there the app's own tile is pressed instead.
  *
@@ -92,25 +94,52 @@ object VpnControl {
         return if (!connected(owner())) "VPN ${label(pkg)} выкл" else "VPN ${label(pkg)}: не выключился"
     }
 
+    /**
+     * Drops the always-on setting [on] left for [pkg]; this disconnects it too. A tile "off"
+     * calls it first: under always-on the system restarts the VPN right after the tile stops it.
+     */
+    suspend fun release(pkg: String): Boolean {
+        if (ours()?.first != pkg || !root()) return false
+        if (!restore()) return false
+        Prefs.log("VPN ${label(pkg)}: снята «постоянная VPN», включённая правилом")
+        // Let the disconnect finish: a tile read while it is going down is "unknown".
+        for (i in 0 until 5) {
+            if (owner() != pkg) break
+            delay(2_000)
+        }
+        return true
+    }
+
+    /** Root still prefers the tile of an app whose tile is its VPN switch (Amnezia): always-on
+     * would keep the app's tile and its own screen out of step and block switching it off. */
+    internal fun viaTile(tile: String?, root: Boolean): Boolean =
+        tile != null && (!root || TileStateProbe.usesVpn(tile, emptySet()))
+
     /** Connects [pkg]'s VPN. Returns a line for the log. */
     suspend fun on(pkg: String): String {
         if (owner() == pkg) return "VPN ${label(pkg)} уже вкл"
-        if (root()) {
-            val out = Privileged.exec("${cli()} on $pkg 0")
-            val previous = Regex("previous=(\\S+)").find(out)?.groupValues?.get(1)
-            // Keep the value from before the first [on]: a later one sees its own app there.
-            val before = ours()?.second ?: previous
-            if (out.contains("ok")) Prefs.vpnAlwaysOn = before?.takeIf { it != pkg }?.let { "$pkg $it" }
-        } else {
-            val tile = tileOf(pkg) ?: return "VPN ${label(pkg)}: без root включается только плиткой, а её нет"
-            return "VPN " + Tiles.set(mapOf(tile to true), vpn = setOf(tile)).joinToString()
+        val root = root()
+        val tile = tileOf(pkg)
+        var tried = ""
+        if (viaTile(tile, root)) {
+            // An always-on left by an older version would restart it after the next tile "off".
+            if (root && ours()?.first == pkg) restore()
+            val line = "VPN " + Tiles.set(mapOf(tile!! to true), vpn = setOf(tile)).joinToString()
+            if (!root || owner() == pkg) return line
+            tried = "$line; через «постоянную VPN»: "
         }
+        if (!root) return "VPN ${label(pkg)}: без root включается только плиткой, а её нет"
+        val out = Privileged.exec("${cli()} on $pkg 0")
+        val previous = Regex("previous=(\\S+)").find(out)?.groupValues?.get(1)
+        // Keep the value from before the first [on]: a later one sees its own app there.
+        val before = ours()?.second ?: previous
+        if (out.contains("ok")) Prefs.vpnAlwaysOn = before?.takeIf { it != pkg }?.let { "$pkg $it" }
         val deadline = System.currentTimeMillis() + CONNECT_WAIT_MS
         while (System.currentTimeMillis() < deadline) {
             delay(2_000)
-            if (owner() == pkg) return "VPN ${label(pkg)} вкл"
+            if (owner() == pkg) return "${tried}VPN ${label(pkg)} вкл"
         }
-        return "VPN ${label(pkg)}: не подключился"
+        return "${tried}VPN ${label(pkg)}: не подключился"
     }
 
     /** Apps that provide a VPN, for the rule dialog. */
