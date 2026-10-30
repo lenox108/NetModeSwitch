@@ -38,4 +38,35 @@ class NotifRulePolicyTest {
         assertEquals(listOf("Код", "важно"), NotifRulePolicy.exclusions("\n Код \nкод\n\nважно\n"))
         assertTrue(NotifRulePolicy.matches(null, false, listOf(" "), "VPN", "", true))
     }
+
+    @Test fun aForegroundServiceCountsAsOngoingWithoutTheOngoingFlag() {
+        assertTrue(NotifRulePolicy.ongoing(android.app.Notification.FLAG_FOREGROUND_SERVICE))
+        assertTrue(NotifRulePolicy.ongoing(android.app.Notification.FLAG_ONGOING_EVENT))
+        assertFalse(NotifRulePolicy.ongoing(android.app.Notification.FLAG_GROUP_SUMMARY))
+    }
+
+    @Test fun aSummaryIsNotHiddenWhileASiblingHasToStayVisible() {
+        assertFalse(NotifRulePolicy.mayHide(true, listOf(true, false)))
+        assertTrue(NotifRulePolicy.mayHide(true, listOf(true, true)))
+        assertTrue(NotifRulePolicy.mayHide(true, emptyList()))
+        assertTrue(NotifRulePolicy.mayHide(false, listOf(false)))
+    }
+
+    @Test fun onlyAMissingChannelCountsAsGone() {
+        assertTrue(NotifRulePolicy.channelGone("error=IllegalStateException: нет канала vpn"))
+        assertFalse(NotifRulePolicy.channelGone("error=SecurityException: denied"))
+    }
+
+    @Test fun aKeyNotSnoozedNowStaysPendingUntilItsTimeRunsOut() {
+        val pending = mapOf("waiting" to 90L, "old" to 10L, "shown" to 90L, "kept" to 90L, "done" to 90L, "failed" to 90L)
+        val next = NotifRulePolicy.nextPending(pending, setOf("kept"), setOf("done", "failed"), setOf("failed"),
+            setOf("shown"), now = 100, ttl = 50, max = 10)
+        assertEquals(setOf("waiting", "failed"), next.keys)
+    }
+
+    @Test fun pendingKeysAreBoundedKeepingTheNewest() {
+        val next = NotifRulePolicy.nextPending(mapOf("a" to 1L, "b" to 2L, "c" to 3L), emptySet(), emptySet(), emptySet(),
+            emptySet(), now = 4, ttl = 100, max = 2)
+        assertEquals(setOf("b", "c"), next.keys)
+    }
 }

@@ -226,6 +226,17 @@
                         android:text="@string/hide_block_pick" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                style="@style/NMS.Hint"
+                android:layout_marginTop="16dp"
+                android:text="@string/hide_return_all_hint" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/returnAll"
+                style="@style/NMS.PickButton"
+                android:layout_marginBottom="6dp"
+                android:text="@string/hide_return_all" />
         </LinearLayout>
     </ScrollView>
 </LinearLayout>

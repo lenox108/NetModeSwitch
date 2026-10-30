@@ -25,11 +25,20 @@ object NotifWatch {
     @Volatile var active: Map<String, Boolean> = emptyMap()
         private set
 
-    internal fun update(list: Array<StatusBarNotification>?) {
-        val now = list.orEmpty().groupBy { it.packageName }.mapValues { (_, ns) -> ns.any { it.isOngoing } }
+    private fun update(list: List<StatusBarNotification>) {
+        val now = list.groupBy { it.packageName }.mapValues { (_, ns) -> ns.any { it.isOngoing } }
         if (now == active) return
         active = now
         ConditionWatch.evaluate(Trigger.NOTIFY_APP)
+    }
+
+    /** A notification a rule keeps out of the shade is still up as far as a condition goes. */
+    internal fun refresh(listener: NotificationListenerService) {
+        val up = runCatching { listener.activeNotifications.toList() }.getOrNull().orEmpty()
+        val rules = Prefs.hideRules
+        val hidden = if (rules.isEmpty()) emptyList() else runCatching { listener.snoozedNotifications.toList() }.getOrNull().orEmpty()
+            .filter { n -> rules.any { it.matches(n) } }
+        update(up + hidden)
     }
 
     /** Notification access is a setting the privileged shell can turn on; no settings screen needed. */
@@ -45,7 +54,7 @@ class NotifListener : NotificationListenerService() {
         NotifWatch.listener = this
         NotifHide.sweep(this)
         App.scope.launch { NotifRules.reconcile() }
-        NotifWatch.update(runCatching { activeNotifications }.getOrNull())
+        NotifWatch.refresh(this)
     }
 
     override fun onListenerDisconnected() {
@@ -55,8 +64,11 @@ class NotifListener : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         sbn?.let { NotifHide.onPosted(this, it) }
-        NotifWatch.update(runCatching { activeNotifications }.getOrNull())
+        NotifWatch.refresh(this)
     }
 
-    override fun onNotificationRemoved(sbn: StatusBarNotification?) = NotifWatch.update(runCatching { activeNotifications }.getOrNull())
+    override fun onNotificationRemoved(sbn: StatusBarNotification?) {
+        sbn?.let { NotifHide.onRemoved(this, it) }
+        NotifWatch.refresh(this)
+    }
 }

@@ -524,6 +524,11 @@ object Prefs {
             org.json.JSONObject().apply { value.forEach { (k, v) -> put(k, v) } }.toString(),
         ).apply()
 
+    /** When the snoozes were last renewed; see NotifRules.renew. */
+    var hideRenewedAt: Long
+        get() = sp.getLong("hide_renewed_at", 0)
+        set(value) = sp.edit().putLong("hide_renewed_at", value).apply()
+
     /** Notifications posted over the last day; see NotifHide.recent. */
     var seenNotifs: List<SeenEntry>
         get() = decodeList(sp.getString("seen_notifs", "[]")!!, SeenEntry::fromJson)

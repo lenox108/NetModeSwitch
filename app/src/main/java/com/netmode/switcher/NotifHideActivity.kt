@@ -40,7 +40,6 @@ class NotifHideActivity : AppCompatActivity() {
     private val expandedApps = mutableSetOf<String>()
     private val collapsedSearchApps = mutableSetOf<String>()
     private val labels = mutableMapOf<String, String>()
-    private var changing = false
 
     private val pickBlocked = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
         val picked = r.data?.getStringArrayExtra(AppPickerActivity.EXTRA_PACKAGES)?.toSet() ?: return@registerForActivityResult
@@ -79,6 +78,7 @@ class NotifHideActivity : AppCompatActivity() {
                     .putExtra(AppPickerActivity.EXTRA_PLAIN, true),
             )
         }
+        ui.returnAll.setOnClickListener { confirmReturnAll() }
         val block = if (NotifHide.canBlock) View.VISIBLE else View.GONE
         ui.blockSection.visibility = block
         ui.blockCard.visibility = block
@@ -119,7 +119,7 @@ class NotifHideActivity : AppCompatActivity() {
 
     private fun render(force: Boolean = false) {
         ui.noAccess.visibility = if (NotifWatch.connected) View.GONE else View.VISIBLE
-        ui.retryRestore.visibility = if (Prefs.releasedKeys.isEmpty() && !NotifRules.canRetry) View.GONE else View.VISIBLE
+        ui.retryRestore.visibility = if (NotifRules.canRetry) View.VISIBLE else View.GONE
         ui.restoreStatus.visibility = if (NotifRules.lastError == null) View.GONE else View.VISIBLE
         ui.restoreStatus.text = NotifRules.lastError.orEmpty()
         val now = NotifHide.shade()
@@ -265,18 +265,41 @@ class NotifHideActivity : AppCompatActivity() {
     }
 
     private fun change(action: suspend () -> Result<Unit>) {
-        if (changing) { render(force = true); return }
-        changing = true
+        // NotifRules runs edits one at a time, so one made during another simply waits its turn.
         lifecycleScope.launch {
             try {
                 action().exceptionOrNull()?.let {
                     Toast.makeText(this@NotifHideActivity, it.message.orEmpty(), Toast.LENGTH_LONG).show()
                 }
             } finally {
-                changing = false
                 render(force = true)
             }
         }
+    }
+
+    private fun confirmReturnAll() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.hide_return_all)
+            .setMessage(R.string.hide_return_all_q)
+            .setPositiveButton(R.string.hide_return_all_do) { _, _ ->
+                lifecycleScope.launch {
+                    val r = NotifRules.returnAll()
+                    render(force = true)
+                    MaterialAlertDialogBuilder(this@NotifHideActivity)
+                        .setTitle(R.string.hide_return_all)
+                        .setMessage(listOfNotNull(
+                            getString(R.string.hide_return_all_done, r.channels, r.unblocked, r.released),
+                            r.failedChannels.takeIf { it.isNotEmpty() }?.let { getString(R.string.hide_return_failed_channels, it.joinToString(", ")) },
+                            r.failedApps.takeIf { it.isNotEmpty() }?.let { a -> getString(R.string.hide_return_failed_apps, a.joinToString(", ") { label(it) }) },
+                            r.error,
+                            getString(if (r.failedChannels.isEmpty() && r.failedApps.isEmpty() && r.error == null) R.string.hide_return_ready else R.string.hide_return_not_ready),
+                        ).joinToString("\n\n"))
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show()
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun renderJournal() {

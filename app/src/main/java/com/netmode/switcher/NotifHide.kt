@@ -33,7 +33,7 @@ data class HideRule(
     fun matches(sbn: StatusBarNotification): Boolean =
         active() && app == NotifHide.appOf(sbn) &&
             (channel == null || channel == sbn.notification.channelId) &&
-            NotifRulePolicy.matches(title, ongoingOnly, exclusions, NotifHide.titleOf(sbn), NotifHide.textOf(sbn), sbn.isOngoing)
+            NotifRulePolicy.matches(title, ongoingOnly, exclusions, NotifHide.titleOf(sbn), NotifHide.textOf(sbn), NotifHide.ongoingOf(sbn))
 
     fun matches(e: ShadeEntry): Boolean = active() && app == e.app &&
         (channel == null || channel == e.channel) &&
@@ -119,11 +119,11 @@ data class SeenEntry(
  * foreground service), which a listener cannot cancel. An update of a snoozed notification
  * stays snoozed; a fresh post comes through [onPosted] and is snoozed again at once.
  *
- * A year, not "forever": the system adds the time to now, and a huge one overflows into a
- * snooze that ends at once, over and over. A key a removed rule let go is kept in
- * [Prefs.releasedKeys] and let go again each time the listener connects: the system remembers
- * snoozes across reboots, and one whose notification was not up at the time is otherwise
- * held for the rest of the year.
+ * Days, not a year: nothing runs when this app is uninstalled, so a snooze has to end by
+ * itself. [NotifRules.renew] extends it while the app is here. A key a removed rule let go is
+ * kept in [Prefs.releasedKeys] for a while and let go again when it shows up: the system
+ * remembers snoozes across reboots and applies one to the app's next post without telling
+ * any listener.
  *
  * The other way, [block], takes POST_NOTIFICATIONS from the whole app through the privileged
  * shell (root first). Nothing of it reaches the shade then, but Android kills the app when a
@@ -132,7 +132,7 @@ data class SeenEntry(
  */
 object NotifHide {
 
-    private const val SNOOZE_MS = 365L * 24 * 3600 * 1000
+    internal const val SNOOZE_MS = 3L * 24 * 3600 * 1000
     private const val PERM = "android.permission.POST_NOTIFICATIONS"
 
     /** POST_NOTIFICATIONS is a runtime permission from Android 13 on; before it there is none. */
@@ -140,6 +140,10 @@ object NotifHide {
 
     /** UserHandle's own user id is hidden API; the uid carries it (100000 uids per user). */
     fun appOf(sbn: StatusBarNotification): String = AppKey.of(sbn.packageName, sbn.uid / 100_000)
+
+    fun ongoingOf(sbn: StatusBarNotification) = NotifRulePolicy.ongoing(sbn.notification.flags)
+
+    fun isSummary(sbn: StatusBarNotification) = sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0
 
     fun titleOf(sbn: StatusBarNotification): String {
         val extras = sbn.notification.extras
@@ -159,7 +163,7 @@ object NotifHide {
         app = NotifHide.appOf(sbn),
         channel = sbn.notification.channelId,
         title = titleOf(sbn),
-        ongoing = sbn.isOngoing,
+        ongoing = ongoingOf(sbn),
         text = textOf(sbn),
     )
 
@@ -179,25 +183,44 @@ object NotifHide {
      * new notification, and one snoozed before that never shows. The bookkeeping — the
      * "recent" list, the keys to let go later — is done off the main thread afterwards.
      */
-    internal fun onPosted(listener: NotificationListenerService, sbn: StatusBarNotification) {
-        val rule = Prefs.hideRules.firstOrNull { it.matches(sbn) }
-        val attempt = rule?.let { runCatching { listener.snoozeNotification(sbn.key, SNOOZE_MS) } }
+    internal fun onPosted(listener: NotificationListenerService, sbn: StatusBarNotification, up: List<StatusBarNotification>? = null) {
+        val rules = Prefs.hideRules
+        val rule = rules.firstOrNull { it.matches(sbn) }
+        // Android takes the rest of a group along with a snooze; only a group needs this look.
+        val group = if (rule == null || !sbn.isGroup) emptyList() else groupOf(listener, sbn, up)
+        val allowed = rule != null && NotifRulePolicy.mayHide(isSummary(sbn),
+            group.filterNot(::isSummary).map { s -> rules.any { it.matches(s) } })
+        val attempt = if (allowed) runCatching { listener.snoozeNotification(sbn.key, SNOOZE_MS) } else null
         val snoozed = attempt?.isSuccess == true
         App.scope.launch {
             if (snoozed) NotifRules.remember(sbn)
             seen(sbn)
-            if (rule != null) {
+            NotifRules.poke()
+            if (rule != null && allowed) {
                 kotlinx.coroutines.delay(120)
+                if (snoozed && group.isNotEmpty()) NotifRules.rememberGroup(rule, group)
                 val confirmed = runCatching { listener.snoozedNotifications.any { it.key == sbn.key } }.getOrDefault(false)
                 NotifJournal.record(sbn, rule, if (attempt?.isFailure == true) "error" else if (confirmed) "hidden" else "unconfirmed")
             }
         }
     }
 
+    private fun groupOf(listener: NotificationListenerService, sbn: StatusBarNotification, up: List<StatusBarNotification>?) =
+        (up ?: runCatching { listener.activeNotifications.toList() }.getOrNull()).orEmpty()
+            .filter { it.key != sbn.key && it.groupKey == sbn.groupKey }
+
+    /** A summary kept for the sake of a visible sibling can go once that sibling has gone. */
+    internal fun onRemoved(listener: NotificationListenerService, sbn: StatusBarNotification) {
+        if (!sbn.isGroup || Prefs.hideRules.isEmpty()) return
+        val up = runCatching { listener.activeNotifications.toList() }.getOrNull().orEmpty()
+        up.filter { isSummary(it) && it.groupKey == sbn.groupKey }.forEach { onPosted(listener, it, up) }
+    }
+
     /** Applies the rules to everything up now: on connect, and when a rule is added. */
     internal fun sweep(listener: NotificationListenerService) {
         if (Prefs.hideRules.isEmpty()) return
-        runCatching { listener.activeNotifications }.getOrNull().orEmpty().forEach { onPosted(listener, it) }
+        val up = runCatching { listener.activeNotifications.toList() }.getOrNull().orEmpty()
+        up.forEach { onPosted(listener, it, up) }
     }
 
     /**
@@ -222,8 +245,21 @@ object NotifHide {
         return r.second.takeIf { r.first == IMPORTANCE_NONE && it != IMPORTANCE_NONE }
     }
 
+    /**
+     * Gives the channel its importance back; returns what it has now, or null on failure. An
+     * app or channel that no longer exists has nothing to give back and counts as done.
+     */
+    internal suspend fun restoreChannel(app: String, channel: String, was: Int): Int? {
+        val installed = runCatching { Compat.appInfo(App.ctx.packageManager, AppKey.pkg(app)) }
+            .exceptionOrNull() !is android.content.pm.PackageManager.NameNotFoundException
+        if (!installed) return was
+        var gone = false
+        val set = setChannel(app, channel, was) { gone = true }
+        return if (gone) was else set?.first
+    }
+
     /** Runs [ChannelCli] as root; (importance now, importance before), or null on failure. */
-    internal suspend fun setChannel(app: String, channel: String, importance: Int): Pair<Int, Int>? {
+    internal suspend fun setChannel(app: String, channel: String, importance: Int, onGone: () -> Unit = {}): Pair<Int, Int>? {
         if (!AppKey.valid(app) || !Root.available()) return null
         val uid = runCatching {
             AppKey.user(app) * 100_000 + Compat.appInfo(App.ctx.packageManager, AppKey.pkg(app)).uid % 100_000
@@ -235,6 +271,7 @@ object NotifHide {
         }.getOrNull().orEmpty()
         val line = out.lineSequence().firstOrNull { it.startsWith("ok=") || it.startsWith("error=") }
         if (line == null || line.startsWith("error=")) {
+            if (line != null && NotifRulePolicy.channelGone(line)) onGone()
             Prefs.log("канал $channel не переключён: ${line?.removePrefix("error=") ?: out.trim().take(200)}")
             return null
         }
