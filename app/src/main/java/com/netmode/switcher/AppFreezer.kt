@@ -33,6 +33,7 @@ object AppFreezer {
 
     private const val TAG = "netmode"
     private val lock = Mutex()
+    private val frozenWrite = Any()
 
     /** A late alarm still counts for a start-only rule within this slack. */
     private val GRACE: Duration = Duration.ofMinutes(10)
@@ -1501,7 +1502,6 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
     private suspend fun sideActions(rule: AppRule, why: String, only: Set<String>? = null) {
         fun wants(key: String) = only == null || key in only
         val existing = Prefs.frozen.associateBy { it.pkg }
-        val added = mutableListOf<FrozenApp>()
         val dropped = mutableListOf<String>()
         val done = mutableListOf<String>()
         val since = System.currentTimeMillis()
@@ -1509,7 +1509,14 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
             // A rule that never ends sets the state for good: whatever an earlier rule meant to
             // put back is superseded rather than restored later.
             if (!rule.restores) { dropped += pkg; return }
-            added += FrozenApp(pkg, rule.id, since, null, null, false, existing[pkg]?.prev ?: prev)
+            // On disk before the change it describes: a crash or process death midway still
+            // leaves the record that puts the change back. The VPN and the tiles record side by side.
+            val entry = FrozenApp(pkg, rule.id, since, null, null, false, existing[pkg]?.prev ?: prev)
+            synchronized(frozenWrite) { Prefs.frozen = FrozenRecords.put(Prefs.frozen, entry) }
+        }
+        /** The change [record] announced did not happen: back to what was on record before it. */
+        fun unrecord(pkg: String) {
+            synchronized(frozenWrite) { Prefs.frozen = FrozenRecords.undo(Prefs.frozen, pkg, existing[pkg]) }
         }
         try {
             rule.netMode?.let { mode ->
@@ -1517,19 +1524,19 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
                 if (slots.isEmpty() && rule.netSlot != SLOT_ALL) done += "SIM ${rule.netSlot + 1} не активна — режим сети не менялся"
                 for (slot in slots.filter { wants(FrozenApp.NET + it) }) {
                     val key = FrozenApp.NET + slot
-                    val mask = runCatching { Telephony.readMask(slot) }.getOrDefault(-1L)
+                    val mask = runCatching { Telephony.readMask(slot) }.rethrowCancel().getOrDefault(-1L)
                     // The exact mask, not its generation: a stock "LTE only" put back as the
                     // 4G preset would quietly change the user's setting.
                     val prev = NetMode.exact(mask)?.name ?: if (mask > 0) "0x%X".format(mask) else null
+                    val restorable = rule.restores && prev != null && (mask != Profile.maskFor(mode, slot) || key in existing)
+                    if (restorable) record(key, prev!!)
                     val result = ModeController.apply(slot, mode, sourceOf(rule))
                     // A failed read-back does not mean nothing was written: whatever changed
                     // is still recorded, so the end of the window puts it back.
                     val changed = result.isSuccess ||
-                        runCatching { Telephony.readMask(slot) }.getOrDefault(mask) != mask
-                    if (changed) {
-                        if (!rule.restores) record(key, "")
-                        else if (prev != null && (mask != Profile.maskFor(mode, slot) || key in existing)) record(key, prev)
-                    }
+                        runCatching { Telephony.readMask(slot) }.rethrowCancel().getOrDefault(mask) != mask
+                    if (changed && !rule.restores) record(key, "")
+                    if (!changed && restorable) unrecord(key)
                     result.onSuccess { done += "SIM ${slot + 1} → ${mode.short}" }
                         .onFailure { done += "SIM ${slot + 1}: ошибка ${it.message}" }
                 }
@@ -1647,9 +1654,8 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
                         if (want == Toggle.ON) {
                             val before = VpnControl.owner()
                             val app = rule.vpnApp
-                            val line = if (app == null) "VPN: не выбрано приложение" else VpnControl.on(app)
-                            if (before != app || FrozenApp.SYSVPN in existing) record(FrozenApp.SYSVPN, before ?: "off")
-                            line
+                            if (app != null && (before != app || FrozenApp.SYSVPN in existing)) record(FrozenApp.SYSVPN, before ?: "off")
+                            if (app == null) "VPN: не выбрано приложение" else VpnControl.on(app)
                         } else VpnControl.off(rule.vpnOffApp) { pkg -> record(FrozenApp.SYSVPN, pkg) }
                     }
                 }
@@ -1665,16 +1671,20 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
             for ((name, value) in rule.sys) {
                 val key = SysKey.of(name) ?: continue
                 if (!wants(FrozenApp.SYS + name)) continue
-                val before = SysSettings.read(key)
-                val ok = runCatching { SysSettings.apply(key, value) }
+                SysSettings.read(key)?.let { record(FrozenApp.SYS + name, it) }
+                val ok = runCatching { SysSettings.apply(key, value) }.rethrowCancel()
                     .onFailure { done += key.title.lowercase() + ": ошибка ${it.message}" }.isSuccess
                 if (!ok) continue
                 done += key.title.lowercase() + ": " + key.optionLabel(value)
-                if (before != null) record(FrozenApp.SYS + name, before)
             }
-            Prefs.frozen = Prefs.frozen.filterNot { e -> e.pkg in dropped || added.any { it.pkg == e.pkg } } + added
+            // Superseded records go only now: until the rule has really set the state for good,
+            // what an earlier rule meant to put back still stands.
+            if (dropped.isNotEmpty()) Prefs.frozen = Prefs.frozen.filterNot { it.pkg in dropped }
             if (done.isNotEmpty()) Prefs.log("($why): ${done.joinToString(", ")}")
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
+            if (done.isNotEmpty()) Prefs.log("($why): ${done.joinToString(", ")}")
             Prefs.log("($why): ошибка — ${e.message}")
             Log.w(TAG, "side actions failed", e)
         }
