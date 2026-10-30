@@ -35,6 +35,7 @@ class MainActivity : AppCompatActivity() {
 
     /** Guards a toggle group while it is being set from code rather than tapped. */
     private var syncing = false
+    private val openCards = mutableSetOf<Int>()
 
     /** A quick action is running: its cell says so until it is done. */
     private var vpnBusy = false
@@ -54,6 +55,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        savedInstanceState?.getIntArray(STATE_OPEN_CARDS)?.let { openCards += it.toList() }
         ui = ActivityMainBinding.inflate(layoutInflater)
         setContentView(ui.root)
         // The freezer tile's long press is for the folder alone: this screen is not shown.
@@ -176,6 +178,11 @@ class MainActivity : AppCompatActivity() {
         super.onStop()
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putIntArray(STATE_OPEN_CARDS, openCards.toIntArray())
+    }
+
     /** First start on a phone: offer the check once, before anything is switched. */
     private fun offerCheck() {
         if (Profile.current != null || Prefs.checkOffered) return
@@ -217,6 +224,14 @@ class MainActivity : AppCompatActivity() {
         sims.forEach { sim ->
             val card = ItemSimBinding.inflate(inflater, ui.simList, false)
             card.simName.text = sim.label
+            paintOpen(card, sim.slot in openCards)
+            card.header.setOnClickListener {
+                val open = sim.slot !in openCards
+                if (open) openCards += sim.slot else openCards -= sim.slot
+                // The whole column, so what lies below the card slides along with it.
+                androidx.transition.TransitionManager.beginDelayedTransition(ui.simList.parent as android.view.ViewGroup)
+                paintOpen(card, open)
+            }
             // A network no working mode of this SIM connects to is greyed out.
             val avail = Profile.available(sim.slot)
             for ((btn, g) in netButtons(card)) btn.isEnabled = avail.any { g in it.generations }
@@ -239,6 +254,15 @@ class MainActivity : AppCompatActivity() {
             paintPair(sim.slot, ModeController.modeOf(sim.slot))
         }
         ui.noSims.visibility = if (sims.isEmpty()) View.VISIBLE else View.GONE
+    }
+
+    private fun paintOpen(card: ItemSimBinding, open: Boolean) {
+        card.controls.visibility = if (open) View.VISIBLE else View.GONE
+        card.chevron.rotation = if (open) 180f else 0f
+        androidx.core.view.ViewCompat.setStateDescription(
+            card.header,
+            getString(if (open) R.string.sim_card_open else R.string.sim_card_closed),
+        )
     }
 
     private fun netButtons(card: ItemSimBinding) =
@@ -616,5 +640,6 @@ class MainActivity : AppCompatActivity() {
     private companion object {
         const val RECENT_EVENTS = 4
         const val MIN_ROW_WIDTH_DP = 300f
+        const val STATE_OPEN_CARDS = "open_cards"
     }
 }

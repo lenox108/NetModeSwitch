@@ -654,7 +654,8 @@
     <string name="ap_legacy">На Android 10 имя, пароль и диапазон точки доступа меняются в системных настройках. Раздача через VPN или Proxy работает.</string>
     <string name="pair_add">Добавить</string>
     <string name="pair_line">В шторке: %1$s ⇄ %2$s</string>
-    <string name="nets_hint">Отметь сети, которые нужны</string>
+    <string name="sim_card_open">Развёрнуто</string>
+    <string name="sim_card_closed">Свёрнуто</string>
     <string name="pair_edit">Выбрать два режима</string>
     <string name="pair_to">Переключить на %s</string>
     <string name="pair_title">SIM %1$d: два режима для шторки</string>
