@@ -69,9 +69,12 @@ internal object TileStateProbe {
         return if (unknown) null else false
     }
 
+    private fun head(dump: String) = dump.lineSequence().filter { it.isNotBlank() }.take(3).joinToString("\n")
+
     /** Existing adapter for proxy/non-VPN tiles, with dump failures kept unknown. */
     fun foreground(dump: String): Boolean? {
-        if (failure.containsMatchIn(dump)) return null
+        // Only up front: an app's own service dump may quote such an error, which is no failure here.
+        if (failure.containsMatchIn(head(dump))) return null
         if (!dump.contains("ACTIVITY MANAGER SERVICES") && !dump.trimStart().startsWith("No services match:")) return null
         return Regex("\\bisForeground=true\\b").containsMatchIn(dump)
     }

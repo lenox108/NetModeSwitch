@@ -11,6 +11,18 @@ class TileStateProbeTest {
     private fun vpn(owner: String, state: String = "CONNECTED") =
         "NetworkAgentInfo{network{101} ni{VPN $state extra: VPN:$owner} nc{[ Transports: VPN ]}}"
 
+    private val services = "ACTIVITY MANAGER SERVICES (dumpsys activity services)\n  User 0 active services:\n" +
+        "  * ServiceRecord{1 u0 com.happproxy/.Svc}\n    isForeground=true\n"
+
+    @Test fun anErrorQuotedInsideTheServiceDumpDoesNotHideItsState() {
+        assertEquals(true, TileStateProbe.foreground(services + "    lastError=java.lang.SecurityException: Permission denied\n"))
+    }
+
+    @Test fun aFailedServiceDumpStaysUnknown() {
+        assertNull(TileStateProbe.foreground("Permission Denial: can't dump ActivityManager\nACTIVITY MANAGER SERVICES\n"))
+        assertNull(TileStateProbe.foreground("Error dumping service info\n" + services))
+    }
+
     @Test fun bothAmneziaClientsUseVpnEvenWhenChosenInTheGenericTileRow() {
         assertTrue(TileStateProbe.usesVpn("$pkg/.AmneziaTileService", emptySet()))
         assertTrue(TileStateProbe.usesVpn("org.amnezia.awg/.QuickTileService", emptySet()))
