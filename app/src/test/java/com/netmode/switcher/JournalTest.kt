@@ -36,9 +36,24 @@ class JournalTest {
     }
 
     @Test fun aSkipIsAWarningAndPlainLinesAreInfo() {
-        assertEquals(Severity.WARNING, Journal.parse("30.10 10:11  (Машина): в конце — VPN не подключён — пропущено").severity)
+        assertEquals(Severity.WARNING, Journal.parse("30.10 10:11  (Машина): Wi-Fi: отключение пропущено").severity)
         assertEquals(Severity.INFO, Journal.parse("30.10 10:11  раздача через VPN (tun0)").severity)
-        assertEquals(Severity.ERROR, Journal.parse("30.10 10:11  раздача через VPN: VPN не подключён — раздача заблокирована").severity)
+        assertEquals(Severity.WARNING, Journal.parse("30.10 10:11  раздача через VPN: VPN не подключён — раздача заблокирована").severity)
+        assertEquals(Severity.ERROR, Journal.parse("30.10 10:11  раздача через VPN: ошибка — раздача заблокирована").severity)
+    }
+
+    @Test fun aVpnAlreadyOffAtTheEndIsNoProblem() {
+        val e = Journal.parse("30.10 11:13  (точка доступа включена — больше нет): в конце — Happ · Переключить уже вкл, VPN AmneziaVPN не подключён — пропущено")
+        assertEquals(Severity.DONE, e.severity)
+        assertEquals(Severity.ERROR, Journal.parse("30.10 11:13  (А): VPN AmneziaVPN не подключён — пропущено, Wi-Fi: ошибка").severity)
+        assertEquals(Severity.ERROR, Journal.parse("30.10 11:13  (А): VPN Amnezia не запустился, VPN Happ не подключён — пропущено").severity)
+    }
+
+    @Test fun aCancelledJobInAnOldLogIsNoError() {
+        assertEquals(Severity.INFO, Journal.parse("30.10 15:00  TTL / IPv6: ошибка yf0 was cancelled").severity)
+        assertEquals(Severity.INFO, Journal.parse("30.10 15:00  (А): VPN: ошибка yf0 was cancelled").severity)
+        assertEquals(Severity.ERROR, Journal.parse("30.10 15:00  (А): VPN: ошибка yf0 was cancelled, Wi-Fi: ошибка").severity)
+        assertEquals(Severity.WARNING, Journal.parse("30.10 15:00  (А): VPN: ошибка yf0 was cancelled, Wi-Fi: отключение пропущено").severity)
     }
 
     @Test fun aRuleOrNetworkNameCannotFakeAProblem() {

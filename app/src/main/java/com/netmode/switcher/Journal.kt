@@ -27,7 +27,19 @@ internal object Journal {
         "ошибк", "не удалось", "неизвестно", "не подтвердилось", "заблокирована", "нужен root",
         "не выключил", "не включил", "не запустился", "неверный адрес",
     )
-    private val WARNINGS = listOf("пропущен", "не подключён", "не активна", "без root", "подожди", "занята")
+    private val WARNINGS = listOf("пропущен", "не активна", "без root", "подожди", "занята")
+
+    /** The hotspot holds its clients back until the VPN is up, usually for a moment: on purpose. */
+    private const val WAITING_FOR_VPN = "vpn не подключён — раздача заблокирована"
+
+    /**
+     * A VPN that was to go off is off already: nothing failed, there was nothing to do.
+     * One action only: a rule's line joins its actions with commas, the others still count.
+     */
+    private val ALREADY_OFF = Regex("vpn [^,]*не подключён — пропущено")
+
+    /** What older versions wrote when a newer event replaced a running job: never a failure. */
+    private val CANCELLED = Regex("[^,]*was cancelled")
 
     fun parse(raw: String): JournalEntry {
         val stamp = STAMP.find(raw)
@@ -66,9 +78,13 @@ internal object Journal {
     private fun severity(text: String, ofRule: Boolean): JournalEntry.Severity {
         // A name in quotes is the user's word, not the app's: a rule may be called "Ошибка".
         val words = text.replace(QUOTED, "").lowercase()
+        // These first: their wording overlaps the lists below.
+        val settled = words.replace(ALREADY_OFF, "").replace(CANCELLED, "")
         return when {
-            ERRORS.any { it in words } -> JournalEntry.Severity.ERROR
-            WARNINGS.any { it in words } -> JournalEntry.Severity.WARNING
+            WAITING_FOR_VPN in settled -> JournalEntry.Severity.WARNING
+            ERRORS.any { it in settled } -> JournalEntry.Severity.ERROR
+            WARNINGS.any { it in settled } -> JournalEntry.Severity.WARNING
+            CANCELLED.containsMatchIn(words) -> JournalEntry.Severity.INFO
             ofRule -> JournalEntry.Severity.DONE
             else -> JournalEntry.Severity.INFO
         }

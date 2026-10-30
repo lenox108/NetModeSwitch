@@ -8,6 +8,8 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -37,7 +39,7 @@ object TetherWatch {
         tweaksPending?.cancel()
         tweaksPending = App.scope.launch {
             delay(1_500)
-            runCatching { NetworkTweaks.apply() }
+            finishing { NetworkTweaks.apply() }
                 .onFailure { Prefs.log("TTL / IPv6: ошибка ${it.message}") }
         }
     }
@@ -75,7 +77,7 @@ object TetherWatch {
                 // OEM tethering setup can replace firewall chains. This
                 // bounded check never requests tile listening and does not rebuild a VPN.
                 if (Prefs.tetherMode == TetherMode.DIRECT) {
-                    if (NetworkTweaks.needed()) runCatching { NetworkTweaks.apply() }
+                    if (NetworkTweaks.needed()) finishing { NetworkTweaks.apply() }
                     apWasUp = false
                     continue
                 }
@@ -84,7 +86,7 @@ object TetherWatch {
                 val check = TetherHealth.shouldApply(up, apWasUp)
                 apWasUp = up
                 if (!check) continue
-                val line = runCatching { TetherRoute.apply() }.getOrElse { "раздача: ошибка ${it.message}" }
+                val line = finishing { TetherRoute.apply() }.getOrElse { "раздача: ошибка ${it.message}" }
                 if (line != Prefs.lastTetherLine) Prefs.log(line)
                 Prefs.lastTetherLine = line
             }
@@ -96,7 +98,7 @@ object TetherWatch {
         pending?.cancel()
         pending = App.scope.launch {
             delay(1_500)
-            val line = runCatching { TetherRoute.apply() }.getOrElse { "раздача: ошибка ${it.message}" }
+            val line = finishing { TetherRoute.apply() }.getOrElse { "раздача: ошибка ${it.message}" }
             // The tether broadcast is sticky and arrives at every process start: the same
             // "will start with the hotspot" line is not worth a log entry each time.
             if (line != Prefs.lastTetherLine) Prefs.log(line)
@@ -145,3 +147,11 @@ internal object TetherHealth {
      */
     fun shouldApply(up: Boolean, wasUp: Boolean): Boolean = up || wasUp
 }
+
+/**
+ * Runs [block] to its end even if the job is cancelled meanwhile. A newer network event cancels
+ * the pending job: that may only drop a wait, since stopping a script halfway leaves rules half
+ * applied and reports the cancellation as if the script had failed. The newer job runs next.
+ */
+internal suspend fun <T> finishing(block: suspend () -> T): Result<T> =
+    withContext(NonCancellable) { runCatching { block() } }
