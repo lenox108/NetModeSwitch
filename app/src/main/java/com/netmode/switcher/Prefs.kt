@@ -17,6 +17,8 @@ object Prefs {
     private const val KEY_CATCH_UP = "catch_up_on_boot"
     private const val KEY_RELIABLE_WIFI = "reliable_wifi"
     private const val KEY_EVENTS = "events"
+    private const val LOG_FILE = "netmode_log"
+    private const val KEY_LOG_MOVED = "moved_from_main"
     private const val KEY_LAST_SSID = "last_ssid"
     private const val KEY_IGNORE_WIFI_OFF = "ignore_wifi_off"
     private const val KEY_BACKEND = "backend"
@@ -555,19 +557,37 @@ object Prefs {
             .getOrDefault(Backend.AUTO)
         set(value) = sp.edit().putString(KEY_BACKEND, value.name).apply()
 
-    val events: List<String>
-        get() = runCatching {
-            val a = JSONArray(sp.getString(KEY_EVENTS, "[]"))
-            (0 until a.length()).map { a.getString(it) }
-        }.getOrDefault(emptyList())
-
-    fun log(line: String) {
-        val stamp = LocalDateTime.now().format(TIME)
-        val next = (listOf("$stamp  $line") + events).take(MAX_EVENTS)
-        sp.edit().putString(KEY_EVENTS, JSONArray(next).toString()).apply()
+    /**
+     * The log has a file of its own: every line rewrites the whole file, which should not take
+     * every setting along. It keeps the key [KEY_EVENTS], and [listen] covers this file too.
+     */
+    private val logSp by lazy {
+        App.ctx.getSharedPreferences(LOG_FILE, Context.MODE_PRIVATE).also { logs ->
+            // Moved in one commit with its mark, then removed; dying in between repeats only the removal.
+            if (!logs.getBoolean(KEY_LOG_MOVED, false)) {
+                logs.edit().putString(KEY_EVENTS, sp.getString(KEY_EVENTS, "[]")).putBoolean(KEY_LOG_MOVED, true).commit()
+            }
+            if (sp.contains(KEY_EVENTS)) sp.edit().remove(KEY_EVENTS).apply()
+        }
     }
 
-    fun clearLog() = sp.edit().remove(KEY_EVENTS).apply()
+    private val eventLog by lazy {
+        EventLog(MAX_EVENTS,
+            read = {
+                runCatching {
+                    val a = JSONArray(logSp.getString(KEY_EVENTS, "[]"))
+                    (0 until a.length()).map { a.getString(it) }
+                }.getOrDefault(emptyList())
+            },
+            write = { logSp.edit().putString(KEY_EVENTS, JSONArray(it).toString()).apply() },
+        )
+    }
+
+    val events: List<String> get() = eventLog.lines()
+
+    fun log(line: String) = eventLog.add("${LocalDateTime.now().format(TIME)}  $line")
+
+    fun clearLog() = eventLog.clear()
 
     /** What a home-screen widget was set up to show; null until it is configured. */
     fun widgetConfig(id: Int): String? = sp.getString("widget_$id", null)
@@ -593,11 +613,15 @@ object Prefs {
     fun setWidgetText(id: Int, value: String?) =
         sp.edit().apply { if (value == null) remove("widget_text_$id") else putString("widget_text_$id", value) }.apply()
 
-    fun listen(l: android.content.SharedPreferences.OnSharedPreferenceChangeListener) =
+    fun listen(l: android.content.SharedPreferences.OnSharedPreferenceChangeListener) {
         sp.registerOnSharedPreferenceChangeListener(l)
+        logSp.registerOnSharedPreferenceChangeListener(l)
+    }
 
-    fun unlisten(l: android.content.SharedPreferences.OnSharedPreferenceChangeListener) =
+    fun unlisten(l: android.content.SharedPreferences.OnSharedPreferenceChangeListener) {
         sp.unregisterOnSharedPreferenceChangeListener(l)
+        logSp.unregisterOnSharedPreferenceChangeListener(l)
+    }
 
     /** True the first time it is asked for [key], false ever after. */
     fun once(key: String): Boolean {
