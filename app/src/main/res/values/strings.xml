@@ -460,9 +460,12 @@
     <string name="notice_skip">Пропустить</string>
     <string name="notice_undo">Отменить</string>
     <string name="notice_end">Завершить</string>
+    <string name="notice_failed_title">«%1$s»: выполнено не всё</string>
+    <string name="notice_retry">Повторить</string>
     <string name="waiting_answer">ждёт ответа в уведомлении</string>
     <string name="channel_rule_ask">Вопросы правил</string>
     <string name="channel_rule_done">Срабатывание правил</string>
+    <string name="channel_rule_failed">Сбои правил</string>
     <string name="extras_add">И ещё если…</string>
     <string name="extras_hint">Правило работает, только пока выполнены все условия: ждёт недостающего и заканчивается, когда одно из них пропадёт</string>
     <string name="extra_time">Время: с … до …</string>
@@ -579,6 +582,8 @@
     <string name="backup_export">Сохранить</string>
     <string name="backup_import">Загрузить</string>
     <string name="backup_import_confirm">Текущие правила заменятся правилами из файла. Продолжить?</string>
+    <string name="backup_import_outside_title">В файле есть команды и запросы</string>
+    <string name="backup_import_outside">Текущие правила заменятся правилами из файла. Эти правила выполняют команды от root или HTTP-запросы, поэтому загрузятся выключенными. Включайте только те, что проверили.\n\n%1$s</string>
     <string name="backup_saved">Сохранено правил: %d</string>
     <string name="backup_loaded">Загружено правил: %d</string>
     <string name="backup_failed">Не получилось: %s</string>

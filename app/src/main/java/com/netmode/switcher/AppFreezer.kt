@@ -33,6 +33,36 @@ object AppFreezer {
 
     private const val TAG = "netmode"
     private val lock = Mutex()
+    private val frozenWrite = Any()
+
+    /** What has failed of the start now running, for [RunNotices.failed]; null outside one. Guarded by [lock]. */
+    @Volatile private var runFailures: MutableList<String>? = null
+
+    /** [fresh] is a new start, which replaces the last one's notice; steps after a pause add to it. */
+    private fun beginRun(rule: AppRule, fresh: Boolean = true) {
+        if (fresh) RunNotices.cancelFailed(rule.id)
+        runFailures = mutableListOf()
+    }
+
+    private fun endRun(rule: AppRule) {
+        val failed = runFailures
+        runFailures = null
+        if (!failed.isNullOrEmpty()) RunNotices.failed(rule, failed)
+    }
+
+    private fun noteFailures(lines: List<String>) {
+        runFailures?.addAll(lines.filter(RunFailure::isFailure))
+    }
+
+    /** "Повторить" on a failure notice: the whole rule again, as "apply now" would run it. */
+    suspend fun retryRun(ruleId: Long) = lock.withLock {
+        val rule = Prefs.appRules.find { it.id == ruleId }?.takeIf { it.enabled } ?: return@withLock
+        if (rule.isTime) rule.lastStart(ZonedDateTime.now())?.let {
+            Prefs.appHandled = Prefs.appHandled + (rule.id to it.toInstant().toEpochMilli())
+        }
+        eventState = 0
+        freezeLocked(rule, "повтор", manual = true)
+    }
 
     /** A late alarm still counts for a start-only rule within this slack. */
     private val GRACE: Duration = Duration.ofMinutes(10)
@@ -319,22 +349,27 @@ object AppFreezer {
             if (!rule.enabled || (rule.restores && id !in Prefs.openWindows)) continue
             val why = rule.logPrefix + "экран погашен"
             acted()
-            if (rule.steps.isNotEmpty()) {
-                // An ordered rule waits as a whole: its steps make no sense out of order.
-                runSteps(rule, end = false, from = 0, why = why)
-                continue
+            beginRun(rule)
+            try {
+                if (rule.steps.isNotEmpty()) {
+                    // An ordered rule waits as a whole: its steps make no sense out of order.
+                    runSteps(rule, end = false, from = 0, why = why)
+                    continue
+                }
+                if (what == PENDING_ALL) {
+                    sideActions(rule, why)
+                    if (rule.reconnect) reconnect(why)
+                    Freezer.ruleStart(rule, why)
+                    if (rule.unload) unloadBackground(why, keep = rule.launchApps, all = rule.unloadAll)
+                    launchApps(rule.launchApps, why)
+                    noteFailures(OneShots.run(rule.note, rule.http, rule.shell, why))
+                } else if (rule.unload) {
+                    unloadBackground(why, keep = rule.launchApps, all = rule.unloadAll)
+                }
+                freezeApps(rule, why)
+            } finally {
+                endRun(rule)
             }
-            if (what == PENDING_ALL) {
-                sideActions(rule, why)
-                if (rule.reconnect) reconnect(why)
-                Freezer.ruleStart(rule, why)
-                if (rule.unload) unloadBackground(why, keep = rule.launchApps, all = rule.unloadAll)
-                launchApps(rule.launchApps, why)
-                OneShots.run(rule.note, rule.http, rule.shell, why)
-            } else if (rule.unload) {
-                unloadBackground(why, keep = rule.launchApps, all = rule.unloadAll)
-            }
-            freezeApps(rule, why)
         }
         DeferWatch.sync()
     }
@@ -832,6 +867,7 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
         val what = if (all) "всё выгружено" else "фон выгружен"
         val out = runCatching { Privileged.exec(script) }.getOrElse {
             Prefs.log("($why): выгрузить не удалось — ${it.message}")
+            runFailures?.add("выгрузить не удалось — ${it.message}")
             return 0
         }
         val b = Regex("""@B (\d+)""").find(out)?.groupValues?.get(1)?.toIntOrNull() ?: 0
@@ -885,7 +921,10 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
         if (cmds.isEmpty()) return
         runCatching { Privileged.exec(cmds.joinToString("\n")) }
             .onSuccess { Prefs.log("($why): открыто — " + AppPickerActivity.labels(keys).joinToString(", ")) }
-            .onFailure { Prefs.log("($why): открыть не удалось — ${it.message}") }
+            .onFailure {
+                Prefs.log("($why): открыть не удалось — ${it.message}")
+                runFailures?.add("открыть не удалось — ${it.message}")
+            }
     }
 
     /**
@@ -1134,6 +1173,7 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
             runCatching { if (end) endStep(rule, step, why) else startStep(rule, step, why) }
                 .onFailure {
                     Prefs.log("($why): шаг не выполнен — ${it.message}")
+                    if (!end) runFailures?.add("шаг не выполнен — ${it.message}")
                     Log.w(TAG, "step $step failed", it)
                 }
         }
@@ -1198,8 +1238,8 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
             "APPS" -> freezeApps(rule, why)
             "LAUNCH" -> launchApps(rule.launchApps, why)
             "NOTE" -> OneShots.run(rule.note, null, null, why)
-            "HTTP" -> OneShots.run(null, rule.http, null, why)
-            "SHELL" -> OneShots.run(null, null, rule.shell, why)
+            "HTTP" -> noteFailures(OneShots.run(null, rule.http, null, why))
+            "SHELL" -> noteFailures(OneShots.run(null, null, rule.shell, why))
             "UNLOAD" -> if (rule.unload) unloadBackground(why, keep = rule.launchApps, all = rule.unloadAll)
             "RECONNECT" -> if (rule.reconnect) reconnect(why)
             "ICE" -> Freezer.ruleStart(rule, why)
@@ -1251,7 +1291,12 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
         }
         eventState = 0
         acted()
-        runSteps(rule, p.end, p.next, why)
+        if (!p.end) beginRun(rule, fresh = false)
+        try {
+            runSteps(rule, p.end, p.next, why)
+        } finally {
+            if (!p.end) endRun(rule)
+        }
         AlarmScheduler.rearm()
     }
 
@@ -1325,6 +1370,7 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
             runCatching { restore(endHeld) }
                 .onSuccess { Prefs.log("($why): возвращены приложения, остановленные в конце прошлого раза (${endHeld.size})") }
         }
+        beginRun(rule)
         try {
             if (rule.steps.isNotEmpty()) {
                 if (defer) {
@@ -1348,7 +1394,7 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
             val unloadNow = rule.unload && !(defer && rule.packages.isNotEmpty())
             if (unloadNow) unloadBackground(why, keep = rule.launchApps, all = rule.unloadAll)
             launchApps(rule.launchApps, why)
-            OneShots.run(rule.note, rule.http, rule.shell, why)
+            noteFailures(OneShots.run(rule.note, rule.http, rule.shell, why))
             if (defer && rule.packages.isNotEmpty()) {
                 Prefs.pendingStarts = Prefs.pendingStarts + (rule.id to PENDING_APPS)
                 Prefs.log("($why): приложения остановятся через минуту после того, как погасишь экран")
@@ -1357,6 +1403,7 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
                 freezeApps(rule, why)
             }
         } finally {
+            endRun(rule)
             // The end of an "after leaving" window is an alarm of its own.
             AlarmScheduler.rearm()
         }
@@ -1488,6 +1535,7 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
             Log.i(TAG, "froze ${pkgs.size}, alive=$alive")
         } catch (e: Exception) {
             Prefs.log("приложения ($why): ошибка — ${e.message}")
+            runFailures?.add("приложения: ошибка — ${e.message}")
             Log.w(TAG, "freeze failed", e)
         }
     }
@@ -1501,7 +1549,6 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
     private suspend fun sideActions(rule: AppRule, why: String, only: Set<String>? = null) {
         fun wants(key: String) = only == null || key in only
         val existing = Prefs.frozen.associateBy { it.pkg }
-        val added = mutableListOf<FrozenApp>()
         val dropped = mutableListOf<String>()
         val done = mutableListOf<String>()
         val since = System.currentTimeMillis()
@@ -1509,7 +1556,14 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
             // A rule that never ends sets the state for good: whatever an earlier rule meant to
             // put back is superseded rather than restored later.
             if (!rule.restores) { dropped += pkg; return }
-            added += FrozenApp(pkg, rule.id, since, null, null, false, existing[pkg]?.prev ?: prev)
+            // On disk before the change it describes: a crash or process death midway still
+            // leaves the record that puts the change back. The VPN and the tiles record side by side.
+            val entry = FrozenApp(pkg, rule.id, since, null, null, false, existing[pkg]?.prev ?: prev)
+            synchronized(frozenWrite) { Prefs.frozen = FrozenRecords.put(Prefs.frozen, entry) }
+        }
+        /** The change [record] announced did not happen: back to what was on record before it. */
+        fun unrecord(pkg: String) {
+            synchronized(frozenWrite) { Prefs.frozen = FrozenRecords.undo(Prefs.frozen, pkg, existing[pkg]) }
         }
         try {
             rule.netMode?.let { mode ->
@@ -1517,19 +1571,19 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
                 if (slots.isEmpty() && rule.netSlot != SLOT_ALL) done += "SIM ${rule.netSlot + 1} не активна — режим сети не менялся"
                 for (slot in slots.filter { wants(FrozenApp.NET + it) }) {
                     val key = FrozenApp.NET + slot
-                    val mask = runCatching { Telephony.readMask(slot) }.getOrDefault(-1L)
+                    val mask = runCatching { Telephony.readMask(slot) }.rethrowCancel().getOrDefault(-1L)
                     // The exact mask, not its generation: a stock "LTE only" put back as the
                     // 4G preset would quietly change the user's setting.
                     val prev = NetMode.exact(mask)?.name ?: if (mask > 0) "0x%X".format(mask) else null
+                    val restorable = rule.restores && prev != null && (mask != Profile.maskFor(mode, slot) || key in existing)
+                    if (restorable) record(key, prev!!)
                     val result = ModeController.apply(slot, mode, sourceOf(rule))
                     // A failed read-back does not mean nothing was written: whatever changed
                     // is still recorded, so the end of the window puts it back.
                     val changed = result.isSuccess ||
-                        runCatching { Telephony.readMask(slot) }.getOrDefault(mask) != mask
-                    if (changed) {
-                        if (!rule.restores) record(key, "")
-                        else if (prev != null && (mask != Profile.maskFor(mode, slot) || key in existing)) record(key, prev)
-                    }
+                        runCatching { Telephony.readMask(slot) }.rethrowCancel().getOrDefault(mask) != mask
+                    if (changed && !rule.restores) record(key, "")
+                    if (!changed && restorable) unrecord(key)
                     result.onSuccess { done += "SIM ${slot + 1} → ${mode.short}" }
                         .onFailure { done += "SIM ${slot + 1}: ошибка ${it.message}" }
                 }
@@ -1647,9 +1701,8 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
                         if (want == Toggle.ON) {
                             val before = VpnControl.owner()
                             val app = rule.vpnApp
-                            val line = if (app == null) "VPN: не выбрано приложение" else VpnControl.on(app)
-                            if (before != app || FrozenApp.SYSVPN in existing) record(FrozenApp.SYSVPN, before ?: "off")
-                            line
+                            if (app != null && VpnControl.validPkg(app) && (before != app || FrozenApp.SYSVPN in existing)) record(FrozenApp.SYSVPN, before ?: "off")
+                            if (app == null) "VPN: не выбрано приложение" else VpnControl.on(app)
                         } else VpnControl.off(rule.vpnOffApp) { pkg -> record(FrozenApp.SYSVPN, pkg) }
                     }
                 }
@@ -1665,16 +1718,23 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
             for ((name, value) in rule.sys) {
                 val key = SysKey.of(name) ?: continue
                 if (!wants(FrozenApp.SYS + name)) continue
-                val before = SysSettings.read(key)
-                val ok = runCatching { SysSettings.apply(key, value) }
+                SysSettings.read(key)?.let { record(FrozenApp.SYS + name, it) }
+                val ok = runCatching { SysSettings.apply(key, value) }.rethrowCancel()
                     .onFailure { done += key.title.lowercase() + ": ошибка ${it.message}" }.isSuccess
                 if (!ok) continue
                 done += key.title.lowercase() + ": " + key.optionLabel(value)
-                if (before != null) record(FrozenApp.SYS + name, before)
             }
-            Prefs.frozen = Prefs.frozen.filterNot { e -> e.pkg in dropped || added.any { it.pkg == e.pkg } } + added
+            // Superseded records go only now: until the rule has really set the state for good,
+            // what an earlier rule meant to put back still stands.
+            if (dropped.isNotEmpty()) Prefs.frozen = Prefs.frozen.filterNot { it.pkg in dropped }
+            noteFailures(done)
             if (done.isNotEmpty()) Prefs.log("($why): ${done.joinToString(", ")}")
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
+            noteFailures(done)
+            runFailures?.add("ошибка — ${e.message}")
+            if (done.isNotEmpty()) Prefs.log("($why): ${done.joinToString(", ")}")
             Prefs.log("($why): ошибка — ${e.message}")
             Log.w(TAG, "side actions failed", e)
         }

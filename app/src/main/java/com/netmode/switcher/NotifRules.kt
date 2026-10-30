@@ -37,10 +37,11 @@ internal object NotifRules {
         }
     }
 
+    fun importable(imported: List<HideRule>): Boolean =
+        imported.all { AppKey.valid(it.app) } && imported.map { it.id }.distinct().size == imported.size
+
     suspend fun replace(imported: List<HideRule>): Result<Unit> = change {
-        require(imported.all { AppKey.valid(it.app) } && imported.map { it.id }.distinct().size == imported.size) {
-            "Некорректные правила скрытия в резервной копии"
-        }
+        require(importable(imported)) { "Некорректные правила скрытия в резервной копии" }
         imported.map { it.copy(channelWas = null, pausedUntil = 0) }
     }
 

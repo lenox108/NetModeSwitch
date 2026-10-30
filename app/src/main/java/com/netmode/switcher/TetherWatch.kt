@@ -69,14 +69,21 @@ object TetherWatch {
     private fun watchHealth() {
         health?.cancel()
         health = App.scope.launch {
+            var apWasUp = false
             while (true) {
                 delay(60_000)
                 // OEM tethering setup can replace firewall chains. This
                 // bounded check never requests tile listening and does not rebuild a VPN.
                 if (Prefs.tetherMode == TetherMode.DIRECT) {
                     if (NetworkTweaks.needed()) runCatching { NetworkTweaks.apply() }
+                    apWasUp = false
                     continue
                 }
+                // A failed read says nothing about the hotspot; apply() would hit the same failure.
+                val up = runCatching { TetherRoute.apInterface() != null }.rethrowCancel().getOrNull() ?: continue
+                val check = TetherHealth.shouldApply(up, apWasUp)
+                apWasUp = up
+                if (!check) continue
                 val line = runCatching { TetherRoute.apply() }.getOrElse { "раздача: ошибка ${it.message}" }
                 if (line != Prefs.lastTetherLine) Prefs.log(line)
                 Prefs.lastTetherLine = line
@@ -128,4 +135,13 @@ object TetherWatch {
             registered = false
         }
     }
+}
+
+internal object TetherHealth {
+    /**
+     * Whether the minute's route check runs [TetherRoute.apply]: while the hotspot is up, and
+     * once more as it goes, in case the tether broadcast that clears the route was missed. With
+     * the hotspot off apply() is the teardown script as root, with no client to protect.
+     */
+    fun shouldApply(up: Boolean, wasUp: Boolean): Boolean = up || wasUp
 }
