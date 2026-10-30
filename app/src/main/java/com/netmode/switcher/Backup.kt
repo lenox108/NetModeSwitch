@@ -57,49 +57,6 @@ object Backup {
         .toString(2)
 
     /**
-     * The freezer's apps and settings. An app already in the freezer keeps its state; a new one
-     * comes in thawed and freezes by its delay, like any app thawed.
-     */
-    private fun importFreezer(f: JSONObject) {
-        runCatching { Prefs.iceDefaultMode = IceMode.valueOf(f.getString("mode")) }
-        if (f.has("delay")) Prefs.iceDefaultDelay = f.getInt("delay")
-        if (f.has("screenOff")) Prefs.iceScreenOff = f.getBoolean("screenOff")
-        if (f.has("keepBusy")) Prefs.iceKeepBusy = f.getBoolean("keepBusy")
-        if (f.has("noConfirm")) Prefs.iceNoConfirm = f.getBoolean("noConfirm")
-        if (f.has("badge")) Prefs.iceBadge = f.getBoolean("badge")
-        if (f.has("view")) Prefs.iceView = f.getString("view")
-        if (f.has("columns")) Prefs.iceColumns = f.getInt("columns")
-        if (f.has("rows")) Prefs.iceRows = f.getInt("rows")
-        if (f.has("iconSize")) Prefs.iceIconSize = f.getString("iconSize")
-        if (f.has("labels")) Prefs.iceLabels = f.getBoolean("labels")
-        if (f.has("sort")) runCatching { Prefs.iceSort = IceSort.valueOf(f.getString("sort")) }
-        f.optJSONArray("order")?.let { a -> Prefs.iceOrder = (0 until a.length()).map { a.getString(it) } }
-        if (f.has("respectRules")) Prefs.iceRespectRules = f.getBoolean("respectRules")
-        if (f.has("bootCheck")) Prefs.iceBootCheck = f.getBoolean("bootCheck")
-        f.optJSONArray("groups")?.let { a -> Prefs.iceGroups = (0 until a.length()).map { a.getString(it) } }
-        val arr = f.optJSONArray("apps") ?: return
-        val have = Prefs.iceApps.associateBy { it.key }
-        val now = System.currentTimeMillis()
-        val read = (0 until arr.length()).mapNotNull { i ->
-            runCatching {
-                val o = arr.getJSONObject(i)
-                val key = o.getString("key").takeIf { AppKey.valid(it) } ?: return@runCatching null
-                val mode = runCatching { IceMode.valueOf(o.getString("mode")) }.getOrDefault(IceMode.DEFAULT)
-                val delay = if (o.isNull("delay")) null else o.getInt("delay")
-                val group = o.optString("group").takeIf { !o.isNull("group") && it.isNotEmpty() }
-                (have[key] ?: IceApp(key, thawedAt = now,
-                    addedAt = o.optLong("addedAt", 0L).coerceAtLeast(0L))).copy(mode = mode, delay = delay, group = group,
-                    favorite = if (o.has("favorite")) o.getBoolean("favorite") else have[key]?.favorite ?: false)
-            }.getOrNull()
-        }
-        val readKeys = read.map { it.key }.toSet()
-        // Installed here only; one the old phone had and this one lacks is left out.
-        val pm = App.ctx.packageManager
-        Prefs.iceApps = read.filter { AppKey.isClone(it.key) || Freezer.info(pm, it.key) != null } +
-            Prefs.iceApps.filter { it.key !in readKeys }
-    }
-
-    /**
      * What a rule would run or call on its own, unlocking block included, each exactly as it
      * stands in the file. A shell command runs as root, so a file from elsewhere must not bring
      * one in unseen.
@@ -124,56 +81,132 @@ object Backup {
         }
     }.joinToString("\n\n")
 
-    /** The rules in [text], nothing changed yet; throws on a file that is not a backup of this app. */
-    fun readRules(text: String): List<AppRule> {
-        val o = JSONObject(text)
-        require(o.optString("app") == "NetModeSwitch") { "это не файл NetModeSwitch" }
-        val arr = o.getJSONArray("rules")
-        return (0 until arr.length()).map { AppRule.fromJson(arr.getJSONObject(it)) }
+    /**
+     * A file read and checked through, with nothing changed yet: [changes] only set what has
+     * already been parsed, so a bad value refuses the whole file instead of leaving a mix.
+     */
+    internal class Plan(val rules: List<AppRule>, val hideRules: List<HideRule>?, val changes: List<() -> Unit>)
+
+    /** A file from a newer version may mean something else by the same names; none is old. */
+    internal fun checkVersion(version: Any?) {
+        if (version == null) return
+        val n = (version as? Number)?.toInt()
+        require(n != null && n >= 1) { "неверная версия файла" }
+        require(n <= VERSION) { "файл создан более новой версией приложения, обновите её" }
     }
 
-    /** Returns the number of rules read; throws on a file that is not a backup of this app. */
-    suspend fun import(text: String): Int {
-        val o = JSONObject(text)
-        val rules = held(readRules(text))
-        o.optJSONObject("settings")?.optJSONArray("hideRules")?.let { a ->
-            NotifRules.replace((0 until a.length()).map { HideRule.fromJson(a.getJSONObject(it)) }).getOrThrow()
-        }
-        o.optJSONObject("settings")?.let { s ->
-            runCatching { Prefs.backend = Backend.valueOf(s.getString("backend")) }
-            if (s.has("catchUp")) Prefs.catchUpOnBoot = s.getBoolean("catchUp")
-            if (s.has("reliableWifi")) Prefs.reliableWifi = s.getBoolean("reliableWifi")
-            if (s.has("statusNotification")) Prefs.statusNotification = s.getBoolean("statusNotification")
-            if (s.has("dualSim")) Prefs.dualSimEnabled = s.getBoolean("dualSim")
-            runCatching { Prefs.dualPrimary = NetMode.valueOf(s.getString("dualPrimary")) }
-            runCatching { Prefs.dualSecondary = NetMode.valueOf(s.getString("dualSecondary")) }
-            s.optString("tetherProxy").takeIf { it.isNotEmpty() }?.let { Prefs.tetherProxy = it }
-            if (s.has("tetherProxyUser")) Prefs.tetherProxyUser = s.getString("tetherProxyUser")
-            if (s.has("hotspotPresets")) Prefs.hotspotPresets = HotspotPreset.decode(s.getString("hotspotPresets"))
-            if (s.has("tetherTtlEnabled")) Prefs.tetherTtlEnabled = s.getBoolean("tetherTtlEnabled")
-            if (s.has("tetherTtlValue")) Prefs.tetherTtlValue = s.getInt("tetherTtlValue").takeIf { it in 0..255 } ?: 0
-            if (s.has("disableTetherIpv6")) Prefs.disableTetherIpv6 = s.getBoolean("disableTetherIpv6")
-            else if (s.has("disableIpv6")) Prefs.disableTetherIpv6 = s.getBoolean("disableIpv6")
-            if (s.has("hideSystem")) Prefs.hideSystemApps = s.getBoolean("hideSystem")
-            s.optJSONArray("unloadExclude")?.let { a -> Prefs.unloadExclude = (0 until a.length()).map { a.getString(it) } }
-            runCatching { Prefs.ruleSort = RuleSort.valueOf(s.getString("ruleSort")) }
-            s.optJSONArray("ruleOrder")?.let { a -> Prefs.ruleOrder = (0 until a.length()).map { a.getLong(it) } }
-            s.optJSONObject("freezer")?.let { importFreezer(it) }
-            s.optJSONObject("togglePairs")?.let { p ->
-                p.keys().forEach { slot ->
-                    runCatching {
-                        val (a, b) = p.getString(slot).split(',').map { NetMode.valueOf(it) }
-                        Prefs.setTogglePair(slot.toInt(), a to b)
-                    }
+    private inline fun <T> JSONObject.choice(key: String, parse: (String) -> T): T =
+        try { parse(getString(key)) } catch (e: Exception) { throw IllegalArgumentException("неверное значение «$key»", e) }
+
+    private fun JSONArray.strings(): List<String> = (0 until length()).map { getString(it) }
+
+    /**
+     * The freezer's apps and settings. An app already in the freezer keeps its state; a new one
+     * comes in thawed and freezes by its delay, like any app thawed.
+     */
+    private fun parseFreezer(f: JSONObject, out: MutableList<() -> Unit>) {
+        fun <T> on(key: String, read: () -> T, set: (T) -> Unit) { if (f.has(key)) { val v = read(); out += { set(v) } } }
+        on("mode", { f.choice("mode") { IceMode.valueOf(it) } }) { Prefs.iceDefaultMode = it }
+        on("delay", { f.getInt("delay") }) { Prefs.iceDefaultDelay = it }
+        on("screenOff", { f.getBoolean("screenOff") }) { Prefs.iceScreenOff = it }
+        on("keepBusy", { f.getBoolean("keepBusy") }) { Prefs.iceKeepBusy = it }
+        on("noConfirm", { f.getBoolean("noConfirm") }) { Prefs.iceNoConfirm = it }
+        on("badge", { f.getBoolean("badge") }) { Prefs.iceBadge = it }
+        on("view", { f.getString("view") }) { Prefs.iceView = it }
+        on("columns", { f.getInt("columns") }) { Prefs.iceColumns = it }
+        on("rows", { f.getInt("rows") }) { Prefs.iceRows = it }
+        on("iconSize", { f.getString("iconSize") }) { Prefs.iceIconSize = it }
+        on("labels", { f.getBoolean("labels") }) { Prefs.iceLabels = it }
+        on("sort", { f.choice("sort") { IceSort.valueOf(it) } }) { Prefs.iceSort = it }
+        on("order", { f.getJSONArray("order").strings() }) { Prefs.iceOrder = it }
+        on("respectRules", { f.getBoolean("respectRules") }) { Prefs.iceRespectRules = it }
+        on("bootCheck", { f.getBoolean("bootCheck") }) { Prefs.iceBootCheck = it }
+        on("groups", { f.getJSONArray("groups").strings() }) { Prefs.iceGroups = it }
+        val arr = f.optJSONArray("apps") ?: return
+        val now = System.currentTimeMillis()
+        // Installed here only; one the old phone had and this one lacks is left out, as is one
+        // this version cannot read. Neither says anything about the rest of the file.
+        val pm = App.ctx.packageManager
+        val read = (0 until arr.length()).mapNotNull { i ->
+            runCatching {
+                val o = arr.getJSONObject(i)
+                val key = o.getString("key").takeIf { AppKey.valid(it) } ?: return@runCatching null
+                val mode = runCatching { IceMode.valueOf(o.getString("mode")) }.getOrDefault(IceMode.DEFAULT)
+                val delay = if (o.isNull("delay")) null else o.getInt("delay")
+                val group = o.optString("group").takeIf { !o.isNull("group") && it.isNotEmpty() }
+                val favorite = if (o.has("favorite")) o.getBoolean("favorite") else null
+                val addedAt = o.optLong("addedAt", 0L).coerceAtLeast(0L)
+                val make: (IceApp?) -> IceApp = { have ->
+                    (have ?: IceApp(key, thawedAt = now, addedAt = addedAt)).copy(mode = mode, delay = delay, group = group,
+                        favorite = favorite ?: have?.favorite ?: false)
                 }
+                key to make
+            }.getOrNull()
+        }
+        val readKeys = read.map { it.first }.toSet()
+        val installed = read.filter { (key, _) -> AppKey.isClone(key) || Freezer.info(pm, key) != null }
+        out += {
+            val have = Prefs.iceApps
+            val byKey = have.associateBy { it.key }
+            Prefs.iceApps = installed.map { (key, make) -> make(byKey[key]) } + have.filter { it.key !in readKeys }
+        }
+    }
+
+    private fun parseSettings(s: JSONObject, out: MutableList<() -> Unit>) {
+        fun <T> on(key: String, read: () -> T, set: (T) -> Unit) { if (s.has(key)) { val v = read(); out += { set(v) } } }
+        on("backend", { s.choice("backend") { Backend.valueOf(it) } }) { Prefs.backend = it }
+        on("catchUp", { s.getBoolean("catchUp") }) { Prefs.catchUpOnBoot = it }
+        on("reliableWifi", { s.getBoolean("reliableWifi") }) { Prefs.reliableWifi = it }
+        on("statusNotification", { s.getBoolean("statusNotification") }) { Prefs.statusNotification = it }
+        on("dualSim", { s.getBoolean("dualSim") }) { Prefs.dualSimEnabled = it }
+        on("dualPrimary", { s.choice("dualPrimary") { NetMode.valueOf(it) } }) { Prefs.dualPrimary = it }
+        on("dualSecondary", { s.choice("dualSecondary") { NetMode.valueOf(it) } }) { Prefs.dualSecondary = it }
+        s.optString("tetherProxy").takeIf { it.isNotEmpty() }?.let { v -> out += { Prefs.tetherProxy = v } }
+        on("tetherProxyUser", { s.getString("tetherProxyUser") }) { Prefs.tetherProxyUser = it }
+        on("hotspotPresets", { HotspotPreset.decode(s.getString("hotspotPresets")) }) { Prefs.hotspotPresets = it }
+        on("tetherTtlEnabled", { s.getBoolean("tetherTtlEnabled") }) { Prefs.tetherTtlEnabled = it }
+        on("tetherTtlValue", { s.choice("tetherTtlValue") { v -> v.toInt().also { require(it in 0..255) } } }) { Prefs.tetherTtlValue = it }
+        if (s.has("disableTetherIpv6")) on("disableTetherIpv6", { s.getBoolean("disableTetherIpv6") }) { Prefs.disableTetherIpv6 = it }
+        else on("disableIpv6", { s.getBoolean("disableIpv6") }) { Prefs.disableTetherIpv6 = it }
+        on("hideSystem", { s.getBoolean("hideSystem") }) { Prefs.hideSystemApps = it }
+        on("unloadExclude", { s.getJSONArray("unloadExclude").strings() }) { Prefs.unloadExclude = it }
+        on("ruleSort", { s.choice("ruleSort") { RuleSort.valueOf(it) } }) { Prefs.ruleSort = it }
+        on("ruleOrder", { s.getJSONArray("ruleOrder").let { a -> (0 until a.length()).map { a.getLong(it) } } }) { Prefs.ruleOrder = it }
+        s.optJSONObject("freezer")?.let { parseFreezer(it, out) }
+        s.optJSONObject("togglePairs")?.let { p ->
+            p.keys().forEach { slot ->
+                val pair = p.choice(slot) { v -> v.split(',').map { NetMode.valueOf(it) }.let { (a, b) -> slot.toInt() to (a to b) } }
+                out += { Prefs.setTogglePair(pair.first, pair.second) }
             }
         }
+    }
+
+    /** Reads all of [text] and changes nothing; throws on anything this version cannot take in. */
+    internal fun parse(text: String): Plan {
+        val o = JSONObject(text)
+        require(o.optString("app") == "NetModeSwitch") { "это не файл NetModeSwitch" }
+        checkVersion(o.opt("version"))
+        val arr = o.getJSONArray("rules")
+        val rules = held((0 until arr.length()).map { AppRule.fromJson(arr.getJSONObject(it)) })
+        val settings = o.optJSONObject("settings")
+        val hide = settings?.optJSONArray("hideRules")?.let { a -> (0 until a.length()).map { HideRule.fromJson(a.getJSONObject(it)) } }
+        require(hide == null || NotifRules.importable(hide)) { "Некорректные правила скрытия в резервной копии" }
+        val changes = mutableListOf<() -> Unit>()
+        settings?.let { parseSettings(it, changes) }
+        return Plan(rules, hide, changes)
+    }
+
+    /** Applies what [parse] read and returns the number of rules. */
+    internal suspend fun apply(plan: Plan): Int {
+        // The one step that can still fail goes first, with everything else untouched.
+        plan.hideRules?.let { NotifRules.replace(it).getOrThrow() }
+        plan.changes.forEach { it() }
         // Whatever the old rules were holding goes back first: reconcile sees them as gone.
-        Prefs.appRules = rules
+        Prefs.appRules = plan.rules
         Prefs.appHandled = emptyMap()
-        rules.forEach { AppFreezer.markSaved(it) }
+        plan.rules.forEach { AppFreezer.markSaved(it) }
         RuleStore.changed()
         App.scope.launch { runCatching { NetworkTweaks.apply() }; TetherWatch.sync() }
-        return rules.size
+        return plan.rules.size
     }
 }

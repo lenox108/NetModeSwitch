@@ -20,6 +20,17 @@ class BackupReviewTest {
             .forEach { assertTrue(it, text.contains(it)) }
     }
 
+    @Test fun filesFromThisVersionOrOlderAreTaken() {
+        Backup.checkVersion(null)
+        Backup.checkVersion(1)
+    }
+
+    @Test fun newerOrNonsenseVersionsAreRefused() {
+        listOf<Any>(2, 99, 0, "1").forEach { v ->
+            assertThrows(v.toString(), IllegalArgumentException::class.java) { Backup.checkVersion(v) }
+        }
+    }
+
     @Test fun aRuleWithNothingOutsideIsNotListed() {
         assertEquals("", Backup.outsideSummary(listOf(rule())))
     }

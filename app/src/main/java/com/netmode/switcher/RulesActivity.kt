@@ -37,22 +37,22 @@ class RulesActivity : AppCompatActivity() {
             // Read before asking: the question has to show what the file would run.
             val read = runCatching {
                 withContext(Dispatchers.IO) {
-                    val text = contentResolver.openInputStream(uri)!!.use { it.readBytes().decodeToString() }
-                    text to Backup.outsideSummary(Backup.readRules(text))
+                    Backup.parse(contentResolver.openInputStream(uri)!!.use { it.readBytes().decodeToString() })
                 }
             }
-            read.onSuccess { (text, outside) -> confirmImport(text, outside) }
+            read.onSuccess { confirmImport(it) }
                 .onFailure { toast(getString(R.string.backup_failed, it.message)) }
         }
     }
 
-    private fun confirmImport(text: String, outside: String) {
+    private fun confirmImport(plan: Backup.Plan) {
+        val outside = Backup.outsideSummary(plan.rules)
         val b = MaterialAlertDialogBuilder(this)
         if (outside.isEmpty()) b.setMessage(R.string.backup_import_confirm)
         else b.setTitle(R.string.backup_import_outside_title).setMessage(getString(R.string.backup_import_outside, outside))
         b.setPositiveButton(R.string.backup_import) { _, _ ->
             lifecycleScope.launch {
-                val n = runCatching { Backup.import(text) }
+                val n = runCatching { Backup.apply(plan) }
                 toast(n.map { getString(R.string.backup_loaded, it) }.getOrElse { getString(R.string.backup_failed, it.message) })
                 load()
             }
