@@ -49,7 +49,7 @@ object Backup {
                 .put("noConfirm", Prefs.iceNoConfirm).put("badge", Prefs.iceBadge)
                 .put("view", Prefs.iceView).put("columns", Prefs.iceColumns).put("rows", Prefs.iceRows)
                 .put("iconSize", Prefs.iceIconSize).put("labels", Prefs.iceLabels)
-                .put("sort", Prefs.iceSort.name).put("order", JSONArray(Prefs.iceOrder))
+                .put("sort", Prefs.iceSort.name).put("folderSort", Prefs.iceFolderSort.name).put("order", JSONArray(Prefs.iceOrder))
                 .put("respectRules", Prefs.iceRespectRules).put("bootCheck", Prefs.iceBootCheck))
             .put("togglePairs", JSONObject().apply {
                 Sims.slots().forEach { slot -> Prefs.togglePair(slot)?.let { put(slot.toString(), "${it.first.name},${it.second.name}") } }
@@ -118,6 +118,7 @@ object Backup {
         on("iconSize", { f.getString("iconSize") }) { Prefs.iceIconSize = it }
         on("labels", { f.getBoolean("labels") }) { Prefs.iceLabels = it }
         on("sort", { f.choice("sort") { IceSort.valueOf(it) } }) { Prefs.iceSort = it }
+        on("folderSort", { f.choice("folderSort") { IceSort.valueOf(it) } }) { Prefs.iceFolderSort = it }
         on("order", { f.getJSONArray("order").strings() }) { Prefs.iceOrder = it }
         on("respectRules", { f.getBoolean("respectRules") }) { Prefs.iceRespectRules = it }
         on("bootCheck", { f.getBoolean("bootCheck") }) { Prefs.iceBootCheck = it }

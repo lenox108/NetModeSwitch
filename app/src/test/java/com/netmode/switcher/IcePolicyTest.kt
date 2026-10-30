@@ -91,6 +91,16 @@ class IcePolicyTest {
         assertEquals(listOf("b", "c", "a"), IceOrder.move(listOf("a", "b", "c"), 0, 2))
     }
 
+    @Test fun settledOrderIgnoresALaunchButKeepsFavoritesFirstAndNewAppsLast() {
+        val order = listOf("a", "b", "c")
+        val launched = IceOrder.sort(listOf(IceApp("a"), IceApp("b"), IceApp("c", launchedAt = 9), IceApp("new")),
+            IceSort.LAUNCHED, emptyList()) { it }
+        assertEquals(listOf("c", "a", "b", "new"), launched.map { it.key })
+        assertEquals(listOf("a", "b", "c", "new"), IceOrder.settled(launched, order).map { it.key })
+        assertEquals(listOf("b", "a", "c"),
+            IceOrder.settled(listOf(IceApp("a"), IceApp("b", favorite = true), IceApp("c")), order).map { it.key })
+    }
+
     @Test fun additionDateUsesSavedDatesRatherThanNamesOrRuntimeState() {
         val apps = listOf(
             IceApp("Alpha", addedAt = 300, thawedAt = 1),

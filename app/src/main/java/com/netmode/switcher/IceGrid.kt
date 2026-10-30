@@ -119,9 +119,12 @@ object IceGrid {
         c.label.visibility = if (labels) View.VISIBLE else View.GONE
         c.state.visibility = if (labels && showState) View.VISIBLE else View.GONE
         c.state.textSize = (s.text - 1f).coerceAtLeast(10f)
-        c.state.setText(if (app.frozen) R.string.ice_cell_frozen else R.string.ice_cell_thawed)
-        c.state.setTextColor(com.google.android.material.color.MaterialColors.getColor(c.root,
-            if (app.frozen) com.google.android.material.R.attr.colorOnSurfaceVariant else com.google.android.material.R.attr.colorTertiary))
+        // Text set on a hidden view still makes the recycled cell measure itself again.
+        if (labels && showState) {
+            c.state.setText(if (app.frozen) R.string.ice_cell_frozen else R.string.ice_cell_thawed)
+            c.state.setTextColor(com.google.android.material.color.MaterialColors.getColor(c.root,
+                if (app.frozen) com.google.android.material.R.attr.colorOnSurfaceVariant else com.google.android.material.R.attr.colorTertiary))
+        }
         val stateHeight = if (labels && showState) ceil(c.state.paint.fontSpacing.toDouble()).toInt() * 2 + dp(ctx, 2) else 0
         val line = ceil(c.label.paint.fontSpacing.toDouble()).toInt()
         val minHeight = dp(ctx, 40) + (if (labels) line + dp(ctx, 4) else 0) + stateHeight

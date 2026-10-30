@@ -11,8 +11,21 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 /** Explicit up/down controls work with touch, keyboard and TalkBack in every freezer view. */
 object IceOrderDialog {
-    fun show(ctx: Context) {
-        val apps = IceOrder.sort(Freezer.apps, Prefs.iceSort, Prefs.iceOrder, Freezer::label)
+    /** The sort chooser of the freezer screen and of the folder, each with a setting of its own. */
+    fun choose(ctx: Context, current: IceSort, apply: (IceSort) -> Unit) {
+        val options = IceSort.entries
+        MaterialAlertDialogBuilder(ctx).setTitle(R.string.sort_title)
+            .setSingleChoiceItems(options.map { ctx.getString(it.title) }.toTypedArray(), options.indexOf(current)) { d, i ->
+                if (options[i] == IceSort.MANUAL && Prefs.iceOrder.isEmpty())
+                    Prefs.iceOrder = IceOrder.sort(Freezer.apps, current, Prefs.iceOrder, Freezer::label).map { it.key }
+                apply(options[i])
+                d.dismiss()
+            }.setNeutralButton(R.string.ice_reorder) { _, _ -> show(ctx, current, apply) }
+            .setNegativeButton(R.string.cancel, null).show()
+    }
+
+    fun show(ctx: Context, current: IceSort, apply: (IceSort) -> Unit) {
+        val apps = IceOrder.sort(Freezer.apps, current, Prefs.iceOrder, Freezer::label)
         val byKey = apps.associateBy { it.key }
         var keys = apps.map { it.key }
         fun dp(n: Int) = (n * ctx.resources.displayMetrics.density).toInt()
@@ -50,7 +63,7 @@ object IceOrderDialog {
             .setPositiveButton(R.string.ice_view_done) { _, _ ->
                 val installed = Freezer.apps.map { it.key }
                 Prefs.iceOrder = keys.filter { it in installed } + installed.filter { it !in keys }
-                Prefs.iceSort = IceSort.MANUAL
+                apply(IceSort.MANUAL)
             }
             .setNegativeButton(R.string.cancel, null).show()
     }

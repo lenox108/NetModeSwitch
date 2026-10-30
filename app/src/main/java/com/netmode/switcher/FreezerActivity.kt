@@ -574,17 +574,7 @@ class FreezerActivity : AppCompatActivity() {
         }
     }
 
-    private fun chooseOrder() {
-        val options = IceSort.entries
-        MaterialAlertDialogBuilder(this).setTitle(R.string.sort_title)
-            .setSingleChoiceItems(options.map { getString(it.title) }.toTypedArray(), options.indexOf(Prefs.iceSort)) { d, i ->
-                if (options[i] == IceSort.MANUAL && Prefs.iceOrder.isEmpty())
-                    Prefs.iceOrder = IceOrder.sort(Freezer.apps, Prefs.iceSort, Prefs.iceOrder, Freezer::label).map { it.key }
-                Prefs.iceSort = options[i]
-                d.dismiss()
-            }.setNeutralButton(R.string.ice_reorder) { _, _ -> IceOrderDialog.show(this) }
-            .setNegativeButton(R.string.cancel, null).show()
-    }
+    private fun chooseOrder() = IceOrderDialog.choose(this, Prefs.iceSort) { Prefs.iceSort = it }
 
     private fun bulkGroup() {
         val keys = selected.toList()

@@ -47,6 +47,12 @@ object IceOrder {
             .sortedWith(compareBy({ it.second }, { label(it.first.key).lowercase() }))
             .map { it.first }
 
+    /** Keeps the order seen when the folder opened, so icons stay put; favorites stay first, new apps go last. */
+    fun settled(sorted: List<IceApp>, order: List<String>): List<IceApp> {
+        val positions = order.withIndex().associate { it.value to it.index }
+        return sorted.sortedWith(compareBy<IceApp> { !it.favorite }.thenBy { positions[it.key] ?: Int.MAX_VALUE })
+    }
+
     fun move(keys: List<String>, from: Int, to: Int): List<String> =
         keys.toMutableList().apply { add(to, removeAt(from)) }
 }

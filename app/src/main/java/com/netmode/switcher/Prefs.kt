@@ -431,6 +431,11 @@ object Prefs {
         get() = runCatching { IceSort.valueOf(sp.getString("ice_sort", "NAME")!!) }.getOrDefault(IceSort.NAME)
         set(value) = sp.edit().putString("ice_sort", value.name).apply()
 
+    /** The folder's own order; until one is chosen it follows the freezer screen's. */
+    var iceFolderSort: IceSort
+        get() = runCatching { IceSort.valueOf(sp.getString("ice_folder_sort", null)!!) }.getOrDefault(iceSort)
+        set(value) = sp.edit().putString("ice_folder_sort", value.name).apply()
+
     var iceOrder: List<String>
         get() = runCatching { val a = JSONArray(sp.getString("ice_order", "[]")); (0 until a.length()).map { a.getString(it) } }.getOrDefault(emptyList())
         set(value) = sp.edit().putString("ice_order", JSONArray(value.distinct()).toString()).apply()
