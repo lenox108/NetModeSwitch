@@ -25,6 +25,21 @@ class AppRulesActivity : AppCompatActivity() {
     private val selected = linkedSetOf<Long>()
     private var selecting = false
     private var upIcon: Drawable? = null
+
+    /** The group chosen above the list; null shows every rule. */
+    private var groupFilter: String? = null
+
+    private val importRule = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
+        uri ?: return@registerForActivityResult
+        lifecycleScope.launch {
+            val text = runCatching {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    contentResolver.openInputStream(uri)!!.use { it.readBytes().decodeToString() }
+                }
+            }
+            text.onSuccess { offerRule(it) }.onFailure { snack(getString(R.string.rule_import_failed, it.message)) }
+        }
+    }
     private val endSelection = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() = clearSelection()
     }
@@ -35,11 +50,12 @@ class AppRulesActivity : AppCompatActivity() {
         setContentView(ui.root)
         selecting = savedInstanceState?.getBoolean("selecting") ?: false
         savedInstanceState?.getLongArray("selected")?.let { selected.addAll(it.toList()) }
+        groupFilter = savedInstanceState?.getString("group")
         upIcon = ui.toolbar.navigationIcon
         ui.toolbar.setNavigationOnClickListener { if (selecting) clearSelection() else finish() }
         onBackPressedDispatcher.addCallback(this, endSelection)
         ui.selectAll.setOnClickListener {
-            if (ui.selectAll.isChecked) selected.addAll(Prefs.appRules.map { it.id }) else selected.clear()
+            if (ui.selectAll.isChecked) selected.addAll(sorted().map { it.id }) else selected.clear()
             paintSelection()
         }
         ui.deleteSelected.setOnClickListener { confirmDelete(selected.toList()) }
@@ -52,6 +68,7 @@ class AppRulesActivity : AppCompatActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putBoolean("selecting", selecting)
         outState.putLongArray("selected", selected.toLongArray())
+        outState.putString("group", groupFilter)
         super.onSaveInstanceState(outState)
     }
 
@@ -91,7 +108,10 @@ class AppRulesActivity : AppCompatActivity() {
     private fun iconOf(t: Trigger) = RuleTiles.icon(t)
 
     private fun render() {
+        renderGroups()
         val rules = sorted()
+        val entries = Prefs.events.map(Journal::parse)
+        val now = java.time.ZonedDateTime.now()
         val ids = rules.map { it.id }
         selected.retainAll(ids.toSet())
         if (rules.isEmpty()) selecting = false
@@ -108,10 +128,22 @@ class AppRulesActivity : AppCompatActivity() {
             row.whenLine.text = whenText
             row.whenLine.visibility = if (whenText.isEmpty()) View.GONE else View.VISIBLE
             val names = AppPickerActivity.labels(rule.packages)
+            val icons = RuleCard.actionIcons(rule)
+            row.actionIcons.removeAllViews()
+            row.actionIcons.visibility = if (icons.isEmpty()) View.GONE else View.VISIBLE
+            val iconSize = (18 * resources.displayMetrics.density).toInt()
+            icons.take(MAX_ACTION_ICONS).forEach { res ->
+                row.actionIcons.addView(android.widget.ImageView(this).apply {
+                    setImageResource(res)
+                    imageTintList = android.content.res.ColorStateList.valueOf(
+                        com.google.android.material.color.MaterialColors.getColor(row.doLine, com.google.android.material.R.attr.colorOnSurfaceVariant))
+                }, android.widget.LinearLayout.LayoutParams(iconSize, iconSize).apply { marginEnd = iconSize / 3 })
+            }
             row.doLine.text = "→ " + listOfNotNull(
                 rule.actionLabel.ifEmpty { null },
                 names.takeIf { it.isNotEmpty() }?.let { it.take(4).joinToString(", ") + if (it.size > 4) "…" else "" },
             ).joinToString("\n")
+            row.doLine.visibility = if (rule.actionLabel.isEmpty() && names.isEmpty()) View.GONE else View.VISIBLE
             row.endLine.text = listOfNotNull(rule.unlockLabel, when {
                 !rule.restores -> getString(R.string.end_never)
                 rule.endLabel != null -> rule.endLabel
@@ -130,6 +162,8 @@ class AppRulesActivity : AppCompatActivity() {
                 getString(R.string.active_now).takeIf { active && !waiting && !unlocked && !asked },
                 getString(R.string.held_now, held).takeIf { held > 0 },
             ).joinToString(" · ")
+            paintNext(row, rule, active, entries, now)
+            paintRun(row, rule, active || waiting || held > 0)
             row.root.tag = rule.id
             row.root.alpha = if (rule.enabled || selecting) 1f else 0.55f
             row.enabled.isChecked = rule.enabled
@@ -145,7 +179,8 @@ class AppRulesActivity : AppCompatActivity() {
                 if (selecting) flip(rule.id) else menu(rule, it)
                 true
             }
-            row.drag.visibility = if (!selecting && rules.size > 1) View.VISIBLE else View.GONE
+            // Dragged within a group, the rules out of sight would lose their place.
+            row.drag.visibility = if (!selecting && rules.size > 1 && groupFilter == null) View.VISIBLE else View.GONE
             if (!selecting) dragBy(row.drag, row.root) { from, to -> moved(ids, from, to) }
             ui.appList.addView(row.root)
         }
@@ -155,6 +190,59 @@ class AppRulesActivity : AppCompatActivity() {
         ui.held.visibility = if (heldApps.isEmpty()) View.GONE else View.VISIBLE
         ui.held.text = getString(R.string.held_block, heldApps.size)
         paintSelection()
+    }
+
+    /** When it runs next, and how it went last time: the two things worth seeing at a glance. */
+    private fun paintNext(row: RowRuleBinding, rule: AppRule, active: Boolean, entries: List<JournalEntry>, now: java.time.ZonedDateTime) {
+        val last = RuleCard.lastOf(entries, RuleOrder.title(rule))
+        val next = if (rule.enabled && rule.isTime && !active) RuleCard.nextLabel(rule.nextStart(now), now) else null
+        val problem = last?.problem == true
+        row.nextLine.text = listOfNotNull(
+            next?.let { getString(R.string.rule_next, it) },
+            last?.let { getString(if (problem) R.string.rule_last_problem else R.string.rule_last, it.time) },
+        ).joinToString("\n")
+        row.nextLine.visibility = if (row.nextLine.text.isEmpty()) View.GONE else View.VISIBLE
+        row.nextLine.setTextColor(com.google.android.material.color.MaterialColors.getColor(row.nextLine,
+            if (problem) android.R.attr.colorError else com.google.android.material.R.attr.colorOnSurfaceVariant))
+    }
+
+    /** One tap runs a rule or takes it back; the snackbar's button undoes a mistaken tap. */
+    private fun paintRun(row: RowRuleBinding, rule: AppRule, running: Boolean) {
+        val title = RuleOrder.title(rule)
+        row.run.visibility = if (!selecting && (rule.enabled || running)) View.VISIBLE else View.GONE
+        row.run.setImageResource(if (running) R.drawable.ic_close else R.drawable.ic_t_manual)
+        row.run.contentDescription = getString(if (running) R.string.rule_stop else R.string.rule_run, title)
+        row.run.setOnClickListener { button ->
+            button.isEnabled = false
+            lifecycleScope.launch {
+                if (running) {
+                    val n = runCatching { AppFreezer.releaseNow(rule.id) }.getOrDefault(0)
+                    snack(getString(R.string.released, n))
+                } else {
+                    AppFreezer.freezeNow(rule)
+                    Snackbar.make(ui.root, R.string.applied, Snackbar.LENGTH_LONG).setAction(R.string.rule_undo) {
+                        lifecycleScope.launch { runCatching { AppFreezer.releaseNow(rule.id) }; render() }
+                    }.show()
+                }
+                render()
+            }
+        }
+    }
+
+    private fun renderGroups() {
+        val groups = RuleCard.groups(Prefs.appRules.map { it.group })
+        if (groupFilter != null && groups.none { it.equals(groupFilter, ignoreCase = true) }) groupFilter = null
+        ui.groupScroll.visibility = if (groups.isEmpty() || selecting) View.GONE else View.VISIBLE
+        ui.groupFilters.removeAllViews()
+        if (groups.isEmpty()) return
+        (listOf(null) + groups).forEach { group ->
+            val chip = layoutInflater.inflate(R.layout.chip_choice, ui.groupFilters, false) as com.google.android.material.chip.Chip
+            chip.text = group ?: getString(R.string.rules_group_all)
+            chip.id = View.generateViewId()
+            ui.groupFilters.addView(chip)
+            chip.isChecked = group.equals(groupFilter, ignoreCase = true)
+            chip.setOnClickListener { groupFilter = group; render() }
+        }
     }
 
     private fun startSelection(id: Long? = null) {
@@ -188,6 +276,14 @@ class AppRulesActivity : AppCompatActivity() {
                 setOnMenuItemClickListener { startSelection(); true }
             }
             ui.toolbar.menu.add(R.string.sort_title).setOnMenuItemClickListener { chooseSort(); true }
+            ui.toolbar.menu.add(R.string.rule_import).setOnMenuItemClickListener {
+                importRule.launch(arrayOf("application/json", "text/plain", "*/*")); true
+            }
+            ui.toolbar.menu.add(R.string.rule_import_paste).setOnMenuItemClickListener {
+                val clip = getSystemService(android.content.ClipboardManager::class.java).primaryClip
+                offerRule(clip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this)?.toString().orEmpty())
+                true
+            }
             ui.toolbar.menu.add(R.string.rules_delete_all).apply {
                 isEnabled = count > 0
                 setOnMenuItemClickListener { confirmDelete(Prefs.appRules.map { it.id }, all = true); true }
@@ -197,6 +293,8 @@ class AppRulesActivity : AppCompatActivity() {
         ui.addApps.visibility = if (selecting) View.GONE else View.VISIBLE
         ui.fromTemplate.visibility = if (selecting) View.GONE else View.VISIBLE
         ui.intro.setText(if (selecting) R.string.rules_selection_hint else R.string.apps_intro)
+        // The hint is for finding the long press: once there are rules each card shows its actions.
+        ui.intro.visibility = if (selecting || count == 0) View.VISIBLE else View.GONE
         ui.deleteSelected.isEnabled = selected.isNotEmpty()
         ui.selectAll.checkedState = when {
             selected.isEmpty() -> MaterialCheckBox.STATE_UNCHECKED
@@ -245,6 +343,7 @@ class AppRulesActivity : AppCompatActivity() {
     private fun sorted(): List<AppRule> {
         val open = Prefs.openWindows
         return RuleOrder.sort(Prefs.appRules, Prefs.ruleSort, Prefs.ruleOrder) { AppFreezer.isActive(it, open) }
+            .filter { RuleCard.inGroup(it.group, groupFilter) }
     }
 
     /** A rule dragged from [from] to [to] of [ids], the list as shown: that order is the user's now. */
@@ -331,10 +430,13 @@ class AppRulesActivity : AppCompatActivity() {
         m.menu.add(0, 2, 1, R.string.release_now)
         m.menu.add(0, 3, 2, R.string.duplicate)
         m.menu.add(0, 4, 3, R.string.delete)
+        m.menu.add(0, 7, 5, R.string.rule_share)
         if (rule.trigger == Trigger.MANUAL) m.menu.add(0, 5, 4, R.string.scene_shortcut)
         m.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 6 -> startSelection(rule.id)
+                7 -> startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND)
+                    .setType("text/plain").putExtra(Intent.EXTRA_TEXT, RuleShare.encode(rule)), getString(R.string.rule_share)))
                 1 -> lifecycleScope.launch {
                     AppFreezer.freezeNow(rule)
                     snack(getString(R.string.applied))
@@ -361,6 +463,25 @@ class AppRulesActivity : AppCompatActivity() {
         m.show()
     }
 
+    /** Nothing from outside runs unseen: its commands are shown and the rule arrives switched off. */
+    private fun offerRule(text: String) {
+        val rule = runCatching { RuleShare.decode(text) }.getOrElse {
+            snack(getString(R.string.rule_import_failed, it.message))
+            return
+        }
+        val lines = listOf(rule.timeLabel, rule.actionLabel).filter { it.isNotEmpty() } + RuleShare.risks(rule) +
+            getString(R.string.rule_import_note)
+        MaterialAlertDialogBuilder(this)
+            .setTitle(getString(R.string.rule_import_title, RuleOrder.title(rule)))
+            .setMessage(lines.joinToString("\n\n"))
+            .setPositiveButton(R.string.rule_import_add) { _, _ ->
+                RuleStore.save(rule.copy(id = Prefs.newId(), enabled = false))
+                render()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
     private fun snack(text: String) = Snackbar.make(ui.root, text, Snackbar.LENGTH_SHORT).show()
 
     /** Lets the user bring back individual apps before their window ends. */
@@ -380,5 +501,9 @@ class AppRulesActivity : AppCompatActivity() {
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
+    }
+
+    private companion object {
+        const val MAX_ACTION_ICONS = 8
     }
 }

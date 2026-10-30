@@ -84,16 +84,28 @@ object Tiles {
         return targets.mapNotNull { c ->
             val state = if (c in vpnTargets) {
                 val uid = runCatching { App.ctx.packageManager.getApplicationInfo(pkg(c), 0).uid }.getOrNull()
-                network?.let { TileStateProbe.vpn(it, pkg(c), uid) }
+                network?.let { TileStateProbe.vpn(it, pkg(c), uid) { why -> readError = why } }
             } else readDump("dumpsys activity services ${pkg(c)} 2>&1")?.let(TileStateProbe::foreground)
             state?.let { c to it }
         }.toMap()
     }
 
+    /** Why the last dump could not be read, for the "state unknown" log line. */
+    @Volatile private var readError: String? = null
+
     private suspend fun readDump(command: String): String? = try {
-        Privileged.exec(command)
+        Privileged.exec(command).also { readError = null }
     } catch (e: CancellationException) { throw e }
-    catch (_: Exception) { null }
+    catch (e: Exception) { readError = e.message ?: e.javaClass.simpleName; null }
+
+    /** Starting a hotspot or a tunnel leaves the VPN connecting for a moment: ask again. */
+    private suspend fun readSettled(c: String, vpn: Set<String>): Boolean? {
+        repeat(UNKNOWN_RETRIES) {
+            states(listOf(c), vpn)[c]?.let { return it }
+            delay(2_000)
+        }
+        return states(listOf(c), vpn)[c]
+    }
 
     /**
      * Brings each tile's app to the wanted state, clicking only where it differs, and waits for
@@ -108,7 +120,7 @@ object Tiles {
         val targets = wanted.filterKeys { valid(it) }
         if (targets.isEmpty()) return emptyList()
         return transitions.set(targets,
-            read = { c -> states(listOf(c), vpn)[c] },
+            read = { c -> readSettled(c, vpn) },
             prepare = ::ensureAdded,
             click = { c ->
                 TileClickWatch.suppress(listOf(c))
@@ -135,7 +147,8 @@ object Tiles {
             when (result.outcome) {
                 TileTransitions.Outcome.ALREADY -> "$name уже $state"
                 TileTransitions.Outcome.CHANGED -> "$name $state"
-                TileTransitions.Outcome.UNKNOWN -> "$name: состояние неизвестно, нажатие пропущено"
+                TileTransitions.Outcome.UNKNOWN -> "$name: состояние неизвестно" +
+                    (readError?.let { " ($it)" } ?: "") + ", нажатие пропущено"
                 TileTransitions.Outcome.UNCONFIRMED -> "$name: изменение не подтвердилось, повторного нажатия нет"
             }
         }
@@ -147,6 +160,7 @@ object Tiles {
             "{ cmd statusbar add-tile \"\$t\" >/dev/null 2>&1 && echo '@ADD'; sleep 1; }")
             .lineSequence().any { it == "@ADD" }
 
+    private const val UNKNOWN_RETRIES = 3
     private const val VPN_WAIT_MS = 25_000L
     private const val APP_WAIT_MS = 10_000L
 }

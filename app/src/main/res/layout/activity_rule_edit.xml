@@ -47,6 +47,37 @@
                     android:maxLines="1" />
             </com.google.android.material.textfield.TextInputLayout>
 
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="@string/rule_group_hint">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/ruleGroup"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textCapSentences"
+                    android:maxLength="24"
+                    android:maxLines="1" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.Material3.CardView.Filled"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                app:cardCornerRadius="16dp">
+
+                <TextView
+                    android:id="@+id/ruleSummary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="14dp"
+                    android:textAppearance="?attr/textAppearanceBodyMedium" />
+            </com.google.android.material.card.MaterialCardView>
+
             <!-- ================= WHEN ================= -->
             <TextView
                 style="@style/NMS.Section"
@@ -121,10 +152,43 @@
                             android:id="@+id/hasEndHint"
                             style="@style/NMS.Hint" />
 
+                        <HorizontalScrollView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:scrollbars="none">
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal">
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/daysWeekdays"
+                                    style="@style/Widget.Material3.Button.TextButton"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/days_weekdays" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/daysWeekend"
+                                    style="@style/Widget.Material3.Button.TextButton"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/days_weekend" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/daysEvery"
+                                    style="@style/Widget.Material3.Button.TextButton"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/days_every" />
+                            </LinearLayout>
+                        </HorizontalScrollView>
+
                         <com.google.android.material.chip.ChipGroup
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
                             app:chipSpacingVertical="0dp">
                             <com.google.android.material.chip.Chip android:id="@+id/d1" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/mon" />
                             <com.google.android.material.chip.Chip android:id="@+id/d2" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/tue" />

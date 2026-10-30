@@ -68,6 +68,23 @@ class TileStateProbeTest {
         }
     }
 
+    @Test fun errorsQuotedInTheLogHistoryDoNotMakeAValidDumpUnknown() {
+        val dump = current("NetworkAgentInfo{network{100} ni{MOBILE[NR] CONNECTED extra: internet} nc{[ Transports: CELLULAR ]}}") +
+            "Tethering log:\n  java.lang.SecurityException: Permission denied\n"
+        assertEquals(false, TileStateProbe.vpn(dump, pkg, uid))
+        assertEquals(true, TileStateProbe.vpn(current(vpn(pkg)) + "  Error dumping NetworkStack\n", pkg, uid))
+    }
+
+    @Test fun aVpnNamedOnlyByRequestsOrCapabilitiesIsNoVpnNetwork() {
+        val mobile = "NetworkAgentInfo{network{163} ni{MOBILE[LTE] CONNECTED extra: internet} nc{[ Transports: CELLULAR Capabilities: INTERNET&NOT_VPN ]}}\n" +
+            "    Requests: REQUEST:1 LISTEN:3\n" +
+            "      NetworkRequest [ LISTEN id=7, [ Transports: VPN OwnerUid: 10001 ] ]"
+        assertEquals(false, TileStateProbe.vpn(current(mobile), pkg, uid))
+        assertEquals(true, TileStateProbe.vpn(current(mobile, vpn(pkg)), pkg, uid))
+        val vpnFirst = "NetworkAgentInfo{network{101} ni{VPN CONNECTED} nc{[ Transports: VPN|USB OwnerUid: $uid ]}}"
+        assertEquals(true, TileStateProbe.vpn(current(vpnFirst), pkg, uid))
+    }
+
     @Test fun foregroundAdapterStillSupportsHappProxyButRejectsUnreadableDumps() {
         assertEquals(true, TileStateProbe.foreground("ACTIVITY MANAGER SERVICES (dumpsys activity services)\n  isForeground=true"))
         assertEquals(false, TileStateProbe.foreground("ACTIVITY MANAGER SERVICES\n  isForeground=false"))

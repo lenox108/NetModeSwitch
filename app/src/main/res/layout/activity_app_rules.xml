@@ -42,6 +42,23 @@
                 android:layout_marginTop="8dp"
                 android:visibility="gone" />
 
+            <HorizontalScrollView
+                android:id="@+id/groupScroll"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:scrollbars="none"
+                android:visibility="gone">
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/groupFilters"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:selectionRequired="true"
+                    app:singleLine="true"
+                    app:singleSelection="true" />
+            </HorizontalScrollView>
+
             <LinearLayout
                 android:id="@+id/appList"
                 android:layout_width="match_parent"

@@ -1,0 +1,4 @@
+<resources>
+    <color name="log_done">#81C784</color>
+    <color name="log_warning">#FFB74D</color>
+</resources>

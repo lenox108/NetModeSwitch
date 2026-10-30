@@ -27,6 +27,9 @@ class HotspotActivity : AppCompatActivity() {
     private lateinit var bands: HotspotBandButtons
     private var bandEdited = false
     private var saveBusy = false
+
+    /** The form as last loaded or saved: "save" only shows when it has something to save. */
+    private var savedForm: String? = null
     private lateinit var panel: HotspotPanel
     private lateinit var screen: HotspotScreen
     private lateinit var presets: HotspotPresetsUi
@@ -62,12 +65,30 @@ class HotspotActivity : AppCompatActivity() {
         bands = HotspotBandButtons(ui)
         bands.bind("keep", Prefs.hotspotAvailableBands)
         bands.setEnabled(false)
-        bands.onChange = { bandEdited = true; fillChannels(0); showBandHint() }
+        bands.onChange = { bandEdited = true; fillChannels(0); showBandHint(); paintSave() }
         panel = HotspotPanel(this, ui)
         panel.start()
-        ui.autoOff.setOnCheckedChangeListener { _, on -> ui.timeoutRow.visibility = if (on) View.VISIBLE else View.GONE }
-        ui.security.onChange = { ui.passLayout.visibility = if (secValues[it] == "open") View.GONE else View.VISIBLE }
+        ui.autoOff.setOnCheckedChangeListener { _, on ->
+            ui.timeoutRow.visibility = if (on) View.VISIBLE else View.GONE
+            paintSave()
+        }
+        ui.security.onChange = {
+            ui.passLayout.visibility = if (secValues[it] == "open") View.GONE else View.VISIBLE
+            paintSave()
+        }
+        ui.channel.onChange = { paintSave() }
+        ui.clients.onChange = { paintSave() }
+        ui.timeout.onChange = { paintSave() }
+        listOf(ui.hidden, ui.ax, ui.randomMac).forEach { it.setOnCheckedChangeListener { _, _ -> paintSave() } }
+        listOf(ui.ssid, ui.pass).forEach { field ->
+            field.addTextChangedListener(object : android.text.TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
+                override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
+                override fun afterTextChanged(s: android.text.Editable?) = paintSave()
+            })
+        }
         ui.save.isEnabled = false
+        ui.save.visibility = View.GONE
         setupTether()
         setupTweaks()
         ui.startProxy.setOnClickListener { quick(TetherMode.PROXY) }
@@ -122,8 +143,21 @@ class HotspotActivity : AppCompatActivity() {
             ui.randomMac.isChecked = s.randomMac
             ui.save.isEnabled = true
             paintTweakControls(Privileged.choose() == Backend.ROOT)
+            savedForm = form()
+            paintSave()
             showStatus()
         }
+    }
+
+    private fun form(): String = listOf(
+        ui.ssid.text, ui.pass.text, ui.security.selectedItemPosition, band(), ui.channel.selectedItemPosition,
+        ui.clients.selectedItemPosition, ui.autoOff.isChecked, ui.timeout.selectedItemPosition,
+        ui.hidden.isChecked, ui.ax.isChecked, ui.randomMac.isChecked,
+    ).joinToString("\u0000")
+
+    private fun paintSave() {
+        val saved = savedForm
+        ui.save.visibility = if (saved != null && form() != saved) View.VISIBLE else View.GONE
     }
 
     private fun showStatus() {
@@ -200,6 +234,8 @@ class HotspotActivity : AppCompatActivity() {
                 loaded = runCatching { HotspotConfig.read() }.getOrNull() ?: s
                 bandEdited = false
                 savedChannel = loaded!!.channel
+                savedForm = form()
+                paintSave()
                 Prefs.log("точка доступа: сохранено — ${HotspotConfig.summary(loaded!!)}")
                 toast(R.string.ap_saved)
                 showStatus()

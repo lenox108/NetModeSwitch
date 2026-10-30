@@ -326,6 +326,7 @@ class RuleEditActivity : AppCompatActivity() {
 
     private fun load(r: AppRule?) {
         v.ruleName.setText(r?.name.orEmpty())
+        v.ruleGroup.setText(r?.group.orEmpty())
         trigger = when (r?.trigger) {
             null -> Trigger.TIME
             Trigger.WIFI_LEFT -> Trigger.WIFI
@@ -511,6 +512,12 @@ class RuleEditActivity : AppCompatActivity() {
         listOf(v.hasEnd, v.lockWindow, v.leftEndTimeOn, v.leftEndBtOn, v.releaseOnLeave).forEach {
             it.setOnCheckedChangeListener { _, _ -> paint() }
         }
+        fun days(mask: Int) = listOf(v.d1, v.d2, v.d3, v.d4, v.d5, v.d6, v.d7)
+            .forEachIndexed { i, c -> c.isChecked = mask and (1 shl i) != 0 }
+        v.daysWeekdays.setOnClickListener { days(RuleCard.WEEKDAYS) }
+        v.daysWeekend.setOnClickListener { days(RuleCard.WEEKEND) }
+        // No day ticked is how a rule says "every day".
+        v.daysEvery.setOnClickListener { days(0) }
         listOf(v.d1, v.d2, v.d3, v.d4, v.d5, v.d6, v.d7).forEach { it.setOnCheckedChangeListener { _, _ -> paint() } }
         v.wifiMode.setOnCheckedChangeListener { _, _ -> paint() }
         v.endMode.setOnCheckedChangeListener { _, _ -> paint() }
@@ -883,6 +890,7 @@ class RuleEditActivity : AppCompatActivity() {
         show(v.unstop, packages.isNotEmpty())
         show(v.unstopHint, packages.isNotEmpty())
         v.unstop.text = getString(R.string.unstop_at_end, packages.count { it !in keepStopped }, packages.size)
+        paintSummary()
     }
 
     private fun dp(x: Int) = (x * resources.displayMetrics.density).toInt()
@@ -1745,31 +1753,104 @@ class RuleEditActivity : AppCompatActivity() {
     }
 
     private fun chooseTrigger() {
-        val items = triggerInfos.map { info ->
-            val text = android.text.SpannableStringBuilder(getString(info.title))
-            text.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, text.length, 0)
-            val from = text.length
-            text.append("\n").append(getString(info.short))
-            text.setSpan(android.text.style.RelativeSizeSpan(0.8f), from, text.length, 0)
-            text
-        }.toTypedArray<CharSequence>()
-        MaterialAlertDialogBuilder(this)
+        val offered = triggerInfos.map { it.trigger }
+        val infoOf = triggerInfos.associateBy { it.trigger }
+        val view = layoutInflater.inflate(R.layout.dialog_trigger_pick, null)
+        val list = view.findViewById<LinearLayout>(R.id.list)
+        val dialog = MaterialAlertDialogBuilder(this)
             .setTitle(R.string.sec_when)
-            .setSingleChoiceItems(items, triggerInfos.indexOfFirst { it.trigger == trigger }) { d, i ->
-                val before = trigger
-                trigger = triggerInfos[i].trigger
-                // VPN apps and the apps on screen are different lists: neither carries over.
-                if ((before == Trigger.VPN) != (trigger == Trigger.VPN)) triggerApps = emptyList()
-                if ((trigger == Trigger.APP_OPEN || trigger == Trigger.NOTIFY_APP) && triggerApps.isEmpty()) v.triggerApps.post { v.triggerApps.performClick() }
-                if (trigger == Trigger.SUN && Prefs.sunPlace == null) v.sunPlace.post { v.sunPlace.performClick() }
-                if (trigger == Trigger.WIFI_OTHER && knownSsids.isEmpty()) v.knownSsids.post { v.knownSsids.performClick() }
-                // Putting back what fixed the internet once it is back would break it again.
-                if (trigger == Trigger.NO_INTERNET && existing == null) v.releaseOnLeave.isChecked = false
-                d.dismiss()
-                paint()
-            }
+            .setView(view)
             .setNegativeButton(R.string.cancel, null)
-            .show()
+            .create()
+        fun fill(query: String) {
+            list.removeAllViews()
+            val sections = RuleCard.sections(offered, query) { t ->
+                infoOf.getValue(t).let { getString(it.title) + " " + getString(it.short) }
+            }
+            if (sections.isEmpty()) {
+                list.addView(TextView(this).apply {
+                    setText(R.string.trigger_nothing)
+                    setPadding(dp(24), dp(16), dp(24), dp(16))
+                })
+            }
+            for ((title, triggers) in sections) {
+                list.addView(TextView(this).apply {
+                    setText(title)
+                    setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_LabelLarge)
+                    setTextColor(com.google.android.material.color.MaterialColors.getColor(this, androidx.appcompat.R.attr.colorPrimary))
+                    setPadding(dp(24), dp(12), dp(24), dp(4))
+                })
+                triggers.forEach { t -> list.addView(triggerRow(infoOf.getValue(t)) { dialog.dismiss(); pickTrigger(t) }) }
+            }
+        }
+        view.findViewById<android.widget.EditText>(R.id.search).addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
+            override fun afterTextChanged(s: android.text.Editable?) = fill(s?.toString().orEmpty())
+        })
+        fill("")
+        dialog.show()
+    }
+
+    /** A condition in the picker: its icon, name and what it means, the current one marked. */
+    private fun triggerRow(info: TriggerInfo, onPick: () -> Unit): View {
+        val current = info.trigger == trigger
+        val text = android.text.SpannableStringBuilder(getString(info.title))
+        text.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, text.length, 0)
+        val from = text.length
+        text.append("\n").append(getString(info.short))
+        text.setSpan(android.text.style.RelativeSizeSpan(0.85f), from, text.length, 0)
+        val accent = com.google.android.material.color.MaterialColors.getColor(v.root, androidx.appcompat.R.attr.colorPrimary)
+        val normal = com.google.android.material.color.MaterialColors.getColor(v.root, com.google.android.material.R.attr.colorOnSurface)
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            minimumHeight = dp(48)
+            setPadding(dp(24), dp(8), dp(24), dp(8))
+            isClickable = true
+            isFocusable = true
+            val ripple = android.util.TypedValue()
+            context.theme.resolveAttribute(android.R.attr.selectableItemBackground, ripple, true)
+            setBackgroundResource(ripple.resourceId)
+            setOnClickListener { onPick() }
+            addView(android.widget.ImageView(context).apply {
+                setImageResource(info.icon)
+                imageTintList = android.content.res.ColorStateList.valueOf(if (current) accent else normal)
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }, LinearLayout.LayoutParams(dp(24), dp(24)))
+            addView(TextView(context).apply {
+                this.text = text
+                setTextColor(if (current) accent else normal)
+            }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(16) })
+            if (current) isSelected = true
+        }
+    }
+
+    private fun pickTrigger(picked: Trigger) {
+        val before = trigger
+        trigger = picked
+        // VPN apps and the apps on screen are different lists: neither carries over.
+        if ((before == Trigger.VPN) != (trigger == Trigger.VPN)) triggerApps = emptyList()
+        if ((trigger == Trigger.APP_OPEN || trigger == Trigger.NOTIFY_APP) && triggerApps.isEmpty()) v.triggerApps.post { v.triggerApps.performClick() }
+        if (trigger == Trigger.SUN && Prefs.sunPlace == null) v.sunPlace.post { v.sunPlace.performClick() }
+        if (trigger == Trigger.WIFI_OTHER && knownSsids.isEmpty()) v.knownSsids.post { v.knownSsids.performClick() }
+        // Putting back what fixed the internet once it is back would break it again.
+        if (trigger == Trigger.NO_INTERNET && existing == null) v.releaseOnLeave.isChecked = false
+        paint()
+    }
+
+    /** The rule as it stands, read like a sentence, before anything is saved. */
+    private fun paintSummary() {
+        val rule = runCatching { build(existing?.id ?: 0L, true) }.getOrNull() ?: return
+        val does = rule.actionLabel.ifEmpty { getString(R.string.rule_summary_nothing) }
+        // The labels are written for the rule list and open with the words this line already has.
+        val ends = (rule.endLabel ?: getString(if (rule.restores) R.string.end_back else R.string.end_never))
+            .removePrefix("в конце").trimStart(' ', ':', '—')
+        v.ruleSummary.text = listOf(
+            getString(R.string.rule_summary_when, rule.timeLabel),
+            getString(R.string.rule_summary_do, does),
+            getString(R.string.rule_summary_end, ends),
+        ).joinToString("\n")
     }
 
     /** The picker without stop methods: apps to open, to stop at the end, to watch for. */
@@ -1877,6 +1958,7 @@ class RuleEditActivity : AppCompatActivity() {
             // watches would end its own window at once.
             netSlot = if (t == Trigger.NET_MODE) otherSlot() else netSlot,
             name = v.ruleName.text.toString().trim().ifEmpty { null },
+            group = v.ruleGroup.text.toString().trim().ifEmpty { null },
             triggerSlot = simSlots.getOrElse(v.tSlot.selectedItemPosition) { 0 },
             triggerMode = NetMode.entries[v.tMode.selectedItemPosition].takeIf { t == Trigger.NET_MODE },
             triggerHotspotVia = triggerHotspotVia.takeIf { t == Trigger.HOTSPOT },
@@ -2067,9 +2149,18 @@ class RuleEditActivity : AppCompatActivity() {
             Snackbar.make(v.root, R.string.apply_disabled, Snackbar.LENGTH_LONG).setAnchorView(v.save).show()
             return
         }
+        val newest = Prefs.events.firstOrNull()
         lifecycleScope.launch {
             AppFreezer.freezeNow(rule)
-            Snackbar.make(v.root, R.string.applied, Snackbar.LENGTH_SHORT).setAnchorView(v.save).show()
+            // What this run wrote to the log, each action with its own outcome.
+            val lines = Prefs.events.takeWhile { it != newest }.map(Journal::parse).reversed().map { it.text }
+            if (lines.isEmpty()) Snackbar.make(v.root, R.string.applied, Snackbar.LENGTH_SHORT).setAnchorView(v.save).show()
+            else MaterialAlertDialogBuilder(this@RuleEditActivity)
+                .setTitle(R.string.rule_test_result)
+                .setMessage(lines.joinToString("\n\n"))
+                .setPositiveButton(android.R.string.ok, null)
+                .setNegativeButton(R.string.rule_undo) { _, _ -> releaseNow() }
+                .show()
         }
     }
 

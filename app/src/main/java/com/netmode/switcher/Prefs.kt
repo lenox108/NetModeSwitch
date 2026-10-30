@@ -557,6 +557,13 @@ object Prefs {
 
     fun clearLog() = sp.edit().remove(KEY_EVENTS).apply()
 
+    /** The newest log line the journal has shown: errors after it are news on the home screen. */
+    var journalSeen: String?
+        get() = sp.getString("journal_seen", null)
+        set(value) = sp.edit().putString("journal_seen", value).apply()
+
+    fun isLogKey(key: String?) = key == KEY_EVENTS
+
     /** What a home-screen widget was set up to show; null until it is configured. */
     fun widgetConfig(id: Int): String? = sp.getString("widget_$id", null)
 

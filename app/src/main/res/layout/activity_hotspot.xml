@@ -27,6 +27,85 @@
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
             android:paddingBottom="16dp">
+            <com.google.android.material.card.MaterialCardView
+                style="@style/NMS.HotspotCard">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:text="@string/ap_live_title"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="?attr/colorOnSurface"
+                            android:layout_weight="1"
+                            android:layout_gravity="center_vertical" />
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/refreshLive"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/ap_refresh_short" />
+                    </LinearLayout>
+                    <TextView
+                        android:id="@+id/status"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="13sp"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:text="@string/ap_live_wait" />
+                    <TextView
+                        android:id="@+id/liveTraffic"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="@string/ap_live_wait"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/statsToggle"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:text="@string/ap_stats_details"
+                            android:gravity="start|center_vertical"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            app:icon="@drawable/ic_expand"
+                            android:layout_weight="1"
+                            android:paddingStart="0dp" />
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/captureReport"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:text="@string/ap_diagnostics_short"
+                            android:layout_weight="1" />
+                    </LinearLayout>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:id="@+id/statsDetails"
+                        android:visibility="gone">
+                        <TextView
+                            android:id="@+id/liveDetails"
+                            style="@style/NMS.Hint" />
+                        <TextView
+                            style="@style/NMS.Hint"
+                            android:text="@string/ap_traffic_hint" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -116,85 +195,6 @@
                         style="@style/NMS.Hint"
                         android:visibility="gone"
                         android:accessibilityLiveRegion="polite" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-            <com.google.android.material.card.MaterialCardView
-                style="@style/NMS.HotspotCard">
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:text="@string/ap_live_title"
-                            android:textSize="14sp"
-                            android:textStyle="bold"
-                            android:textColor="?attr/colorOnSurface"
-                            android:layout_weight="1"
-                            android:layout_gravity="center_vertical" />
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/refreshLive"
-                            style="@style/Widget.Material3.Button.TextButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/ap_refresh_short" />
-                    </LinearLayout>
-                    <TextView
-                        android:id="@+id/status"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="13sp"
-                        android:textColor="?attr/colorOnSurfaceVariant"
-                        android:text="@string/ap_live_wait" />
-                    <TextView
-                        android:id="@+id/liveTraffic"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:text="@string/ap_live_wait"
-                        android:textSize="20sp"
-                        android:textStyle="bold" />
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/statsToggle"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:text="@string/ap_stats_details"
-                            android:gravity="start|center_vertical"
-                            style="@style/Widget.Material3.Button.TextButton"
-                            app:icon="@drawable/ic_expand"
-                            android:layout_weight="1"
-                            android:paddingStart="0dp" />
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/captureReport"
-                            style="@style/Widget.Material3.Button.TextButton"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:text="@string/ap_diagnostics_short"
-                            android:layout_weight="1" />
-                    </LinearLayout>
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:id="@+id/statsDetails"
-                        android:visibility="gone">
-                        <TextView
-                            android:id="@+id/liveDetails"
-                            style="@style/NMS.Hint" />
-                        <TextView
-                            style="@style/NMS.Hint"
-                            android:text="@string/ap_traffic_hint" />
-                    </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
             <com.google.android.material.card.MaterialCardView

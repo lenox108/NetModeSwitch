@@ -233,6 +233,8 @@ data class AppRule(
     val triggerMode: NetMode? = null,
     /** The user's own name for the rule; null shows the generated description. */
     val name: String? = null,
+    /** Only sorts rules into the list's filter; has no effect on how they run. */
+    val group: String? = null,
     /** Per-app method; apps not listed use [method]. */
     val appMethods: Map<String, FreezeMethod> = emptyMap(),
     val netMode: NetMode? = null,
@@ -691,7 +693,7 @@ data class AppRule(
         .put("endBtAddr", endBtAddress ?: JSONObject.NULL).put("endBtName", endBtName ?: JSONObject.NULL)
         .put("wifi", wifi?.name ?: JSONObject.NULL).put("hotspot", hotspot?.name ?: JSONObject.NULL)
         .put("data", mobileData?.name ?: JSONObject.NULL)
-        .put("name", name ?: JSONObject.NULL)
+        .put("name", name ?: JSONObject.NULL).put("group", group ?: JSONObject.NULL)
         .put("tSlot", triggerSlot).put("tMode", triggerMode?.name ?: JSONObject.NULL)
         .put("keepStopped", JSONArray(keepStopped.toList()))
         .put("tiles", JSONObject().apply { tiles.forEach { (c, t) -> put(c, t.name) } })
@@ -781,6 +783,7 @@ data class AppRule(
                 hotspot = o.str("hotspot")?.let { runCatching { Toggle.valueOf(it) }.getOrNull() },
                 mobileData = o.str("data")?.let { runCatching { Toggle.valueOf(it) }.getOrNull() },
                 name = o.str("name"),
+                group = o.str("group"),
                 triggerSlot = o.optInt("tSlot", 0),
                 triggerMode = o.str("tMode")?.let { runCatching { NetMode.valueOf(it) }.getOrNull() },
                 tiles = o.toggles("tiles"),

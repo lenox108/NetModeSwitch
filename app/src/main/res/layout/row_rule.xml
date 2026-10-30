@@ -66,6 +66,15 @@
                 android:textColor="?attr/colorOnSurfaceVariant"
                 android:textSize="13sp" />
 
+            <LinearLayout
+                android:id="@+id/actionIcons"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:importantForAccessibility="no"
+                android:orientation="horizontal"
+                android:visibility="gone" />
+
             <TextView
                 android:id="@+id/doLine"
                 android:layout_width="match_parent"
@@ -94,7 +103,27 @@
                 android:textSize="12sp"
                 android:textStyle="bold"
                 android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/nextLine"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:textSize="12sp"
+                android:visibility="gone" />
         </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/run"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:scaleType="center"
+            android:src="@drawable/ic_t_manual"
+            app:tint="?attr/colorPrimary" />
 
         <com.google.android.material.checkbox.MaterialCheckBox
             android:id="@+id/check"

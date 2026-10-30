@@ -19,7 +19,12 @@ import androidx.lifecycle.lifecycleScope
 import rikka.shizuku.Shizuku
 import com.netmode.switcher.databinding.ActivityMainBinding
 import com.netmode.switcher.databinding.ItemSimBinding
+import com.netmode.switcher.databinding.RowLogBinding
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
 
@@ -30,6 +35,22 @@ class MainActivity : AppCompatActivity() {
 
     /** Guards a toggle group while it is being set from code rather than tapped. */
     private var syncing = false
+
+    /** A quick action is running: its cell says so until it is done. */
+    private var vpnBusy = false
+    private var apBusy = false
+    private var vpnOwner: String? = null
+    private var quickRead: Job? = null
+
+    /** A line in the log usually means the state on screen just changed. */
+    private val logChanged = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (Prefs.isLogKey(key)) runOnUiThread {
+            renderLog()
+            renderRules()
+            quickRead?.cancel()
+            quickRead = lifecycleScope.launch { delay(1_000); renderQuick() }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,6 +65,8 @@ class MainActivity : AppCompatActivity() {
         ui.toolbar.inflateMenu(R.menu.main)
         ui.toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
+                R.id.action_settings -> startActivity(Intent(this, RulesActivity::class.java))
+                R.id.action_add_tile -> addTiles()
                 R.id.action_refresh -> refresh(force = true)
                 R.id.action_diagnose -> diagnose()
             }
@@ -51,12 +74,21 @@ class MainActivity : AppCompatActivity() {
         }
 
         ui.rulesCard.setOnClickListener { startActivity(Intent(this, AppRulesActivity::class.java)) }
-        ui.settingsCard.setOnClickListener { startActivity(Intent(this, RulesActivity::class.java)) }
         ui.hideCard.setOnClickListener { startActivity(Intent(this, NotifHideActivity::class.java)) }
         ui.iceCard.setOnClickListener { startActivity(Intent(this, FreezerActivity::class.java)) }
         ui.apCard.setOnClickListener { startActivity(Intent(this, HotspotActivity::class.java)) }
-        ui.tileCard.setOnClickListener { addTiles() }
         ui.logAll.setOnClickListener { startActivity(Intent(this, LogActivity::class.java)) }
+        // Too narrow for its text (small screen, large font): side by side would break words.
+        if (resources.configuration.let { it.screenWidthDp / it.fontScale } < MIN_ROW_WIDTH_DP) {
+            listOf(ui.statusRow, ui.navRow1, ui.navRow2).forEach(::stack)
+        }
+        ui.problemCard.setOnClickListener {
+            startActivity(Intent(this, LogActivity::class.java).putExtra(LogActivity.EXTRA_PROBLEMS, true))
+        }
+        ui.vpnCell.setOnClickListener { vpnAction() }
+        ui.apCell.setOnClickListener { hotspotAction() }
+        ui.apCell.setOnLongClickListener { startActivity(Intent(this, HotspotActivity::class.java)); true }
+        ui.activeCell.setOnClickListener { startActivity(Intent(this, AppRulesActivity::class.java)) }
     }
 
     /**
@@ -124,7 +156,15 @@ class MainActivity : AppCompatActivity() {
         refresh(force = false)
         renderStatus()
         renderLog()
+        renderRules()
+        renderQuick()
+        Prefs.listen(logChanged)
         offerCheck()
+    }
+
+    override fun onStop() {
+        Prefs.unlisten(logChanged)
+        super.onStop()
     }
 
     /** First start on a phone: offer the check once, before anything is switched. */
@@ -308,7 +348,6 @@ class MainActivity : AppCompatActivity() {
             resources.getQuantityString(R.plurals.n_app_rules, on, on),
             if (held > 0) getString(R.string.held_now, held) else null,
         ).joinToString(" · ")
-        ui.settingsSummary.text = getString(R.string.settings_summary)
         val hiding = Prefs.hideRules.size
         val blocked = Prefs.notifBlocked.size
         val ice = Freezer.apps
@@ -324,10 +363,174 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun stack(row: android.widget.LinearLayout) {
+        row.orientation = android.widget.LinearLayout.VERTICAL
+        for (i in 0 until row.childCount) {
+            val lp = row.getChildAt(i).layoutParams as android.widget.LinearLayout.LayoutParams
+            lp.width = android.widget.LinearLayout.LayoutParams.MATCH_PARENT
+            lp.height = android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+            lp.weight = 0f
+            lp.marginStart = 0
+            lp.marginEnd = 0
+            if (i > 0) lp.topMargin = (8 * resources.displayMetrics.density).toInt()
+        }
+    }
+
     private fun renderLog() {
-        val events = Prefs.events
-        ui.log.text = if (events.isEmpty()) getString(R.string.no_events)
-        else events.take(8).joinToString("\n")
+        val entries = Prefs.events.map(Journal::parse)
+        val (done, problems) = Journal.today(entries, java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("dd.MM")))
+        ui.todayLine.text = getString(R.string.home_today, done, problems)
+        val errors = Journal.unseenErrors(entries, Prefs.journalSeen).size
+        ui.problemCard.visibility = if (errors > 0) View.VISIBLE else View.GONE
+        ui.problemText.text = resources.getQuantityString(R.plurals.home_problems, errors, errors)
+        ui.logList.removeAllViews()
+        if (entries.isEmpty()) {
+            val row = RowLogBinding.inflate(layoutInflater, ui.logList, true)
+            row.icon.visibility = View.GONE
+            row.title.visibility = View.GONE
+            row.body.text = getString(R.string.no_events)
+            return
+        }
+        entries.take(RECENT_EVENTS).forEach { entry ->
+            val row = RowLogBinding.inflate(layoutInflater, ui.logList, true)
+            bindLogRow(row, entry, maxLines = 2)
+            row.root.setOnClickListener { startActivity(Intent(this, LogActivity::class.java)) }
+        }
+    }
+
+    private fun renderRules() {
+        val active = Prefs.appRules.count { AppFreezer.isActive(it) }
+        paintCell(ui.activeCell, ui.activeIcon, ui.activeLabel, ui.activeValue, active > 0,
+            if (active > 0) getString(R.string.home_rules_active, active) else getString(R.string.home_rules_idle))
+    }
+
+    /** What is up right now, read from the system and not from what was last asked for. */
+    private fun renderQuick() {
+        lifecycleScope.launch {
+            if (!Privileged.available()) {
+                vpnOwner = null
+                if (!vpnBusy) paintVpn(getString(R.string.home_no_access), false)
+                if (!apBusy) paintAp(getString(R.string.home_no_access), false)
+                return@launch
+            }
+            val owner = runCatching { VpnControl.owner() }
+            val ap = runCatching { HotspotControl.isOn() }
+            vpnOwner = owner.getOrNull()
+            if (!vpnBusy) {
+                val name = vpnOwner?.let { AppPickerActivity.labels(listOf(it)).first() }
+                paintVpn(name ?: getString(if (owner.isSuccess) R.string.home_off else R.string.unknown), name != null)
+            }
+            if (!apBusy) {
+                val on = ap.getOrNull()
+                paintAp(when (on) {
+                    null -> getString(R.string.unknown)
+                    true -> getString(R.string.home_ap_on, TetherRoute.label(Prefs.tetherMode))
+                    false -> getString(R.string.home_off)
+                }, on == true)
+            }
+        }
+    }
+
+    private fun paintVpn(value: String, on: Boolean) =
+        paintCell(ui.vpnCell, ui.vpnIcon, ui.vpnLabel, ui.vpnValue, on, value)
+
+    private fun paintAp(value: String, on: Boolean) =
+        paintCell(ui.apCell, ui.apIcon, ui.apLabel, ui.apValue, on, value)
+
+    private fun paintCell(
+        cell: com.google.android.material.card.MaterialCardView,
+        icon: android.widget.ImageView,
+        label: android.widget.TextView,
+        text: android.widget.TextView,
+        on: Boolean,
+        value: String,
+    ) {
+        fun color(attr: Int) = com.google.android.material.color.MaterialColors.getColor(cell, attr)
+        val content = color(if (on) com.google.android.material.R.attr.colorOnPrimaryContainer else com.google.android.material.R.attr.colorOnSurfaceVariant)
+        cell.setCardBackgroundColor(color(if (on) com.google.android.material.R.attr.colorPrimaryContainer else com.google.android.material.R.attr.colorSurfaceContainerHigh))
+        icon.imageTintList = android.content.res.ColorStateList.valueOf(content)
+        label.setTextColor(content)
+        text.setTextColor(content)
+        text.text = value
+        cell.contentDescription = getString(R.string.home_cell_state, label.text, value)
+    }
+
+    private fun vpnAction() {
+        if (vpnBusy) return
+        val owner = vpnOwner
+        if (owner != null) {
+            val name = AppPickerActivity.labels(listOf(owner)).first()
+            MaterialAlertDialogBuilder(this)
+                .setMessage(getString(R.string.home_vpn_off_ask, name))
+                .setPositiveButton(R.string.home_turn_off) { _, _ -> runVpn { VpnControl.off() } }
+                .setNegativeButton(R.string.cancel, null)
+                .show()
+            return
+        }
+        lifecycleScope.launch {
+            val apps = withContext(Dispatchers.IO) { Tiles.list().filter { it.vpn }.distinctBy { it.pkg } }
+            if (apps.isEmpty()) {
+                android.widget.Toast.makeText(this@MainActivity, R.string.home_vpn_none, android.widget.Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            MaterialAlertDialogBuilder(this@MainActivity)
+                .setTitle(R.string.home_vpn_pick)
+                .setItems(apps.map { it.label }.toTypedArray()) { _, i -> runVpn { VpnControl.on(apps[i].pkg) } }
+                .setNegativeButton(R.string.cancel, null)
+                .show()
+        }
+    }
+
+    private fun hotspotAction() {
+        if (apBusy) return
+        if (HotspotControl.lastOn) {
+            MaterialAlertDialogBuilder(this)
+                .setMessage(R.string.home_ap_off_ask)
+                .setPositiveButton(R.string.home_turn_off) { _, _ -> runHotspot { HotspotControl.stop() } }
+                .setNegativeButton(R.string.cancel, null)
+                .show()
+            return
+        }
+        val modes = listOf(TetherMode.VPN, TetherMode.PROXY, TetherMode.DIRECT)
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.home_ap_pick)
+            .setItems(modes.map { TetherRoute.label(it).replaceFirstChar(Char::uppercase) }.toTypedArray()) { _, i ->
+                runHotspot { HotspotControl.toggle(modes[i]) }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    /** In the app's scope: leaving this screen must not cut a switch off halfway. */
+    private fun runVpn(action: suspend () -> String) {
+        vpnBusy = true
+        paintVpn(getString(R.string.home_working), false)
+        App.scope.launch {
+            val line = runCatching { action() }.getOrElse { "VPN: ошибка ${it.message}" }
+            Prefs.log(line)
+            withContext(Dispatchers.Main) {
+                vpnBusy = false
+                finishQuick(line)
+            }
+        }
+    }
+
+    private fun runHotspot(action: suspend () -> String) {
+        apBusy = true
+        paintAp(getString(R.string.home_working), false)
+        App.scope.launch {
+            val line = runCatching { action() }.getOrElse { "точка доступа: ошибка ${it.message}" }
+            withContext(Dispatchers.Main) {
+                apBusy = false
+                finishQuick(line)
+            }
+        }
+    }
+
+    private fun finishQuick(line: String) {
+        if (isDestroyed) return
+        android.widget.Toast.makeText(this, line, android.widget.Toast.LENGTH_SHORT).show()
+        renderQuick()
     }
 
     /**
@@ -390,5 +593,10 @@ class MainActivity : AppCompatActivity() {
                 .setPositiveButton(android.R.string.ok, null)
                 .show()
         }
+    }
+
+    private companion object {
+        const val RECENT_EVENTS = 4
+        const val MIN_ROW_WIDTH_DP = 300f
     }
 }
