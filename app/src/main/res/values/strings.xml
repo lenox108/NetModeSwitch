@@ -579,6 +579,8 @@
     <string name="backup_export">Сохранить</string>
     <string name="backup_import">Загрузить</string>
     <string name="backup_import_confirm">Текущие правила заменятся правилами из файла. Продолжить?</string>
+    <string name="backup_import_outside_title">В файле есть команды и запросы</string>
+    <string name="backup_import_outside">Текущие правила заменятся правилами из файла. Эти правила выполняют команды от root или HTTP-запросы, поэтому загрузятся выключенными. Включайте только те, что проверили.\n\n%1$s</string>
     <string name="backup_saved">Сохранено правил: %d</string>
     <string name="backup_loaded">Загружено правил: %d</string>
     <string name="backup_failed">Не получилось: %s</string>

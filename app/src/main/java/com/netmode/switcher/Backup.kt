@@ -99,12 +99,43 @@ object Backup {
             Prefs.iceApps.filter { it.key !in readKeys }
     }
 
-    /** Returns the number of rules read; throws on a file that is not a backup of this app. */
-    suspend fun import(text: String): Int {
+    /**
+     * What a rule would run or call on its own, unlocking block included, each exactly as it
+     * stands in the file. A shell command runs as root, so a file from elsewhere must not bring
+     * one in unseen.
+     */
+    internal fun outsideActions(rule: AppRule): List<String> = listOfNotNull(
+        rule.shell?.let { "команда при старте: $it" },
+        rule.http?.let { "HTTP при старте: $it" },
+        rule.endShell?.let { "команда в конце: $it" },
+        rule.endHttp?.let { "HTTP в конце: $it" },
+        rule.unlockEnd?.shell?.let { "команда при разблокировке: $it" },
+        rule.unlockEnd?.http?.let { "HTTP при разблокировке: $it" },
+    )
+
+    /** The rules with [outsideActions] come in switched off, for the user to look at first. */
+    internal fun held(rules: List<AppRule>): List<AppRule> =
+        rules.map { if (outsideActions(it).isEmpty()) it else it.copy(enabled = false) }
+
+    /** Every outside action of [rules] for the confirmation; empty when there are none. */
+    internal fun outsideSummary(rules: List<AppRule>): String = rules.mapNotNull { rule ->
+        outsideActions(rule).takeIf { it.isNotEmpty() }?.let { actions ->
+            "«${rule.name ?: rule.timeLabel}»\n" + actions.joinToString("\n") { "• $it" }
+        }
+    }.joinToString("\n\n")
+
+    /** The rules in [text], nothing changed yet; throws on a file that is not a backup of this app. */
+    fun readRules(text: String): List<AppRule> {
         val o = JSONObject(text)
         require(o.optString("app") == "NetModeSwitch") { "это не файл NetModeSwitch" }
         val arr = o.getJSONArray("rules")
-        val rules = (0 until arr.length()).map { AppRule.fromJson(arr.getJSONObject(it)) }
+        return (0 until arr.length()).map { AppRule.fromJson(arr.getJSONObject(it)) }
+    }
+
+    /** Returns the number of rules read; throws on a file that is not a backup of this app. */
+    suspend fun import(text: String): Int {
+        val o = JSONObject(text)
+        val rules = held(readRules(text))
         o.optJSONObject("settings")?.optJSONArray("hideRules")?.let { a ->
             NotifRules.replace((0 until a.length()).map { HideRule.fromJson(a.getJSONObject(it)) }).getOrThrow()
         }
