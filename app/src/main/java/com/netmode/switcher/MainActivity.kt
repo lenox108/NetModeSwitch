@@ -390,6 +390,9 @@ class MainActivity : AppCompatActivity() {
         else listOfNotNull(
             getString(R.string.hide_summary_rules, hiding).takeIf { hiding > 0 },
             getString(R.string.hide_summary_blocked, blocked).takeIf { blocked > 0 },
+            getString(R.string.hide_summary_no_access).takeIf {
+                hiding > 0 && packageName !in androidx.core.app.NotificationManagerCompat.getEnabledListenerPackages(this)
+            },
         ).joinToString(" · ")
         lifecycleScope.launch {
             runCatching { HotspotConfig.read() }.getOrNull()?.let { ui.apSummary.text = HotspotConfig.summary(it) }

@@ -60,6 +60,8 @@ class NotifListener : NotificationListenerService() {
     override fun onListenerDisconnected() {
         NotifWatch.connected = false
         NotifWatch.listener = null
+        // Some firmwares unbind on their own; while the access is off this does nothing.
+        runCatching { requestRebind(android.content.ComponentName(this, NotifListener::class.java)) }
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {

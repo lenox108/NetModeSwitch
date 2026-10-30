@@ -149,6 +149,18 @@ internal object NotifRules {
         }
     }
 
+    /** Brings one notification back despite its rule, until the app withdraws it. */
+    suspend fun showNow(key: String): Result<Unit> = withContext(NonCancellable + Dispatchers.IO) {
+        mutex.withLock {
+            runCatching {
+                Prefs.hideShownKeys = Prefs.hideShownKeys + key
+                Prefs.hiddenKeys = Prefs.hiddenKeys - key
+                Prefs.releasedKeys = Prefs.releasedKeys + (key to System.currentTimeMillis())
+                restorePending()
+            }
+        }
+    }
+
     /** Pending keys get no callback when Android re-snoozes them: any post is a chance to look. */
     suspend fun poke() {
         val now = System.currentTimeMillis()
@@ -173,9 +185,10 @@ internal object NotifRules {
         val rules = Prefs.hideRules
         snoozed.filter { it.key in hidden && ruleFor(it, snoozed.asList(), rules) != null }.forEach { n ->
             val group = up.filter { it.groupKey == n.groupKey && !NotifHide.isSummary(it) }
+            val shown = Prefs.hideShownKeys
             // A snooze of a group member can take visible siblings along, a child's too: with
             // one up, let this snooze run out. [NotifHide.onPosted] hides the repost.
-            if (NotifRulePolicy.mayHide(true, group.map { s -> rules.any { it.matches(s) } }))
+            if (NotifRulePolicy.mayHide(true, group.map { s -> s.key !in shown && rules.any { it.matches(s) } }))
                 runCatching { listener.snoozeNotification(n.key, NotifHide.SNOOZE_MS) }
         }
         Prefs.hideRenewedAt = now
@@ -248,10 +261,11 @@ internal object NotifRules {
             error("Android не дал проверить скрытые уведомления. Повтори после подключения службы")
         }
         val rules = Prefs.hideRules
+        val shown = Prefs.hideShownKeys
         val keepHidden = mutableMapOf<String, Long>()
         val release = pending.keys.filter { key ->
             val n = snoozed[key]
-            val rule = n?.let { sbn -> ruleFor(sbn, snoozed.values, rules) }
+            val rule = if (key in shown) null else n?.let { sbn -> ruleFor(sbn, snoozed.values, rules) }
             if (rule != null) keepHidden[key] = rule.id
             n != null && rule == null
         }

@@ -27,6 +27,13 @@ class NotifRulePolicyTest {
         assertTrue(NotifRulePolicy.matches(null, false, listOf("код"), "Банк", "Акция", false))
     }
 
+    @Test fun onlyAnOrdinaryNotificationCanBeClosedForGood() {
+        assertTrue(NotifRulePolicy.dismissable(0))
+        assertFalse(NotifRulePolicy.dismissable(android.app.Notification.FLAG_ONGOING_EVENT))
+        assertFalse(NotifRulePolicy.dismissable(android.app.Notification.FLAG_FOREGROUND_SERVICE))
+        assertFalse(NotifRulePolicy.dismissable(android.app.Notification.FLAG_NO_CLEAR))
+    }
+
     @Test fun disabledRulesAndPausesRespectTheExactDeadline() {
         assertFalse(NotifRulePolicy.active(false, 0, 100))
         assertFalse(NotifRulePolicy.active(true, 101, 100))

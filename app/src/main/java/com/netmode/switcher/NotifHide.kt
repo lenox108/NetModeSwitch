@@ -24,6 +24,7 @@ data class HideRule(
     val pausedUntil: Long = 0,
     val ongoingOnly: Boolean = false,
     val exclusions: List<String> = emptyList(),
+    val dismiss: Boolean = false,
 ) {
     /** A rule on one whole channel: the kind root can switch off rather than snooze. */
     val wholeChannel: Boolean get() = channel != null && title == null && !ongoingOnly && exclusions.isEmpty()
@@ -53,6 +54,7 @@ data class HideRule(
         .put("channelWas", channelWas ?: JSONObject.NULL)
         .put("enabled", enabled).put("pausedUntil", pausedUntil).put("ongoingOnly", ongoingOnly)
         .put("exclusions", org.json.JSONArray(exclusions))
+        .put("dismiss", dismiss)
 
     companion object {
         fun fromJson(o: JSONObject) = HideRule(
@@ -67,6 +69,7 @@ data class HideRule(
             exclusions = o.optJSONArray("exclusions")?.let { a ->
                 NotifRulePolicy.exclusions((0 until a.length()).joinToString("\n") { a.optString(it) })
             }.orEmpty(),
+            dismiss = o.optBoolean("dismiss", false),
         )
     }
 }
@@ -178,6 +181,14 @@ object NotifHide {
         return all.filter { !summary(it) || it.groupKey !in groups }.map(::entryOf)
     }
 
+    /** What the rules hold back now, for the screen to list; a group's summary is left out. */
+    fun hiddenNow(): List<ShadeEntry> {
+        val keys = Prefs.hiddenKeys
+        if (keys.isEmpty()) return emptyList()
+        return NotifWatch.listener?.let { l -> runCatching { l.snoozedNotifications }.getOrNull() }.orEmpty()
+            .filter { it.key in keys && !isSummary(it) }.map(::entryOf)
+    }
+
     /**
      * The snooze goes first and alone: the shade takes some tens of milliseconds to draw a
      * new notification, and one snoozed before that never shows. The bookkeeping — the
@@ -185,13 +196,18 @@ object NotifHide {
      */
     internal fun onPosted(listener: NotificationListenerService, sbn: StatusBarNotification, up: List<StatusBarNotification>? = null) {
         val rules = Prefs.hideRules
-        val rule = rules.firstOrNull { it.matches(sbn) }
+        val shown = Prefs.hideShownKeys
+        val rule = if (sbn.key in shown) null else rules.firstOrNull { it.matches(sbn) }
         // Android takes the rest of a group along with a snooze; only a group needs this look.
         val group = if (rule == null || !sbn.isGroup) emptyList() else groupOf(listener, sbn, up)
         val allowed = rule != null && NotifRulePolicy.mayHide(isSummary(sbn),
-            group.filterNot(::isSummary).map { s -> rules.any { it.matches(s) } })
-        val attempt = if (allowed) runCatching { listener.snoozeNotification(sbn.key, SNOOZE_MS) } else null
-        val snoozed = attempt?.isSuccess == true
+            group.filterNot(::isSummary).map { s -> s.key !in shown && rules.any { it.matches(s) } })
+        // A rule that closes still has to snooze what cannot be closed: a foreground service.
+        val closing = rule?.dismiss == true && NotifRulePolicy.dismissable(sbn.notification.flags)
+        val attempt = if (!allowed) null else runCatching {
+            if (closing) listener.cancelNotification(sbn.key) else listener.snoozeNotification(sbn.key, SNOOZE_MS)
+        }
+        val snoozed = attempt?.isSuccess == true && !closing
         App.scope.launch {
             if (snoozed) NotifRules.remember(sbn)
             seen(sbn)
@@ -199,8 +215,16 @@ object NotifHide {
             if (rule != null && allowed) {
                 kotlinx.coroutines.delay(120)
                 if (snoozed && group.isNotEmpty()) NotifRules.rememberGroup(rule, group)
-                val confirmed = runCatching { listener.snoozedNotifications.any { it.key == sbn.key } }.getOrDefault(false)
-                NotifJournal.record(sbn, rule, if (attempt?.isFailure == true) "error" else if (confirmed) "hidden" else "unconfirmed")
+                val confirmed = runCatching {
+                    if (closing) listener.activeNotifications.none { it.key == sbn.key }
+                    else listener.snoozedNotifications.any { it.key == sbn.key }
+                }.getOrDefault(false)
+                NotifJournal.record(sbn, rule, when {
+                    attempt?.isFailure == true -> "error"
+                    !confirmed -> "unconfirmed"
+                    closing -> "dismissed"
+                    else -> "hidden"
+                })
             }
         }
     }
@@ -211,6 +235,8 @@ object NotifHide {
 
     /** A summary kept for the sake of a visible sibling can go once that sibling has gone. */
     internal fun onRemoved(listener: NotificationListenerService, sbn: StatusBarNotification) {
+        val shown = Prefs.hideShownKeys
+        if (sbn.key in shown) Prefs.hideShownKeys = shown - sbn.key
         if (!sbn.isGroup || Prefs.hideRules.isEmpty()) return
         val up = runCatching { listener.activeNotifications.toList() }.getOrNull().orEmpty()
         up.filter { isSummary(it) && it.groupKey == sbn.groupKey }.forEach { onPosted(listener, it, up) }
@@ -332,6 +358,7 @@ object NotifHide {
         rule.channel?.let { "канал «$it»" } ?: "все каналы",
         rule.title?.let { "заголовок с «$it»" },
         "только постоянные".takeIf { rule.ongoingOnly },
+        "закрывать".takeIf { rule.dismiss },
         rule.exclusions.takeIf { it.isNotEmpty() }?.joinToString(", ", prefix = "кроме: "),
     ).joinToString(", ")
 

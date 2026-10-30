@@ -525,6 +525,11 @@ object Prefs {
         ).apply()
 
     /** When the snoozes were last renewed; see NotifRules.renew. */
+    /** Keys the user brought back by hand: no rule hides them until they are withdrawn. */
+    var hideShownKeys: Set<String>
+        get() = sp.getStringSet("hide_shown_keys", emptySet())!!
+        set(value) = sp.edit().putStringSet("hide_shown_keys", value).apply()
+
     var hideRenewedAt: Long
         get() = sp.getLong("hide_renewed_at", 0)
         set(value) = sp.edit().putLong("hide_renewed_at", value).apply()

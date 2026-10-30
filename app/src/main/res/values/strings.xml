@@ -816,6 +816,15 @@
     <string name="hide_remove_rule">Удалить правило</string>
     <string name="hide_edit_channel">Канал (пусто — все каналы)</string>
     <string name="hide_only_ongoing">Только постоянные уведомления</string>
+    <string name="hide_dismiss">Закрывать, а не скрывать</string>
+    <string name="hide_dismiss_short">закрывать</string>
+    <string name="hide_dismiss_hint">Обычное уведомление закроется насовсем и не вернётся после отключения правила. Постоянные закрыть нельзя, они будут скрываться</string>
+    <string name="hide_everything_warn">Правило охватывает все уведомления приложения, включая звонки, будильники и коды подтверждения</string>
+    <string name="hide_sec_hidden">Скрыто сейчас</string>
+    <string name="hide_hidden_empty">Сейчас ничего не скрыто</string>
+    <string name="hide_show_now">Показать снова (пока приложение его не уберёт)</string>
+    <string name="hide_open_rule">Открыть правило</string>
+    <string name="hide_summary_no_access">нет доступа к уведомлениям, скрытие не работает</string>
     <string name="hide_exclusions">Исключения</string>
     <string name="hide_exclusions_hint">До 30 фраз, по одной на строку. Уведомление остаётся видимым, если фраза есть в заголовке или тексте</string>
     <string name="hide_except_prefix">Кроме: </string>
@@ -833,6 +842,7 @@
     <string name="hide_journal_empty">Событий скрытия пока нет</string>
     <string name="hide_journal_hidden">Скрытие подтверждено</string>
     <string name="hide_journal_error">Ошибка скрытия</string>
+    <string name="hide_journal_dismissed">Закрыто</string>
     <string name="hide_journal_unconfirmed">Запрос без подтверждения</string>
     <string name="hide_journal_rule_removed">Это правило уже удалено</string>
     <string name="hide_recent_clear">Очистить</string>

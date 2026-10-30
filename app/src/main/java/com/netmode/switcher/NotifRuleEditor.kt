@@ -61,14 +61,21 @@ internal object NotifRuleEditor {
             setText(R.string.hide_rule_enabled)
             isChecked = rule.enabled
         }.also { content.addView(it) }
+        val dismiss = MaterialSwitch(context).apply {
+            setText(R.string.hide_dismiss)
+            isChecked = rule.dismiss
+        }.also { content.addView(it) }
+        hint(R.string.hide_dismiss_hint)
+        val everything = hint(R.string.hide_everything_warn)
         val preview = TextView(context).apply {
             setTextAppearance(R.style.NMS_Hint)
             setPadding(0, (16 * dp).toInt(), 0, 0)
         }.also { content.addView(it) }
         fun draft() = rule.copy(channel = channel.text?.toString()?.trim()?.ifEmpty { null },
             title = words.text?.toString()?.trim()?.ifEmpty { null }, enabled = enabled.isChecked,
-            ongoingOnly = ongoing.isChecked, exclusions = NotifRulePolicy.exclusions(exclusions.text?.toString().orEmpty()))
+            ongoingOnly = ongoing.isChecked, dismiss = dismiss.isChecked, exclusions = NotifRulePolicy.exclusions(exclusions.text?.toString().orEmpty()))
         fun updatePreview() {
+            everything.visibility = draft().let { if (it.channel == null && it.title == null && !it.ongoingOnly) android.view.View.VISIBLE else android.view.View.GONE }
             if (!NotifWatch.connected) {
                 preview.setText(R.string.hide_preview_no_access)
                 return

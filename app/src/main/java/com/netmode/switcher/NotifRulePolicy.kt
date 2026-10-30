@@ -18,6 +18,9 @@ internal object NotifRulePolicy {
     fun ongoing(flags: Int) = flags and (android.app.Notification.FLAG_ONGOING_EVENT or
         android.app.Notification.FLAG_FOREGROUND_SERVICE) != 0
 
+    /** What a listener may close for good; an ongoing one would refuse or come straight back. */
+    fun dismissable(flags: Int) = !ongoing(flags) && flags and android.app.Notification.FLAG_NO_CLEAR == 0
+
     /** Android snoozes a summary's whole group: only when nothing of it has to stay visible. */
     fun mayHide(summary: Boolean, siblingsMatch: List<Boolean>) = !summary || siblingsMatch.all { it }
 

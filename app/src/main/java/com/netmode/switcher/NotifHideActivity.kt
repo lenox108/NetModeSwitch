@@ -31,6 +31,7 @@ class NotifHideActivity : AppCompatActivity() {
 
     /** What the shade list last showed; a repaint is skipped while nothing changed. */
     private var shown: List<ShadeEntry>? = null
+    private var shownHidden: List<ShadeEntry>? = null
     private var shownRecent: List<SeenEntry>? = null
     private var recentExpanded = false
     private var shownRules: List<HideRule>? = null
@@ -127,6 +128,11 @@ class NotifHideActivity : AppCompatActivity() {
             shown = now
             renderShade(now)
         }
+        val hidden = NotifHide.hiddenNow()
+        if (force || hidden != shownHidden) {
+            shownHidden = hidden
+            renderHidden(hidden)
+        }
         val rules = Prefs.hideRules
         // Not up now and not hidden already: what is in the shade is picked from above.
         val recent = NotifHide.recent().filter { r ->
@@ -162,6 +168,33 @@ class NotifHideActivity : AppCompatActivity() {
             ).joinToString(" · ")
             row(ui.shadeList, e.app, e.displayedTitle.ifEmpty { label(e.app) }, label(e.app) + if (sub.isEmpty()) "" else " · $sub") { pick(e) }
         }
+    }
+
+    private fun renderHidden(list: List<ShadeEntry>) {
+        ui.hiddenList.removeAllViews()
+        if (list.isEmpty()) return empty(ui.hiddenList, R.string.hide_hidden_empty)
+        list.sortedBy { label(it.app).lowercase() }.forEach { e ->
+            val sub = listOfNotNull(
+                label(e.app),
+                getString(R.string.hide_ongoing).takeIf { e.ongoing },
+                e.channel?.let { getString(R.string.hide_channel, it) },
+            ).joinToString(" · ")
+            row(ui.hiddenList, e.app, e.displayedTitle.ifEmpty { label(e.app) }, sub) { pickHidden(e) }
+        }
+    }
+
+    /** Bringing one back lasts until its app withdraws it; the rule itself stays as it is. */
+    private fun pickHidden(e: ShadeEntry) {
+        val rule = Prefs.hiddenKeys[e.key]?.let { id -> Prefs.hideRules.firstOrNull { it.id == id } }
+        val choices = buildList<Pair<String, () -> Unit>> {
+            add(getString(R.string.hide_show_now) to { change { NotifRules.showNow(e.key) } })
+            rule?.let { r -> add(getString(R.string.hide_open_rule) to { editRule(r) }) }
+        }
+        MaterialAlertDialogBuilder(this)
+            .setTitle(e.displayedTitle.ifEmpty { label(e.app) })
+            .setItems(choices.map { it.first }.toTypedArray()) { _, i -> choices[i].second() }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun setRecentExpanded(open: Boolean) {
@@ -224,6 +257,7 @@ class NotifHideActivity : AppCompatActivity() {
                 else -> ""
             }
             val conditions = listOfNotNull(what, getString(R.string.hide_only_ongoing).takeIf { r.ongoingOnly },
+                getString(R.string.hide_dismiss_short).takeIf { r.dismiss },
                 r.exclusions.takeIf { it.isNotEmpty() }?.joinToString(", ", prefix = getString(R.string.hide_except_prefix)))
                 .joinToString(" · ")
             val state = when {
@@ -318,6 +352,7 @@ class NotifHideActivity : AppCompatActivity() {
                 .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
             val outcome = getString(when (entry.outcome) {
                 "hidden" -> R.string.hide_journal_hidden
+                "dismissed" -> R.string.hide_journal_dismissed
                 "error" -> R.string.hide_journal_error
                 else -> R.string.hide_journal_unconfirmed
             })

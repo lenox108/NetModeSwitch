@@ -139,6 +139,19 @@
 
             <TextView
                 style="@style/NMS.Section"
+                android:text="@string/hide_sec_hidden" />
+
+            <com.google.android.material.card.MaterialCardView style="@style/NMS.Card">
+
+                <LinearLayout
+                    android:id="@+id/hiddenList"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                style="@style/NMS.Section"
                 android:text="@string/hide_sec_rules" />
 
             <com.google.android.material.card.MaterialCardView style="@style/NMS.Card">
