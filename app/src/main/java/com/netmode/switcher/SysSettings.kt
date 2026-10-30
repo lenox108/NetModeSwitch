@@ -185,9 +185,10 @@ object OneShots {
         return "уведомление"
     }
 
-    /** All of a start's or an end's one-offs, in this order, into the log. */
-    suspend fun run(note: String?, http: String?, shell: String?, why: String) {
+    /** All of a start's or an end's one-offs, in this order, into the log; returns those lines. */
+    suspend fun run(note: String?, http: String?, shell: String?, why: String): List<String> {
         val done = listOfNotNull(note?.let { note(it) }, http?.let { http(it) }, shell?.let { shell(it) })
         if (done.isNotEmpty()) Prefs.log("($why): ${done.joinToString(", ")}")
+        return done
     }
 }

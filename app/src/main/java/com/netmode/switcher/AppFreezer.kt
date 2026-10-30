@@ -35,6 +35,35 @@ object AppFreezer {
     private val lock = Mutex()
     private val frozenWrite = Any()
 
+    /** What has failed of the start now running, for [RunNotices.failed]; null outside one. Guarded by [lock]. */
+    @Volatile private var runFailures: MutableList<String>? = null
+
+    /** [fresh] is a new start, which replaces the last one's notice; steps after a pause add to it. */
+    private fun beginRun(rule: AppRule, fresh: Boolean = true) {
+        if (fresh) RunNotices.cancelFailed(rule.id)
+        runFailures = mutableListOf()
+    }
+
+    private fun endRun(rule: AppRule) {
+        val failed = runFailures
+        runFailures = null
+        if (!failed.isNullOrEmpty()) RunNotices.failed(rule, failed)
+    }
+
+    private fun noteFailures(lines: List<String>) {
+        runFailures?.addAll(lines.filter(RunFailure::isFailure))
+    }
+
+    /** "Повторить" on a failure notice: the whole rule again, as "apply now" would run it. */
+    suspend fun retryRun(ruleId: Long) = lock.withLock {
+        val rule = Prefs.appRules.find { it.id == ruleId }?.takeIf { it.enabled } ?: return@withLock
+        if (rule.isTime) rule.lastStart(ZonedDateTime.now())?.let {
+            Prefs.appHandled = Prefs.appHandled + (rule.id to it.toInstant().toEpochMilli())
+        }
+        eventState = 0
+        freezeLocked(rule, "повтор", manual = true)
+    }
+
     /** A late alarm still counts for a start-only rule within this slack. */
     private val GRACE: Duration = Duration.ofMinutes(10)
 
@@ -320,22 +349,27 @@ object AppFreezer {
             if (!rule.enabled || (rule.restores && id !in Prefs.openWindows)) continue
             val why = rule.logPrefix + "экран погашен"
             acted()
-            if (rule.steps.isNotEmpty()) {
-                // An ordered rule waits as a whole: its steps make no sense out of order.
-                runSteps(rule, end = false, from = 0, why = why)
-                continue
+            beginRun(rule)
+            try {
+                if (rule.steps.isNotEmpty()) {
+                    // An ordered rule waits as a whole: its steps make no sense out of order.
+                    runSteps(rule, end = false, from = 0, why = why)
+                    continue
+                }
+                if (what == PENDING_ALL) {
+                    sideActions(rule, why)
+                    if (rule.reconnect) reconnect(why)
+                    Freezer.ruleStart(rule, why)
+                    if (rule.unload) unloadBackground(why, keep = rule.launchApps, all = rule.unloadAll)
+                    launchApps(rule.launchApps, why)
+                    noteFailures(OneShots.run(rule.note, rule.http, rule.shell, why))
+                } else if (rule.unload) {
+                    unloadBackground(why, keep = rule.launchApps, all = rule.unloadAll)
+                }
+                freezeApps(rule, why)
+            } finally {
+                endRun(rule)
             }
-            if (what == PENDING_ALL) {
-                sideActions(rule, why)
-                if (rule.reconnect) reconnect(why)
-                Freezer.ruleStart(rule, why)
-                if (rule.unload) unloadBackground(why, keep = rule.launchApps, all = rule.unloadAll)
-                launchApps(rule.launchApps, why)
-                OneShots.run(rule.note, rule.http, rule.shell, why)
-            } else if (rule.unload) {
-                unloadBackground(why, keep = rule.launchApps, all = rule.unloadAll)
-            }
-            freezeApps(rule, why)
         }
         DeferWatch.sync()
     }
@@ -833,6 +867,7 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
         val what = if (all) "всё выгружено" else "фон выгружен"
         val out = runCatching { Privileged.exec(script) }.getOrElse {
             Prefs.log("($why): выгрузить не удалось — ${it.message}")
+            runFailures?.add("выгрузить не удалось — ${it.message}")
             return 0
         }
         val b = Regex("""@B (\d+)""").find(out)?.groupValues?.get(1)?.toIntOrNull() ?: 0
@@ -886,7 +921,10 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
         if (cmds.isEmpty()) return
         runCatching { Privileged.exec(cmds.joinToString("\n")) }
             .onSuccess { Prefs.log("($why): открыто — " + AppPickerActivity.labels(keys).joinToString(", ")) }
-            .onFailure { Prefs.log("($why): открыть не удалось — ${it.message}") }
+            .onFailure {
+                Prefs.log("($why): открыть не удалось — ${it.message}")
+                runFailures?.add("открыть не удалось — ${it.message}")
+            }
     }
 
     /**
@@ -1135,6 +1173,7 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
             runCatching { if (end) endStep(rule, step, why) else startStep(rule, step, why) }
                 .onFailure {
                     Prefs.log("($why): шаг не выполнен — ${it.message}")
+                    if (!end) runFailures?.add("шаг не выполнен — ${it.message}")
                     Log.w(TAG, "step $step failed", it)
                 }
         }
@@ -1199,8 +1238,8 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
             "APPS" -> freezeApps(rule, why)
             "LAUNCH" -> launchApps(rule.launchApps, why)
             "NOTE" -> OneShots.run(rule.note, null, null, why)
-            "HTTP" -> OneShots.run(null, rule.http, null, why)
-            "SHELL" -> OneShots.run(null, null, rule.shell, why)
+            "HTTP" -> noteFailures(OneShots.run(null, rule.http, null, why))
+            "SHELL" -> noteFailures(OneShots.run(null, null, rule.shell, why))
             "UNLOAD" -> if (rule.unload) unloadBackground(why, keep = rule.launchApps, all = rule.unloadAll)
             "RECONNECT" -> if (rule.reconnect) reconnect(why)
             "ICE" -> Freezer.ruleStart(rule, why)
@@ -1252,7 +1291,12 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
         }
         eventState = 0
         acted()
-        runSteps(rule, p.end, p.next, why)
+        if (!p.end) beginRun(rule, fresh = false)
+        try {
+            runSteps(rule, p.end, p.next, why)
+        } finally {
+            if (!p.end) endRun(rule)
+        }
         AlarmScheduler.rearm()
     }
 
@@ -1326,6 +1370,7 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
             runCatching { restore(endHeld) }
                 .onSuccess { Prefs.log("($why): возвращены приложения, остановленные в конце прошлого раза (${endHeld.size})") }
         }
+        beginRun(rule)
         try {
             if (rule.steps.isNotEmpty()) {
                 if (defer) {
@@ -1349,7 +1394,7 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
             val unloadNow = rule.unload && !(defer && rule.packages.isNotEmpty())
             if (unloadNow) unloadBackground(why, keep = rule.launchApps, all = rule.unloadAll)
             launchApps(rule.launchApps, why)
-            OneShots.run(rule.note, rule.http, rule.shell, why)
+            noteFailures(OneShots.run(rule.note, rule.http, rule.shell, why))
             if (defer && rule.packages.isNotEmpty()) {
                 Prefs.pendingStarts = Prefs.pendingStarts + (rule.id to PENDING_APPS)
                 Prefs.log("($why): приложения остановятся через минуту после того, как погасишь экран")
@@ -1358,6 +1403,7 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
                 freezeApps(rule, why)
             }
         } finally {
+            endRun(rule)
             // The end of an "after leaving" window is an alarm of its own.
             AlarmScheduler.rearm()
         }
@@ -1489,6 +1535,7 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
             Log.i(TAG, "froze ${pkgs.size}, alive=$alive")
         } catch (e: Exception) {
             Prefs.log("приложения ($why): ошибка — ${e.message}")
+            runFailures?.add("приложения: ошибка — ${e.message}")
             Log.w(TAG, "freeze failed", e)
         }
     }
@@ -1680,10 +1727,13 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
             // Superseded records go only now: until the rule has really set the state for good,
             // what an earlier rule meant to put back still stands.
             if (dropped.isNotEmpty()) Prefs.frozen = Prefs.frozen.filterNot { it.pkg in dropped }
+            noteFailures(done)
             if (done.isNotEmpty()) Prefs.log("($why): ${done.joinToString(", ")}")
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
+            noteFailures(done)
+            runFailures?.add("ошибка — ${e.message}")
             if (done.isNotEmpty()) Prefs.log("($why): ${done.joinToString(", ")}")
             Prefs.log("($why): ошибка — ${e.message}")
             Log.w(TAG, "side actions failed", e)

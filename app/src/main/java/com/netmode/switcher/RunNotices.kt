@@ -20,12 +20,16 @@ object RunNotices {
 
     private const val CHANNEL_ASK = "rule_ask"
     private const val CHANNEL_DONE = "rule_done"
+    private const val CHANNEL_FAILED = "rule_failed"
     private const val ID = 1
 
     /** An unanswered question goes after an hour; the window has usually moved on by then. */
     private const val ASK_TIMEOUT_MS = 60 * 60_000L
 
     private fun tag(ruleId: Long) = "rule:$ruleId"
+
+    /** Beside the rule's own notice, not over it: "Отменить" still applies to what did work. */
+    private fun failedTag(ruleId: Long) = "failed:$ruleId"
 
     private fun nm(ctx: Context) = ctx.getSystemService(NotificationManager::class.java)
 
@@ -37,8 +41,11 @@ object RunNotices {
         val nm = nm(ctx)
         if (!Compat.granted(ctx, Manifest.permission.POST_NOTIFICATIONS) || !nm.areNotificationsEnabled()) return false
         if (nm.getNotificationChannel(channel) == null) {
-            val (name, importance) = if (channel == CHANNEL_ASK) R.string.channel_rule_ask to NotificationManager.IMPORTANCE_HIGH
-            else R.string.channel_rule_done to NotificationManager.IMPORTANCE_LOW
+            val (name, importance) = when (channel) {
+                CHANNEL_ASK -> R.string.channel_rule_ask to NotificationManager.IMPORTANCE_HIGH
+                CHANNEL_FAILED -> R.string.channel_rule_failed to NotificationManager.IMPORTANCE_DEFAULT
+                else -> R.string.channel_rule_done to NotificationManager.IMPORTANCE_LOW
+            }
             nm.createNotificationChannel(NotificationChannel(channel, ctx.getString(name), importance))
         }
         return nm.getNotificationChannel(channel)?.importance != NotificationManager.IMPORTANCE_NONE
@@ -89,6 +96,29 @@ object RunNotices {
         nm(ctx).notify(tag(rule.id), ID, b.build())
     }
 
+    /** What of [rule]'s start failed or was skipped, whatever its [AppRule.notice]; it can be run again. */
+    fun failed(rule: AppRule, lines: List<String>) {
+        val ctx = App.ctx
+        if (!visible(ctx, CHANNEL_FAILED)) return
+        val text = lines.joinToString("\n")
+        val log = PendingIntent.getActivity(ctx, 0, Intent(ctx, LogActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
+        val n = Notification.Builder(ctx, CHANNEL_FAILED)
+            .setSmallIcon(R.drawable.ic_tile)
+            .setContentTitle(ctx.getString(R.string.notice_failed_title, title(rule)))
+            .setContentText(text)
+            .setStyle(Notification.BigTextStyle().bigText(text))
+            .setCategory(Notification.CATEGORY_ERROR)
+            .setContentIntent(log)
+            .setAutoCancel(true)
+            .addAction(button(ctx, RunNoticeReceiver.RETRY, rule.id, R.string.notice_retry))
+            .build()
+        nm(ctx).notify(failedTag(rule.id), ID, n)
+    }
+
+    fun cancelFailed(ruleId: Long) {
+        runCatching { nm(App.ctx).cancel(failedTag(ruleId), ID) }
+    }
+
     /** "Показать уведомление": a rule's own text, each one a notification of its own. */
     fun message(text: String) {
         val ctx = App.ctx
@@ -103,14 +133,16 @@ object RunNotices {
 
     fun cancel(ruleId: Long) {
         runCatching { nm(App.ctx).cancel(tag(ruleId), ID) }
+        cancelFailed(ruleId)
     }
 }
 
-/** The buttons of [RunNotices]: run what waited, skip it, or end a rule that ran. */
+/** The buttons of [RunNotices]: run what waited, skip it, end a rule that ran, or run it again. */
 class RunNoticeReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val id = intent.getLongExtra(EXTRA_ID, 0L)
-        RunNotices.cancel(id)
+        // "Повторить" leaves the rule's own notice: its window stays open.
+        if (intent.action == RETRY) RunNotices.cancelFailed(id) else RunNotices.cancel(id)
         val pending = goAsync()
         val work = App.scope.launch {
             runCatching {
@@ -118,6 +150,7 @@ class RunNoticeReceiver : BroadcastReceiver() {
                     RUN -> AppFreezer.runAsked(id)
                     SKIP -> AppFreezer.skipAsked(id)
                     UNDO -> AppFreezer.releaseNow(id)
+                    RETRY -> AppFreezer.retryRun(id)
                 }
             }
             Widgets.update()
@@ -132,6 +165,7 @@ class RunNoticeReceiver : BroadcastReceiver() {
         const val RUN = "run"
         const val SKIP = "skip"
         const val UNDO = "undo"
+        const val RETRY = "retry"
         const val EXTRA_ID = "id"
     }
 }

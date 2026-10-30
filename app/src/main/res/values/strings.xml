@@ -460,9 +460,12 @@
     <string name="notice_skip">Пропустить</string>
     <string name="notice_undo">Отменить</string>
     <string name="notice_end">Завершить</string>
+    <string name="notice_failed_title">«%1$s»: выполнено не всё</string>
+    <string name="notice_retry">Повторить</string>
     <string name="waiting_answer">ждёт ответа в уведомлении</string>
     <string name="channel_rule_ask">Вопросы правил</string>
     <string name="channel_rule_done">Срабатывание правил</string>
+    <string name="channel_rule_failed">Сбои правил</string>
     <string name="extras_add">И ещё если…</string>
     <string name="extras_hint">Правило работает, только пока выполнены все условия: ждёт недостающего и заканчивается, когда одно из них пропадёт</string>
     <string name="extra_time">Время: с … до …</string>
