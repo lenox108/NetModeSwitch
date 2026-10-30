@@ -67,6 +67,8 @@ class MainActivity : AppCompatActivity() {
             when (item.itemId) {
                 R.id.action_settings -> startActivity(Intent(this, RulesActivity::class.java))
                 R.id.action_add_tile -> addTiles()
+                R.id.action_add_widget -> addStatusWidget()
+                R.id.action_setup -> startActivity(Intent(this, SetupActivity::class.java))
                 R.id.action_refresh -> refresh(force = true)
                 R.id.action_diagnose -> diagnose()
             }
@@ -150,6 +152,13 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
+        val first = SetupFlow.shouldOffer(Prefs.setupOffered, Prefs.checkOffered, Prefs.appRules.isNotEmpty())
+        Prefs.setupOffered = true
+        // Before this screen's own permission requests, which the wizard explains first.
+        if (first && intent?.action == Intent.ACTION_MAIN) {
+            startActivity(Intent(this, SetupActivity::class.java))
+            return
+        }
         ensurePermissions()
         // Shizuku started by hand after a reboot: what waited for it runs now.
         AccessWait.poke()
@@ -360,6 +369,15 @@ class MainActivity : AppCompatActivity() {
         ).joinToString(" · ")
         lifecycleScope.launch {
             runCatching { HotspotConfig.read() }.getOrNull()?.let { ui.apSummary.text = HotspotConfig.summary(it) }
+        }
+    }
+
+    private fun addStatusWidget() {
+        val manager = android.appwidget.AppWidgetManager.getInstance(this)
+        if (!manager.isRequestPinAppWidgetSupported ||
+            !manager.requestPinAppWidget(ComponentName(this, StatusWidget::class.java), null, null)
+        ) {
+            android.widget.Toast.makeText(this, R.string.home_widget_unsupported, android.widget.Toast.LENGTH_LONG).show()
         }
     }
 

@@ -428,3 +428,42 @@ class RulesWidget : BaseWidget() {
         }
     }
 }
+
+/** "Состояние": VPN, the hotspot and the rules in force, each a way into its own screen. */
+class StatusWidget : BaseWidget() {
+
+    companion object {
+        fun paint(ctx: Context, manager: AppWidgetManager, ids: IntArray, snap: Widgets.Snap) {
+            // Readable with no privilege at all, and without waking a shell on every paint.
+            val cm = ctx.getSystemService(android.net.ConnectivityManager::class.java)
+            @Suppress("DEPRECATION")
+            val vpnOn = runCatching {
+                cm.allNetworks.any { cm.getNetworkCapabilities(it)?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN) == true }
+            }.getOrDefault(false)
+            val (apOn, apMode) = Want.ap()
+            val active = snap.rules.count { snap.active(it) }
+            for (id in ids) {
+                val v = RemoteViews(ctx.packageName, R.layout.widget_status)
+                v.backdrop(id)
+                fun cell(cell: Int, icon: Int, label: Int, state: Int, on: Boolean, text: String, open: Class<*>) {
+                    val tone = if (on) R.color.w_accent else R.color.w_text2
+                    v.tint(icon, tone)
+                    v.color(label, R.color.w_text2)
+                    v.color(state, tone)
+                    v.setTextViewText(state, text)
+                    v.setOnClickPendingIntent(cell, Widgets.openApp(ctx, open))
+                }
+                cell(R.id.st_vpn_cell, R.id.st_vpn_icon, R.id.st_vpn_label, R.id.st_vpn_state, vpnOn,
+                    ctx.getString(if (vpnOn) R.string.w_on else R.string.w_off), MainActivity::class.java)
+                cell(R.id.st_ap_cell, R.id.st_ap_icon, R.id.st_ap_label, R.id.st_ap_state, apOn, when {
+                    !apOn -> ctx.getString(R.string.w_off)
+                    apMode == TetherMode.DIRECT -> ctx.getString(R.string.w_on)
+                    else -> TetherRoute.label(apMode)
+                }, HotspotActivity::class.java)
+                cell(R.id.st_rules_cell, R.id.st_rules_icon, R.id.st_rules_label, R.id.st_rules_state, active > 0,
+                    ctx.getString(R.string.w_status_rules, active), AppRulesActivity::class.java)
+                manager.updateAppWidget(id, v)
+            }
+        }
+    }
+}

@@ -279,6 +279,10 @@ object Prefs {
         set(value) = sp.edit().putString("device_profile", value).apply()
 
     /** Whether the first start has offered the phone check already. */
+    var setupOffered: Boolean
+        get() = sp.getBoolean("setup_offered", false)
+        set(value) = sp.edit().putBoolean("setup_offered", value).apply()
+
     var checkOffered: Boolean
         get() = sp.getBoolean("check_offered", false)
         set(value) = sp.edit().putBoolean("check_offered", value).apply()

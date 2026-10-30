@@ -3,6 +3,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item android:id="@+id/action_settings" android:title="@string/settings_card" android:icon="@drawable/ic_settings" app:iconTint="?attr/colorOnSurface" app:showAsAction="always" />
     <item android:id="@+id/action_add_tile" android:title="@string/add_tile" app:showAsAction="never" />
+    <item android:id="@+id/action_add_widget" android:title="@string/home_add_widget" app:showAsAction="never" />
+    <item android:id="@+id/action_setup" android:title="@string/setup_menu" app:showAsAction="never" />
     <item android:id="@+id/action_refresh" android:title="@string/refresh" app:showAsAction="never" />
     <item android:id="@+id/action_diagnose" android:title="@string/diagnostics" app:showAsAction="never" />
 </menu>

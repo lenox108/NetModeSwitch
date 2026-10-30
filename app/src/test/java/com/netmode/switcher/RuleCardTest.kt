@@ -69,4 +69,11 @@ class RuleCardTest {
             .map(Journal::parse)
         assertEquals(1 to 1, Journal.today(entries, "30.10"))
     }
+
+    @Test fun setupIsOfferedOnceAndOnlyOnAFreshInstall() {
+        assertTrue(SetupFlow.shouldOffer(offered = false, checkOffered = false, hasRules = false))
+        assertFalse(SetupFlow.shouldOffer(offered = true, checkOffered = false, hasRules = false))
+        assertFalse(SetupFlow.shouldOffer(offered = false, checkOffered = true, hasRules = false))
+        assertFalse(SetupFlow.shouldOffer(offered = false, checkOffered = false, hasRules = true))
+    }
 }

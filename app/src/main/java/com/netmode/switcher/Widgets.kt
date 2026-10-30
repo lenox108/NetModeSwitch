@@ -37,7 +37,7 @@ object Widgets {
 
     private const val TAG = "netmode"
 
-    val providers = listOf(ModeWidget::class.java, ButtonWidget::class.java, HotspotWidget::class.java, RulesWidget::class.java)
+    val providers = listOf(ModeWidget::class.java, ButtonWidget::class.java, HotspotWidget::class.java, RulesWidget::class.java, StatusWidget::class.java)
 
     fun ids(ctx: Context, cls: Class<out AppWidgetProvider>): IntArray =
         runCatching { AppWidgetManager.getInstance(ctx).getAppWidgetIds(ComponentName(ctx, cls)) }.getOrNull() ?: IntArray(0)
@@ -78,6 +78,7 @@ object Widgets {
         runCatching { ModeWidget.paint(ctx, manager, ids(ctx, ModeWidget::class.java), snap) }.onFailure { Log.w(TAG, "paint", it) }
         runCatching { ButtonWidget.paint(ctx, manager, ids(ctx, ButtonWidget::class.java), snap) }.onFailure { Log.w(TAG, "paint", it) }
         runCatching { HotspotWidget.paint(ctx, manager, ids(ctx, HotspotWidget::class.java)) }.onFailure { Log.w(TAG, "paint", it) }
+        runCatching { StatusWidget.paint(ctx, manager, ids(ctx, StatusWidget::class.java), snap) }.onFailure { Log.w(TAG, "paint status", it) }
         runCatching { RulesWidget.paint(ctx, manager, ids(ctx, RulesWidget::class.java), snap) }.onFailure { Log.w(TAG, "paint", it) }
     }
 
@@ -123,6 +124,11 @@ object Widgets {
         }
     }
 
+    private val vpn = object : android.net.ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: android.net.Network) = update()
+        override fun onLost(network: android.net.Network) = update()
+    }
+
     private val ruleKeys = setOf("app_rules", "open_windows", "pending_starts", "frozen_apps", "app_rules_handled", "tether_mode", "device_profile")
 
     private val prefs = SharedPreferences.OnSharedPreferenceChangeListener { _, key -> if (key in ruleKeys) update() }
@@ -146,10 +152,16 @@ object Widgets {
             runCatching { ctx.registerReceiver(system, filter, Context.RECEIVER_NOT_EXPORTED) }
             runCatching { ctx.contentResolver.registerContentObserver(Settings.Global.CONTENT_URI, true, settings) }
             Prefs.listen(prefs)
+            runCatching {
+                ctx.getSystemService(android.net.ConnectivityManager::class.java).registerNetworkCallback(
+                    android.net.NetworkRequest.Builder().addTransportType(android.net.NetworkCapabilities.TRANSPORT_VPN)
+                        .removeCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VPN).build(), vpn)
+            }
         } else {
             runCatching { ctx.unregisterReceiver(system) }
             runCatching { ctx.contentResolver.unregisterContentObserver(settings) }
             Prefs.unlisten(prefs)
+            runCatching { ctx.getSystemService(android.net.ConnectivityManager::class.java).unregisterNetworkCallback(vpn) }
         }
         watching = need
     }
