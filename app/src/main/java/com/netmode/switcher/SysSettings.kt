@@ -99,27 +99,16 @@ object SysSettings {
                 }
                 notes.setInterruptionFilter(filter)
             }
-            SysKey.BRIGHT -> Privileged.exec(when {
-                value == "auto" -> "settings put system screen_brightness_mode 1"
-                value.startsWith("m:") -> "settings put system screen_brightness_mode 0; settings put system screen_brightness ${value.removePrefix("m:")}"
-                else -> "settings put system screen_brightness_mode 0; settings put system screen_brightness " +
-                    ((value.toIntOrNull() ?: return) * 255 / 100).coerceIn(1, 255)
-            })
-            SysKey.TIMEOUT -> {
-                val ms = if (value.startsWith("ms:")) value.removePrefix("ms:") else ((value.toIntOrNull() ?: return) * 1000).toString()
-                Privileged.exec("settings put system screen_off_timeout $ms")
-            }
-            SysKey.REFRESH -> {
-                fun put(name: String, v: String) = if (v.isEmpty()) "settings delete system $name" else "settings put system $name $v"
-                val (peak, min) = when {
-                    value == "60" -> "60.0" to "60.0"
-                    value == "max" -> maxRate() to "0.0"
-                    value.startsWith("p:") -> value.removePrefix("p:").substringBefore('|') to value.substringAfter('|', "")
-                    else -> return
-                }
-                Privileged.exec(put(PEAK, peak) + "; " + put(MIN, min))
-            }
+            SysKey.BRIGHT -> Privileged.exec(SysCommands.brightness(value) ?: reject(key, value))
+            SysKey.TIMEOUT -> Privileged.exec(SysCommands.timeout(value) ?: reject(key, value))
+            SysKey.REFRESH -> Privileged.exec(SysCommands.refresh(value, PEAK, MIN, ::maxRate) ?: reject(key, value))
         }
+    }
+
+    /** No command for a value that is not one: it would otherwise reach the root shell as it is. */
+    private fun reject(key: SysKey, value: String): Nothing {
+        Prefs.log("${key.title}: недопустимое значение «${value.take(40)}» — команда не выполнена")
+        throw IllegalArgumentException("недопустимое значение")
     }
 
     /** The highest refresh rate the screen offers, "120.0" on the phone the app was built on. */
@@ -127,6 +116,42 @@ object SysSettings {
         val d = ctx.getSystemService(android.hardware.display.DisplayManager::class.java).getDisplay(0)
         d.supportedModes.maxOf { it.refreshRate }.toString()
     }.getOrDefault("120.0")
+}
+
+/**
+ * The shell commands of [SysSettings], for an option code or a raw form from its read; null when
+ * [value] is neither. Rules and backups are text, so nothing else may reach the shell.
+ */
+internal object SysCommands {
+    private val RATE = Regex("^(\\d{1,4}(\\.\\d{1,9})?|Infinity)$")
+
+    fun brightness(value: String): String? {
+        val raw = when {
+            value == "auto" -> return "settings put system screen_brightness_mode 1"
+            value.startsWith("m:") -> value.removePrefix("m:").toIntOrNull()?.takeIf { it >= 0 }
+            else -> value.toIntOrNull()?.let { (it * 255 / 100).coerceIn(1, 255) }
+        } ?: return null
+        return "settings put system screen_brightness_mode 0; settings put system screen_brightness $raw"
+    }
+
+    fun timeout(value: String): String? {
+        val ms = if (value.startsWith("ms:")) value.removePrefix("ms:").toIntOrNull()
+        else value.toIntOrNull()?.let { it * 1000 }
+        return ms?.let { "settings put system screen_off_timeout $it" }
+    }
+
+    /** An empty rate was unset when read, so it is unset again; see [SysSettings.read]. */
+    fun refresh(value: String, peakKey: String, minKey: String, maxRate: () -> String): String? {
+        val (peak, min) = when {
+            value == "60" -> "60.0" to "60.0"
+            value == "max" -> maxRate() to "0.0"
+            value.startsWith("p:") -> value.removePrefix("p:").substringBefore('|') to value.substringAfter('|', "")
+            else -> return null
+        }
+        if (listOf(peak, min).any { it.isNotEmpty() && !RATE.matches(it) }) return null
+        fun put(name: String, v: String) = if (v.isEmpty()) "settings delete system $name" else "settings put system $name $v"
+        return put(peakKey, peak) + "; " + put(minKey, min)
+    }
 }
 
 /** One-off actions: a notification, an HTTP request, a shell command. Each returns a log line. */

@@ -1654,7 +1654,7 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
                         if (want == Toggle.ON) {
                             val before = VpnControl.owner()
                             val app = rule.vpnApp
-                            if (app != null && (before != app || FrozenApp.SYSVPN in existing)) record(FrozenApp.SYSVPN, before ?: "off")
+                            if (app != null && VpnControl.validPkg(app) && (before != app || FrozenApp.SYSVPN in existing)) record(FrozenApp.SYSVPN, before ?: "off")
                             if (app == null) "VPN: не выбрано приложение" else VpnControl.on(app)
                         } else VpnControl.off(rule.vpnOffApp) { pkg -> record(FrozenApp.SYSVPN, pkg) }
                     }

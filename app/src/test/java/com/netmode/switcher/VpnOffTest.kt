@@ -17,6 +17,20 @@ class VpnOffTest {
         result to mutations
     }
 
+    @Test fun anUnsafeTargetRunsNothing() {
+        var read = false
+        val line = runBlocking {
+            VpnControl.off("x; reboot", readOwner = { read = true; null }, name = { it }) { "disconnected" }
+        }
+        assertTrue(line.contains("неверное имя"))
+        assertFalse(read)
+    }
+
+    @Test fun onlyPlainPackageNamesAreValid() {
+        assertTrue(VpnControl.validPkg(amnezia))
+        listOf("x; reboot", "\$(id)", "com.a b", "com.a@10", "nodots").forEach { assertFalse(it, VpnControl.validPkg(it)) }
+    }
+
     @Test fun hotspotEndingForAmneziaDoesNotTouchHappOrClaimItsState() {
         val (message, mutations) = disconnect(amnezia, happ)
         assertTrue(message.contains("пропущено"))

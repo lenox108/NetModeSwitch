@@ -28,6 +28,11 @@ object VpnControl {
 
     private suspend fun root(): Boolean = Privileged.choose() == Backend.ROOT
 
+    /** A plain package name: rules and backups are text, and this goes into a root command. */
+    internal fun validPkg(pkg: String): Boolean = AppKey.valid(pkg) && !pkg.contains('@')
+
+    private fun rejected(pkg: String) = "VPN: неверное имя приложения «${pkg.take(60)}» — команда не выполнена"
+
     private fun cli(): String = "CLASSPATH=${App.ctx.applicationInfo.sourceDir} app_process /system/bin com.netmode.switcher.VpnCli"
 
     private fun tileOf(pkg: String): String? = Tiles.list().firstOrNull { it.pkg == pkg }?.component
@@ -41,6 +46,10 @@ object VpnControl {
     /** Puts back the always-on VPN that [on] replaced; this also disconnects the one [on] set. */
     private suspend fun restore(): Boolean {
         val (_, previous) = ours() ?: return false
+        if (previous != "-" && !validPkg(previous)) {
+            Prefs.log(rejected(previous))
+            return false
+        }
         val out = Privileged.exec("${cli()} restore $previous 0")
         if (out.contains("ok")) Prefs.vpnAlwaysOn = null
         return out.contains("ok")
@@ -60,6 +69,7 @@ object VpnControl {
         name: (String) -> String,
         disconnect: suspend (String?) -> String,
     ): String {
+        if (target != null && !validPkg(target)) return rejected(target)
         val current = readOwner()
         if (target != null && current != target) return "VPN ${name(target)} не подключён — пропущено"
         return disconnect(current)
@@ -94,6 +104,7 @@ object VpnControl {
 
     /** Connects [pkg]'s VPN. Returns a line for the log. */
     suspend fun on(pkg: String): String {
+        if (!validPkg(pkg)) return rejected(pkg)
         if (owner() == pkg) return "VPN ${label(pkg)} уже вкл"
         if (root()) {
             val out = Privileged.exec("${cli()} on $pkg 0")
