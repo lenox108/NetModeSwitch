@@ -40,21 +40,33 @@ object Prefs {
         set(value) = sp.edit().putStringSet("hotspot_available_bands", value.toSet()).apply()
 
     var schedules: List<ScheduleRule>
-        get() = decodeList(sp.getString(KEY_SCHEDULES, "[]")!!, ScheduleRule::fromJson)
+        get() = readList(KEY_SCHEDULES, ScheduleRule::fromJson)
         set(value) = sp.edit().putString(KEY_SCHEDULES, encodeList(value) { it.toJson() }).apply()
 
     var wifiRules: List<WifiRule>
-        get() = decodeList(sp.getString(KEY_WIFI, "[]")!!, WifiRule::fromJson)
+        get() = readList(KEY_WIFI, WifiRule::fromJson)
         set(value) = sp.edit().putString(KEY_WIFI, encodeList(value) { it.toJson() }).apply()
 
     var appRules: List<AppRule>
-        get() = decodeList(sp.getString(KEY_APP_RULES, "[]")!!, AppRule::fromJson)
+        get() = readList(KEY_APP_RULES, AppRule::fromJson)
         set(value) = sp.edit().putString(KEY_APP_RULES, encodeList(value) { it.toJson() }).apply()
 
     /** Apps currently held down, with what to put back; survives reboots on purpose. */
     var frozen: List<FrozenApp>
-        get() = decodeList(sp.getString(KEY_FROZEN, "[]")!!, FrozenApp::fromJson)
+        get() = readList(KEY_FROZEN, FrozenApp::fromJson)
         set(value) = sp.edit().putString(KEY_FROZEN, encodeList(value) { it.toJson() }).commit().let { }
+
+    /** A list that must not lose data to a damaged item: what cannot be read is copied aside. */
+    private fun <T> readList(key: String, item: (org.json.JSONObject) -> T): List<T> {
+        val raw = sp.getString(key, "[]")!!
+        val decoded = decodeChecked(raw, item)
+        if (decoded.bad > 0) runCatching {
+            UnreadableCopies.keep(java.io.File(App.ctx.filesDir, "unreadable"), key, raw)?.let { copy ->
+                log("настройки «$key»: не прочитано записей: ${decoded.bad}, копия данных — $copy")
+            }
+        }
+        return decoded.items
+    }
 
     /**
      * Rule id → the start (epoch ms) that has already been acted on. Stops a late or repeated

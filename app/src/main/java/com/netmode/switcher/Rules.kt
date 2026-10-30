@@ -136,10 +136,48 @@ internal fun lastOccurrence(
     return t
 }
 
-internal fun <T> decodeList(raw: String, item: (JSONObject) -> T): List<T> = runCatching {
-    val array = JSONArray(raw)
-    (0 until array.length()).map { item(array.getJSONObject(it)) }
-}.getOrDefault(emptyList())
+internal fun <T> decodeList(raw: String, item: (JSONObject) -> T): List<T> = decodeChecked(raw, item).items
+
+/** What could be read of a stored list; [bad] counts what could not, the whole list being one. */
+internal data class Decoded<T>(val items: List<T>, val bad: Int)
+
+internal fun <T> decodeChecked(raw: String, item: (JSONObject) -> T): Decoded<T> {
+    val array = runCatching { JSONArray(raw) }.getOrNull() ?: return Decoded(emptyList(), 1)
+    return decodeItems(array.length()) { item(array.getJSONObject(it)) }
+}
+
+/** One unreadable item costs that item alone: the next save writes back all the others. */
+internal fun <T> decodeItems(count: Int, item: (Int) -> T): Decoded<T> {
+    val read = (0 until count).map { i -> runCatching { item(i) }.getOrNull() }
+    val items = read.filterNotNull()
+    return Decoded(items, count - items.size)
+}
+
+/**
+ * Copies of stored lists with something unreadable in them. The next save overwrites the
+ * original, and these stay for a manual rescue. Same content, same name: a list read again and
+ * again makes one copy.
+ */
+internal object UnreadableCopies {
+    const val KEEP = 10
+
+    fun name(key: String, raw: String): String = "$key-%08x.json".format(raw.hashCode())
+
+    /** The oldest of [byAge] (oldest first) beyond [KEEP]. */
+    fun excess(byAge: List<String>): List<String> = byAge.dropLast(KEEP)
+
+    /** The new copy's name; null when this content was copied before. */
+    fun keep(dir: java.io.File, key: String, raw: String): String? {
+        val file = java.io.File(dir, name(key, raw))
+        if (file.exists()) return null
+        dir.mkdirs()
+        file.writeText(raw)
+        val files = dir.listFiles().orEmpty().sortedBy { it.lastModified() }
+        val gone = excess(files.map { it.name }).toSet()
+        files.filter { it.name in gone }.forEach { it.delete() }
+        return file.name
+    }
+}
 
 internal fun <T> encodeList(list: List<T>, item: (T) -> JSONObject): String =
     JSONArray().apply { list.forEach { put(item(it)) } }.toString()
