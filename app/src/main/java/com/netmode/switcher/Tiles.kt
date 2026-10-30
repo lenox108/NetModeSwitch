@@ -119,6 +119,8 @@ object Tiles {
     ): List<String> {
         val targets = wanted.filterKeys { valid(it) }
         if (targets.isEmpty()) return emptyList()
+        // Under the always-on a rule set, the system reconnects right after the tile's "off".
+        for ((c, want) in targets) if (!want) VpnControl.release(pkg(c))
         return transitions.set(targets,
             read = { c -> readSettled(c, vpn) },
             prepare = ::ensureAdded,
