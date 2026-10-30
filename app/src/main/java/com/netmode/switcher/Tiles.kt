@@ -80,7 +80,7 @@ object Tiles {
         val targets = components.filter { valid(it) }
         if (targets.isEmpty()) return emptyMap()
         val vpnTargets = targets.filter { TileStateProbe.usesVpn(it, vpn) }.toSet()
-        val network = if (vpnTargets.isEmpty()) null else readDump("dumpsys connectivity 2>&1")
+        val network = if (vpnTargets.isEmpty()) null else readDump(TileStateProbe.VPN_DUMP)
         return targets.mapNotNull { c ->
             val state = if (c in vpnTargets) {
                 val uid = runCatching { App.ctx.packageManager.getApplicationInfo(pkg(c), 0).uid }.getOrNull()

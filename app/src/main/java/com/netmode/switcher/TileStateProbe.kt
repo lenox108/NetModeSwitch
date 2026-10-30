@@ -7,6 +7,16 @@ internal object TileStateProbe {
     fun usesVpn(component: String, explicit: Set<String>): Boolean =
         component in explicit || component.substringBefore('/') in setOf("org.amnezia.vpn", "org.amnezia.awg")
 
+    /**
+     * What [vpn] reads, cut down on the device: the await loop asks every 2 s, and the full dump
+     * is large. Keeps the first lines, where a failed dump says so, then "Current Networks:"
+     * up to and including the next header, and stops reading there.
+     */
+    const val VPN_DUMP = "dumpsys connectivity 2>&1 | awk '" +
+        "!s && /^[ \\t]*Current Networks:[ \\t]*\$/ { s = 1; match(\$0, /^[ \\t]*/); i = RLENGTH; print; next } " +
+        "s { print; if (NF) { match(\$0, /^[ \\t]*/); if (RLENGTH <= i && \$0 !~ /^[ \\t]*NetworkAgentInfo/) exit } next } " +
+        "NF && h < 3 { h++; print }'"
+
     private val failure = Regex("Permission Denial|Permission denied|SecurityException|Can't find service|Error dumping", RegexOption.IGNORE_CASE)
     private val legacyOwner = Regex("\\bextra: VPN:([A-Za-z0-9_.]+)")
     private val connectionState = Regex("\\bVPN (CONNECTED|CONNECTING|DISCONNECTING|DISCONNECTED)\\b|\\bstate:\\s*(CONNECTED|CONNECTING|DISCONNECTING|DISCONNECTED)\\b")
