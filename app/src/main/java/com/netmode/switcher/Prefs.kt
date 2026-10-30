@@ -459,6 +459,11 @@ object Prefs {
         get() = sp.getBoolean("ice_labels", true)
         set(value) = sp.edit().putBoolean("ice_labels", value).apply()
 
+    /** The freezer's long-press tip has been acted on and need not be shown again. */
+    var iceHintSeen: Boolean
+        get() = sp.getBoolean("ice_hint_seen", false)
+        set(value) = sp.edit().putBoolean("ice_hint_seen", value).apply()
+
     var iceBootCheck: Boolean
         get() = sp.getBoolean("ice_boot_check", true)
         set(value) = sp.edit().putBoolean("ice_boot_check", value).apply()

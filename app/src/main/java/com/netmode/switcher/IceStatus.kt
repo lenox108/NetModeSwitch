@@ -4,7 +4,8 @@ import android.content.Context
 
 /** Reads cached observations only. Rendering a countdown never starts a shell command. */
 object IceStatus {
-    fun text(ctx: Context, a: IceApp, now: Long = System.currentTimeMillis()): String {
+    /** [accessShown]: the screen already says there is no access, so a row need not repeat it. */
+    fun text(ctx: Context, a: IceApp, now: Long = System.currentTimeMillis(), accessShown: Boolean = false): String {
         fun remaining(at: Long) = Steps.words((((at - now).coerceAtLeast(0L) + 59_999L) / 60_000L)
             .coerceIn(1L, 24L * 60L).toInt() * 60)
         val parts = mutableListOf<String>()
@@ -30,7 +31,7 @@ object IceStatus {
             }
         }
         when (Freezer.waitReason(a.key)) {
-            Freezer.WaitReason.NO_ACCESS -> parts += ctx.getString(R.string.ice_no_access)
+            Freezer.WaitReason.NO_ACCESS -> if (!accessShown) parts += ctx.getString(R.string.ice_no_access)
             Freezer.WaitReason.FAILED -> parts += ctx.getString(R.string.ice_st_failed)
             else -> Unit
         }

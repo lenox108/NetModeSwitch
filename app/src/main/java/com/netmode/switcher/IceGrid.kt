@@ -78,6 +78,8 @@ object IceGrid {
     }
 
     fun apply(grid: GridView, list: Boolean) {
+        // Rows differ in height: a pixel-based scrollbar would jump as they pass.
+        grid.isSmoothScrollbarEnabled = false
         val cols = Prefs.iceColumns
         grid.numColumns = when {
             list -> cols.coerceIn(1, LIST_MAX_COLUMNS)
@@ -129,13 +131,14 @@ object IceGrid {
         val room = if (fixed) h - pad * 2 - stateHeight - (if (labels) line + dp(ctx, 8) else 0) else Int.MAX_VALUE
         val icon = minOf(dp(ctx, s.icon), room - dp(ctx, 8),
             if (grid.width > 0) width(grid) - dp(ctx, 16) else dp(ctx, s.icon)).coerceAtLeast(dp(ctx, 16))
-        c.iconBox.layoutParams = c.iconBox.layoutParams.apply { width = icon + dp(ctx, 8); height = width }
-        c.icon.layoutParams = c.icon.layoutParams.apply { width = icon; height = width }
-        c.label.maxLines = if (fixed && h < icon + dp(ctx, 24) + line * 2 + stateHeight) 1 else 2
-        c.label.minLines = c.label.maxLines
+        c.iconBox.resize(icon + dp(ctx, 8), icon + dp(ctx, 8))
+        c.icon.resize(icon, icon)
+        val lines = if (fixed && h < icon + dp(ctx, 24) + line * 2 + stateHeight) 1 else 2
+        if (c.label.maxLines != lines) c.label.maxLines = lines
+        if (c.label.minLines != lines) c.label.minLines = lines
         c.root.gravity = Gravity.CENTER
-        c.root.minimumHeight = minHeight
-        c.root.layoutParams = c.root.layoutParams.apply { height = h }
+        c.root.minHeight(minHeight)
+        c.root.resize(c.root.layoutParams.width, h)
         c.root.setPadding(dp(ctx, 4), pad, dp(ctx, 4), pad)
     }
 
@@ -144,24 +147,41 @@ object IceGrid {
         val ctx = grid.context
         val narrow = grid.numColumns > 1 && width(grid) < dp(ctx, 280)
         row.status.visibility = if (compact) View.GONE else View.VISIBLE
-        row.status.maxLines = if (narrow) 1 else 2
+        val statusLines = if (narrow) 1 else 2
+        if (row.status.maxLines != statusLines) row.status.maxLines = statusLines
         row.label.textSize = if (narrow) 13f else 16f
         val textHeight = ceil(row.label.paint.fontSpacing.toDouble()).toInt() +
             if (compact) 0 else ceil(row.status.paint.fontSpacing.toDouble()).toInt() * row.status.maxLines + dp(ctx, 2)
         val h = height(grid, maxOf(dp(ctx, if (compact) 48 else 64), textHeight + dp(ctx, 8)))
         val icon = dp(ctx, if (narrow) 28 else if (compact) size.compactRow else size.row)
-        row.icon.layoutParams = row.icon.layoutParams.apply { width = icon; height = width }
+        row.icon.resize(icon, icon)
         row.icon.visibility = if (narrow && selecting) View.GONE else View.VISIBLE
-        row.textBox.layoutParams = (row.textBox.layoutParams as ViewGroup.MarginLayoutParams).apply {
-            marginStart = dp(ctx, if (narrow) 6 else 14)
+        val textParams = row.textBox.layoutParams as ViewGroup.MarginLayoutParams
+        val textMargin = dp(ctx, if (narrow) 6 else 14)
+        if (textParams.marginStart != textMargin) {
+            textParams.marginStart = textMargin
+            row.textBox.layoutParams = textParams
         }
-        row.open.minimumHeight = dp(ctx, if (compact) 44 else 56)
+        row.open.minHeight(dp(ctx, if (compact) 44 else 56))
         row.open.setPadding(0, dp(ctx, 4), 0, dp(ctx, 4))
-        row.root.minimumHeight = dp(ctx, if (compact) 48 else 64)
-        row.root.layoutParams = row.root.layoutParams.apply { height = h }
+        row.root.minHeight(dp(ctx, if (compact) 48 else 64))
+        row.root.resize(row.root.layoutParams.width, h)
         row.root.setPadding(dp(ctx, if (narrow) 6 else 16), 0, dp(ctx, if (narrow) 4 else 8), 0)
         row.launch.visibility = if (selecting || narrow) View.GONE else View.VISIBLE
         row.toggle.visibility = if (selecting || narrow) View.GONE else View.VISIBLE
+    }
+
+    // These setters ask for a layout even when nothing changes; scrolling binds rows all the time.
+    private fun View.resize(w: Int, h: Int) {
+        val params = layoutParams
+        if (params.width == w && params.height == h) return
+        params.width = w
+        params.height = h
+        layoutParams = params
+    }
+
+    private fun View.minHeight(value: Int) {
+        if (minimumHeight != value) minimumHeight = value
     }
 }
 

@@ -29,6 +29,27 @@ class IceGroupsTest {
         assertTrue(selection.apps(emptyList()).isEmpty())
     }
 
+    @Test fun thawedKeysAreOnlyThawedMembersOfTheSelection() {
+        assertEquals(listOf("app.work.awake"), IceGroups.thawedKeys(IceGroupSelection("Работа"), apps))
+        assertEquals(listOf("app.other"), IceGroups.thawedKeys(IceGroupSelection(ungrouped = true), apps))
+        assertEquals(listOf("app.other", "app.work.awake"), IceGroups.thawedKeys(IceGroupSelection(), apps))
+    }
+
+    @Test fun thawedKeysAreEmptyWhenNothingIsThawedOrTheGroupIsUnknown() {
+        assertTrue(IceGroups.thawedKeys(IceGroupSelection("Личное"), apps).isEmpty())
+        assertTrue(IceGroups.thawedKeys(IceGroupSelection("Нет такой"), apps).isEmpty())
+        assertTrue(IceGroups.thawedKeys(IceGroupSelection("Работа"), emptyList()).isEmpty())
+    }
+
+    @Test fun thawedKeysSkipWhatTheFreezerWouldRefuse() {
+        val clone = workAwake.copy(key = "app.work.awake@10")
+        val broken = workAwake.copy(key = "not a key")
+        val list = listOf(workAwake, clone, broken)
+        // A guarded package covers its clones too, matching freezeLocked.
+        assertTrue(IceGroups.thawedKeys(IceGroupSelection("Работа"), list, setOf("app.work.awake")).isEmpty())
+        assertEquals(listOf("app.work.awake", "app.work.awake@10"), IceGroups.thawedKeys(IceGroupSelection("Работа"), list))
+    }
+
     @Test fun savedOrderKeepsEmptyGroupsAndAppOnlyLegacyGroupsFollowIt() {
         assertEquals(listOf("Пустая", "Личное", "Работа"), IceGroups.ordered(listOf("Пустая", "Личное", "Личное"), apps))
         assertEquals(listOf("Работа", "Личное"), IceGroups.ordered(emptyList(), apps))

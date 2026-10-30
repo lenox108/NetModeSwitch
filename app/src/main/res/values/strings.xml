@@ -895,9 +895,9 @@
     <string name="ice_st_timed_hold">Защита от заморозки: ещё %1$s</string>
     <string name="ice_st_countdown">Заморозится через %1$s</string>
     <string name="ice_st_open">Открыто — заморозка ждёт ухода</string>
-    <string name="ice_st_busy">Занято музыкой, навигацией или загрузкой — заморозка ждёт</string>
+    <string name="ice_st_busy">Занято фоновой работой — заморозка ждёт</string>
     <string name="ice_st_call">Идёт звонок — заморозка ждёт</string>
-    <string name="ice_st_due">Срок подошёл — проверяем, можно ли заморозить</string>
+    <string name="ice_st_due">Срок подошёл — проверяем</string>
     <string name="ice_st_failed">Не удалось выполнить действие — подробности в журнале</string>
     <string name="ice_favorites">Избранное</string>
     <string name="ice_favorite_add">В избранное</string>
@@ -906,6 +906,7 @@
     <string name="ice_sort_state">Сначала размороженные</string>
     <string name="ice_sort_newest">По дате добавления: новые сверху</string>
     <string name="ice_sort_oldest">По дате добавления: старые сверху</string>
+    <string name="ice_sort_launched">По последнему запуску</string>
     <string name="ice_order">Порядок приложений</string>
     <string name="ice_reorder">Изменить порядок…</string>
     <string name="ice_order_hint">Перемещай приложения стрелками. Избранное всегда сверху. Порядок общий для списка и папки.</string>
@@ -916,6 +917,9 @@
     <string name="ice_group_summary">%1$s · заморожено %2$d из %3$d</string>
     <string name="ice_group_freeze_named">Заморозить группу «%1$s»</string>
     <string name="ice_group_thaw_named">Разморозить группу «%1$s»</string>
+    <string name="ice_group_freeze_thawed">Заморозить разморозившиеся</string>
+    <string name="ice_group_freeze_thawed_n">Заморозить · %1$d</string>
+    <string name="ice_group_freeze_thawed_named">Заморозить разморозившиеся в группе «%1$s»: %2$d</string>
     <string name="ice_group_order">Порядок групп</string>
     <string name="ice_group_order_hint">Перемещай группы стрелками. Порядок чипов общий для списка и папки морозилки. «Все группы» и «Без группы» остаются по краям.</string>
     <string name="ice_group_pin">Добавить ярлык группы</string>
@@ -941,6 +945,7 @@
     <string name="ice_filter_all">Все</string>
     <string name="ice_filter_frozen">Заморожены</string>
     <string name="ice_filter_thawed">Разморожены</string>
+    <string name="ice_filter_soon">Скоро заморозится</string>
     <string name="ice_filter_modes_all">Все режимы</string>
     <string name="ice_groups_all">Все группы</string>
     <string name="ice_add">Добавить</string>

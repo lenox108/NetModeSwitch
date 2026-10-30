@@ -15,24 +15,31 @@ import com.netmode.switcher.databinding.RowIceBinding
 
 /** Compact rows show the observed freeze mode, including when their action buttons are hidden. */
 object IceModeIndicator {
-    fun bind(row: RowIceBinding, app: IceApp, compact: Boolean) {
+    fun bind(row: RowIceBinding, app: IceApp, compact: Boolean, status: String) {
         val ctx = row.root.context
         val mode = app.frozenAs
         val compactFrozen = compact && mode != null
-        row.toggle.iconSize = dp(ctx, if (compactFrozen) 36 else 22)
-        row.toggle.icon = if (compactFrozen) snowflake(ctx, mode!!, 36, 22)
-            else AppCompatResources.getDrawable(ctx, R.drawable.ic_ice)
-        row.toggle.iconTint = if (compactFrozen) null else ColorStateList.valueOf(MaterialColors.getColor(row.root,
-            if (app.frozen) androidx.appcompat.R.attr.colorPrimary else com.google.android.material.R.attr.colorOnSurfaceVariant))
-        row.toggle.backgroundTintList = ColorStateList.valueOf(
-            if (!compact && app.frozen) MaterialColors.getColor(row.root, com.google.android.material.R.attr.colorSecondaryContainer)
-            else Color.TRANSPARENT)
-        TooltipCompat.setTooltipText(row.toggle, if (compact) IceStatus.text(ctx, app) else null)
+        // A recycled row usually looks the same already; its icons are costly to build again.
+        val look = Triple(compact, app.frozen, mode)
+        val changed = row.toggle.tag != look
+        if (changed) {
+            row.toggle.tag = look
+            row.toggle.iconSize = dp(ctx, if (compactFrozen) 36 else 22)
+            row.toggle.icon = if (compactFrozen) snowflake(ctx, mode!!, 36, 22)
+                else AppCompatResources.getDrawable(ctx, R.drawable.ic_ice)
+            row.toggle.iconTint = if (compactFrozen) null else ColorStateList.valueOf(MaterialColors.getColor(row.root,
+                if (app.frozen) androidx.appcompat.R.attr.colorPrimary else com.google.android.material.R.attr.colorOnSurfaceVariant))
+            row.toggle.backgroundTintList = ColorStateList.valueOf(
+                if (!compact && app.frozen) MaterialColors.getColor(row.root, com.google.android.material.R.attr.colorSecondaryContainer)
+                else Color.TRANSPARENT)
+        }
+        TooltipCompat.setTooltipText(row.toggle, if (compact) status else null)
 
         // Narrow columns and selection mode have no action buttons. Keep a small, non-clickable indicator.
         val showMode = compactFrozen && row.toggle.visibility != View.VISIBLE
         row.freezeMode.visibility = if (showMode) View.VISIBLE else View.GONE
-        row.freezeMode.setImageDrawable(if (showMode) snowflake(ctx, mode!!, 24, 16) else null)
+        if (!showMode) row.freezeMode.setImageDrawable(null)
+        else if (changed || row.freezeMode.drawable == null) row.freezeMode.setImageDrawable(snowflake(ctx, mode!!, 24, 16))
     }
 
     private fun snowflake(ctx: Context, mode: IceMode, diameterDp: Int, iconDp: Int): Drawable {

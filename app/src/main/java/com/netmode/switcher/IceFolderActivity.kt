@@ -2,7 +2,6 @@ package com.netmode.switcher
 
 import android.content.Intent
 import android.content.SharedPreferences
-import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
@@ -129,20 +128,21 @@ class IceFolderActivity : AppCompatActivity() {
         }
         ui.freezeAll.setOnClickListener { folderPerform(Freezer.apps.map { it.key }, true) }
 
-        val pm = packageManager
-        val icons = mutableMapOf<String, Drawable>()
+        val icons = IceIcons(this)
+        val labels = mutableMapOf<String, String>()
+        fun label(key: String) = labels.getOrPut(key) { Freezer.label(key) }
         var shown = emptyList<Pair<IceApp, String>>()
         val adapter = object : BaseAdapter() {
             override fun getCount() = shown.size
             override fun getItem(position: Int) = shown[position]
             override fun getItemId(position: Int) = position.toLong()
             override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-                val c = convertView?.let { CellIceBinding.bind(it) } ?: CellIceBinding.inflate(layoutInflater, parent, false)
+                val c = convertView?.tag as? CellIceBinding
+                    ?: CellIceBinding.inflate(layoutInflater, parent, false).also { it.root.tag = it }
                 val (a, name) = shown[position]
                 IceGrid.style(c, ui.grid, a, showState = false)
                 c.label.text = if (a.favorite) getString(R.string.ice_favorite_name, name) else name
-                val icon = icons.getOrPut(a.key) { Freezer.info(pm, a.key)?.loadIcon(pm) ?: pm.defaultActivityIcon }
-                c.icon.setImageDrawable(icon)
+                icons.bind(c.icon, a.key)
                 c.badge.visibility = if (a.frozen) View.VISIBLE else View.GONE
                 c.root.contentDescription = name + ", " + IceStatus.text(this@IceFolderActivity, a)
                 c.root.setOnClickListener { open(a.key) }
@@ -157,7 +157,7 @@ class IceFolderActivity : AppCompatActivity() {
             val apps = Freezer.apps
             groups.render(apps)
             val members = groups.selection.apps(apps)
-            val all = IceOrder.sort(members, Prefs.iceSort, Prefs.iceOrder, Freezer::label).map { it to Freezer.label(it.key) }
+            val all = IceOrder.sort(members, Prefs.iceSort, Prefs.iceOrder, ::label).map { it to label(it.key) }
             val q = ui.search.text?.toString()?.trim().orEmpty()
             shown = if (q.isEmpty()) all else all.filter { (a, name) -> name.contains(q, true) || a.key.contains(q, true) }
             ui.empty.visibility = if (shown.isEmpty()) View.VISIBLE else View.GONE
@@ -167,6 +167,7 @@ class IceFolderActivity : AppCompatActivity() {
             ui.folderHint.visibility = if (groups.selection.isAll) View.VISIBLE else View.GONE
             IceGrid.apply(ui.grid, list = false)
             adapter.notifyDataSetChanged()
+            icons.preload(shown.map { it.first.key })
         }
         ui.search.doAfterTextChanged { renderFolder?.invoke() }
         Prefs.listen(folderPrefs)

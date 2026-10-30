@@ -123,4 +123,47 @@ class IcePolicyTest {
         assertEquals(listOf("star-old", "star-new", "old", "new"),
             IceOrder.sort(apps, IceSort.OLDEST, emptyList()) { it }.map { it.key })
     }
+
+    @Test fun lastLaunchedSortsRecentFirstNeverLaunchedLastAndTiesByName() {
+        val apps = listOf(IceApp("never-z"), IceApp("old", launchedAt = 100), IceApp("Never-a"),
+            IceApp("tie-b", launchedAt = 200), IceApp("Tie-a", launchedAt = 200), IceApp("new", launchedAt = 300))
+        assertEquals(listOf("new", "Tie-a", "tie-b", "old", "Never-a", "never-z"),
+            IceOrder.sort(apps, IceSort.LAUNCHED, emptyList()) { it }.map { it.key })
+    }
+
+    @Test fun lastLaunchedKeepsFavoritesFirstLikeEverySavedSort() {
+        val apps = listOf(IceApp("recent", launchedAt = 300), IceApp("star", favorite = true, launchedAt = 100))
+        assertEquals(listOf("star", "recent"),
+            IceOrder.sort(apps, IceSort.LAUNCHED, emptyList()) { it }.map { it.key })
+    }
+
+    @Test fun soonestKeepsOnlyAppsThatHaveADeadlineNearestFirst() {
+        val apps = listOf(
+            thawed.copy(key = "later", keepUntil = now + 500),
+            thawed.copy(key = "frozen", frozenAs = IceMode.DEEP, keepUntil = now + 1),
+            thawed.copy(key = "manual", keepUntil = -1),
+            thawed.copy(key = "rule", heldBy = 7, keepUntil = now + 1),
+            thawed.copy(key = "never", delay = -1),
+            thawed.copy(key = "due", keepUntil = now - 500),
+            thawed.copy(key = "soon", keepUntil = now + 100),
+        )
+        assertEquals(listOf("due", "soon", "later"),
+            IceOrder.soonest(apps, { IcePolicy.deadline(it, -1) }) { it }.map { it.key })
+    }
+
+    @Test fun soonestIgnoresFavoritesAndBreaksTiesByName() {
+        val apps = listOf(
+            thawed.copy(key = "star", favorite = true, keepUntil = now + 900),
+            thawed.copy(key = "b", keepUntil = now + 100),
+            thawed.copy(key = "A", keepUntil = now + 100),
+        )
+        assertEquals(listOf("A", "b", "star"),
+            IceOrder.soonest(apps, { IcePolicy.deadline(it, -1) }) { it }.map { it.key })
+    }
+
+    @Test fun savedSortNamesStayReadableBySettingsAndBackups() {
+        for (name in listOf("NAME", "NEWEST", "OLDEST", "STATE", "MANUAL", "LAUNCHED")) {
+            assertEquals(name, IceSort.valueOf(name).name)
+        }
+    }
 }

@@ -19,6 +19,7 @@ object IcePolicy {
 
 enum class IceSort(val title: Int) {
     NAME(R.string.sort_name), NEWEST(R.string.ice_sort_newest), OLDEST(R.string.ice_sort_oldest),
+    LAUNCHED(R.string.ice_sort_launched),
     STATE(R.string.ice_sort_state), MANUAL(R.string.sort_manual)
 }
 
@@ -33,11 +34,18 @@ object IceOrder {
             IceSort.NAME -> base.thenBy { label(it.key).lowercase() }
             IceSort.NEWEST -> base.thenByDescending { it.addedAt }.thenByDescending { addedPositions[it.key] }
             IceSort.OLDEST -> base.thenBy { it.addedAt }.thenBy { addedPositions[it.key] }
+            IceSort.LAUNCHED -> base.thenByDescending { it.launchedAt }.thenBy { label(it.key).lowercase() }
             IceSort.STATE -> base.thenBy { it.frozen }.thenBy { label(it.key).lowercase() }
             IceSort.MANUAL -> base.thenBy { positions[it.key] ?: Int.MAX_VALUE }
         }
         return apps.sortedWith(comparator)
     }
+
+    /** Only apps with a deadline, nearest first. This order replaces the chosen sort, favorites included. */
+    fun soonest(apps: List<IceApp>, deadline: (IceApp) -> Long?, label: (String) -> String): List<IceApp> =
+        apps.mapNotNull { a -> deadline(a)?.let { a to it } }
+            .sortedWith(compareBy({ it.second }, { label(it.first.key).lowercase() }))
+            .map { it.first }
 
     fun move(keys: List<String>, from: Int, to: Int): List<String> =
         keys.toMutableList().apply { add(to, removeAt(from)) }
