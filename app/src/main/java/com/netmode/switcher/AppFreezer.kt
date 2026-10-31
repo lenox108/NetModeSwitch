@@ -484,6 +484,18 @@ object AppFreezer {
     }
 
     /**
+     * A rule of this app took Wi-Fi down while on [ssid] (the night rule, the hotspot). Not
+     * leaving: nothing is released and the network stays remembered. But that rule may have
+     * overridden what the "while connected" rules set, so they are marked not applied and the
+     * reconnect that follows applies them again.
+     */
+    suspend fun onWifiSelfOff(ssid: String) = lock.withLock {
+        val ids = Prefs.appRules.filter { it.isWifi && it.matchesSsid(ssid) }.map { it.id }.toSet()
+        val handled = Prefs.appHandled
+        if (ids.any { (handled[it] ?: 0L) != 0L }) Prefs.appHandled = handled - ids
+    }
+
+    /**
      * Left [ssid]. With [adapterOff] only rules that count switching Wi-Fi off as leaving act;
      * the rest stay as they are and are not re-applied on the reconnect that follows.
      * Returns true when some rule was kept, so the caller keeps remembering the network.
