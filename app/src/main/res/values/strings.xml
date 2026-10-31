@@ -845,6 +845,10 @@
     <string name="hide_journal_dismissed">Закрыто</string>
     <string name="hide_journal_unconfirmed">Запрос без подтверждения</string>
     <string name="hide_journal_rule_removed">Это правило уже удалено</string>
+    <string name="hide_journal_app">Приложение: %1$s</string>
+    <string name="hide_journal_rule_then">Сработало правило: %1$s</string>
+    <string name="hide_journal_rule_now">Правило сейчас: %1$s</string>
+    <string name="hide_journal_open_rule">Открыть правило</string>
     <string name="hide_recent_clear">Очистить</string>
     <string name="hide_recent_empty">За сутки ничего другого не было. Список начинает собираться после включения доступа к уведомлениям</string>
     <string name="hide_seen_at">в %1$s</string>
