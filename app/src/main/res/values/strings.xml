@@ -922,6 +922,8 @@
     <string name="ice_favorite_add">В избранное</string>
     <string name="ice_favorite_remove">Убрать из избранного</string>
     <string name="ice_favorite_name">★ %1$s</string>
+    <string name="ice_favorite_group_title">В избранное — в какую группу?</string>
+    <string name="ice_favorite_keep_group">Не менять группу</string>
     <string name="ice_sort_state">Сначала размороженные</string>
     <string name="ice_sort_newest">По дате добавления: новые сверху</string>
     <string name="ice_sort_oldest">По дате добавления: старые сверху</string>
