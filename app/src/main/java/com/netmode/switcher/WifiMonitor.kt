@@ -126,9 +126,12 @@ object WifiRules {
         val adapterOff = !adapterEnabled()
 
         // A rule of this app switched Wi-Fi off or took it over for the hotspot: that is not
-        // the user leaving, so nothing reacts and the network stays remembered.
+        // the user leaving, so nothing reacts and the network stays remembered. Its "while
+        // connected" rules are applied again on the reconnect: that rule may have changed what
+        // they set (the night rule's network mode).
         if (AppFreezer.changedWifiRecently()) {
-            Prefs.log("Wi-Fi переключён правилом — отключение от «$was» не учитываю")
+            AppFreezer.onWifiSelfOff(was)
+            Prefs.log("Wi-Fi переключён правилом — отключение от «$was» не учитываю, при возврате правила сети применю заново")
             return true
         }
 
