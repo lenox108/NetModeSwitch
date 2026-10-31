@@ -28,7 +28,7 @@ object IceAppMenu {
             action(R.string.ice_resume_auto) { App.scope.launch { Freezer.resumeAuto(keys) } }
         }
         action(if (a.favorite) R.string.ice_favorite_remove else R.string.ice_favorite_add) {
-            Freezer.setFavorite(keys, !a.favorite)
+            if (a.favorite) Freezer.setFavorite(keys, false) else IceFavoriteDialog.add(activity, keys)
         }
         if (!IceShortcuts.isPinned(activity, key)) {
             action(R.string.ice_pin) {

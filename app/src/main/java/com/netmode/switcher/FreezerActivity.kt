@@ -141,7 +141,7 @@ class FreezerActivity : AppCompatActivity() {
                 R.id.action_undo -> undoLast()
                 R.id.action_thaw_for -> chooseThawFor(Freezer.apps.map { it.key })
                 R.id.sel_thaw_for -> { val keys = selected.toList(); clearSelection(); chooseThawFor(keys) }
-                R.id.sel_favorite -> { Freezer.setFavorite(selected.toList(), true); clearSelection() }
+                R.id.sel_favorite -> IceFavoriteDialog.add(this, selected.toList()) { clearSelection() }
                 R.id.sel_unfavorite -> { Freezer.setFavorite(selected.toList(), false); clearSelection() }
                 R.id.sel_card -> selected.singleOrNull()?.let { k -> clearSelection(); openSheet(k) }
                 R.id.sel_freeze -> bulkFreeze(true)
@@ -681,7 +681,9 @@ class FreezerActivity : AppCompatActivity() {
         }
         s.groupInfo.setOnClickListener { sheetHelp(R.string.ice_sec_group, getString(R.string.ice_group_hint)) }
         s.resumeAuto.setOnClickListener { App.scope.launch { Freezer.resumeAuto(listOf(key)) } }
-        s.favorite.setOnClickListener { Freezer.find(key)?.let { Freezer.setFavorite(listOf(key), !it.favorite) } }
+        s.favorite.setOnClickListener {
+            Freezer.find(key)?.let { if (it.favorite) Freezer.setFavorite(listOf(key), false) else IceFavoriteDialog.add(this, listOf(key)) }
+        }
         s.remove.setOnClickListener { askRemove(key) { dialog.dismiss() } }
         paintSheet(a)
         dialog.show()
