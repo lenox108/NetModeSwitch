@@ -199,6 +199,53 @@ class GitPullTest(unittest.TestCase):
         self.assertEqual((self.repo / "main.txt").read_text(), "main\n")
         self.assertEqual((self.repo / "cloud.txt").read_text(), "different patch\n")
 
+    def lines(self, *values):
+        return "".join(value + "\n" for value in values)
+
+    def test_same_change_with_other_context_and_notes_is_not_imported_again(self):
+        base = self.lines("a", "b", "c", "d", "e", "f", "g", "h", "i", "j")
+        (self.seed / "code.txt").write_text(base)
+        (self.seed / "NOTES.md").write_text("old\n")
+        initial = self.commit(self.seed, "Base code")
+        self.git(self.seed, "push", "origin", "main")
+        self.git(self.seed, "switch", "-c", "ccr-same", initial)
+        (self.seed / "code.txt").write_text(base.replace("e\n", "cloud\n"))
+        (self.seed / "NOTES.md").write_text("cloud notes\n")
+        self.commit(self.seed, "Same change")
+        self.git(self.seed, "push", "origin", "ccr-same")
+        self.git(self.seed, "switch", "main")
+        # main moves the neighbouring lines, then takes the change with notes of its own.
+        (self.seed / "code.txt").write_text(base.replace("c\n", "moved\n"))
+        self.commit(self.seed, "Move the neighbours")
+        (self.seed / "code.txt").write_text(base.replace("c\n", "moved\n").replace("e\n", "cloud\n"))
+        (self.seed / "NOTES.md").write_text("main notes\n")
+        self.commit(self.seed, "Same change")
+        self.git(self.seed, "push", "origin", "main")
+        output = self.pull(cloud=True)
+        self.assertIn("уже были в main: 1", str(output))
+        self.assertEqual(self.git(self.repo, "rev-parse", "HEAD"), self.git(self.seed, "rev-parse", "main"))
+
+    def test_one_conflicting_commit_does_not_hold_back_the_others(self):
+        initial = self.git(self.seed, "rev-parse", "HEAD")
+        (self.seed / "shared.txt").write_text("main\n")
+        self.commit(self.seed, "Main edit")
+        self.git(self.seed, "push", "origin", "main")
+        self.git(self.seed, "switch", "-c", "ccr-a-bad", initial)
+        (self.seed / "shared.txt").write_text("cloud\n")
+        self.commit(self.seed, "Conflicting")
+        self.git(self.seed, "push", "origin", "ccr-a-bad")
+        self.git(self.seed, "switch", "-c", "ccr-b-good", initial)
+        (self.seed / "good.txt").write_text("good\n")
+        self.commit(self.seed, "Good")
+        self.git(self.seed, "push", "origin", "ccr-b-good")
+        self.dirty()
+        self.pull(cloud=True, success=False)
+        self.assertEqual((self.repo / "good.txt").read_text(), "good\n")
+        self.assertEqual((self.repo / "shared.txt").read_text(), "main\n")
+        self.assertEqual((self.repo / "local.txt").read_text(), "unstaged\n")
+        git_dir = Path(self.git(self.repo, "rev-parse", "--absolute-git-dir"))
+        self.assertFalse((git_dir / "CHERRY_PICK_HEAD").exists())
+
     def test_one_failed_repository_does_not_prevent_the_next_update(self):
         self.upstream()
         self.pull(public_repos=[self.root / "missing", self.repo], success=False)

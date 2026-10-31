@@ -80,12 +80,38 @@ _gitpull_main() {
   fi
 }
 
+# The changed lines of a commit, without its context or its notes: another commit may have moved
+# the code around them, or written the same change up differently. Empty for notes alone.
+_gitpull_code_id() {
+  emulate -L zsh
+  local id
+  id=$(git -C "$1" show --format= -U0 "$2" -- . ':(exclude)*.md' | git -C "$1" patch-id --stable)
+  print -r -- "${id%% *}"
+}
+
+# git cherry calls a commit new when only its context differs, which is what an earlier import
+# of the same change looks like once main has moved on.
+_gitpull_already_in() {
+  emulate -L zsh
+  local repo=$1 commit=$2 subject id other
+  id=$(_gitpull_code_id "$repo" "$commit")
+  [[ -n $id ]] || return 1
+  subject=$(git -C "$repo" log -1 --format=%s "$commit")
+  for other in ${(f)"$(git -C "$repo" log main --format=%H --fixed-strings --grep="$subject")"}; do
+    [[ $(git -C "$repo" log -1 --format=%s "$other") == "$subject" ]] || continue
+    [[ $(_gitpull_code_id "$repo" "$other") == "$id" ]] && return 0
+  done
+  return 1
+}
+
 # Legacy Claude sessions use ccr-* branches. Codex changes merged into main arrive
 # through pull; do not automatically apply unrelated or unfinished codex/* branches.
+# One commit that will not apply is reported and leaves the others to come through.
 _gitpull_cloud() {
   emulate -L zsh
-  local repo=$1 branch commit patch_line picked=0
+  local repo=$1 git_dir branch commit patch_line picked=0 known=0 failed=0
   local branches patches
+  git_dir=$(git -C "$repo" rev-parse --absolute-git-dir) || return 1
   git -C "$repo" fetch --prune origin || return $?
   branches=$(git -C "$repo" for-each-ref --format='%(refname:short)' 'refs/remotes/origin/ccr-*') || return 1
   for branch in ${(f)branches}; do
@@ -94,13 +120,23 @@ _gitpull_cloud() {
     for patch_line in ${(f)patches}; do
       [[ $patch_line == '+ '* ]] || continue
       commit=${patch_line#'+ '}
-      if ! git -C "$repo" cherry-pick "$commit"; then
-        git -C "$repo" cherry-pick --abort || return 1
-        print -r -- "⚠️  Не удалось перенести $commit из $branch. Этот перенос отменён."
-        return 1
+      if _gitpull_already_in "$repo" "$commit"; then
+        (( ++known ))
+        continue
       fi
-      (( ++picked ))
+      if git -C "$repo" cherry-pick "$commit" >/dev/null 2>&1; then
+        (( ++picked ))
+      elif [[ -e $git_dir/CHERRY_PICK_HEAD && -z $(git -C "$repo" diff --name-only --diff-filter=U) ]]; then
+        # Applied cleanly and changed nothing: main has all of it already.
+        git -C "$repo" cherry-pick --skip >/dev/null 2>&1 || return 1
+        (( ++known ))
+      else
+        git -C "$repo" cherry-pick --abort || return 1
+        print -r -- "⚠️  Не удалось перенести ${commit[1,10]} из $branch: $(git -C "$repo" log -1 --format=%s "$commit"). Этот перенос отменён."
+        (( ++failed ))
+      fi
     done
   done
-  print -r -- "☁️  Из облачных веток перенесено коммитов: $picked."
+  print -r -- "☁️  Из облачных веток перенесено: $picked, уже были в main: $known, не перенесено: $failed."
+  (( failed == 0 ))
 }

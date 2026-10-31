@@ -7,3 +7,4 @@ build/
 .kotlin/
 backup/
 store/*.apk
+.claude/worktrees/
