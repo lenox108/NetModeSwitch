@@ -1421,23 +1421,32 @@ class RuleEditActivity : AppCompatActivity() {
         val (kind, seconds) = Steps.checkOf(order[i]) ?: return
         val b = MaterialButton(this, null, android.R.attr.borderlessButtonStyle).apply {
             isAllCaps = false
-            text = Steps.words(seconds)
+            text = waitLabel(seconds)
             setOnClickListener { askCheck(kind, seconds) { order[i] = it; commit(); paint() } }
         }
-        val title = getString(if (kind == Steps.CHECK_VPN) R.string.check_step_vpn else R.string.check_step_net)
-        row(box, R.drawable.ic_hourglass, title, b) { order.removeAt(i); commit(); paint() }
+        row(box, R.drawable.ic_hourglass, getString(Steps.CHECKS.getValue(kind).label), b) { order.removeAt(i); commit(); paint() }
     }
 
+    private fun waitLabel(seconds: Int) = if (seconds == 0) getString(R.string.check_wait_none) else Steps.words(seconds)
+
+    /** First what must hold, then how long it may take to. */
     private fun askCheck(kind: String, seconds: Int, done: (String) -> Unit) {
-        val choices = listOf(Steps.CHECK_VPN to 15, Steps.CHECK_VPN to 30, Steps.CHECK_VPN to 60, Steps.CHECK_VPN to 120,
-            Steps.CHECK_NET to 15, Steps.CHECK_NET to 30, Steps.CHECK_NET to 60, Steps.CHECK_NET to 120)
-        val labels = choices.map { (k, s) ->
-            getString(if (k == Steps.CHECK_VPN) R.string.check_step_vpn else R.string.check_step_net) + " · " + Steps.words(s)
-        }
+        val kinds = Steps.CHECKS.keys.toList()
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.check_step_title)
-            .setSingleChoiceItems(labels.toTypedArray(), choices.indexOf(kind to seconds)) { d, i ->
-                done(Steps.check(choices[i].first, choices[i].second))
+            .setSingleChoiceItems(kinds.map { getString(Steps.CHECKS.getValue(it).label) }.toTypedArray(), kinds.indexOf(kind)) { d, i ->
+                d.dismiss()
+                askCheckWait(kinds[i], seconds, done)
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun askCheckWait(kind: String, seconds: Int, done: (String) -> Unit) {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.check_wait_title)
+            .setSingleChoiceItems(Steps.CHECK_WAITS.map { waitLabel(it) }.toTypedArray(), Steps.CHECK_WAITS.indexOf(seconds)) { d, i ->
+                done(Steps.check(kind, Steps.CHECK_WAITS[i]))
                 d.dismiss()
             }
             .setNegativeButton(R.string.cancel, null)

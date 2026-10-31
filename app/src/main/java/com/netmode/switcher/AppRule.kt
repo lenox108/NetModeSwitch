@@ -483,7 +483,7 @@ data class AppRule(
     private fun ordered(steps: List<String>, labels: LinkedHashMap<String, String?>): String {
         if (steps.isEmpty()) return labels.values.filterNotNull().joinToString(" · ")
         return steps.mapNotNull { s -> Steps.pauseOf(s)?.let { "⏳ " + Steps.words(it) }
-            ?: Steps.checkOf(s)?.let { (kind, seconds) -> "если " + (if (kind == Steps.CHECK_VPN) "VPN" else "интернет") + " есть (ждать ${Steps.words(seconds)})" }
+            ?: Steps.checkOf(s)?.let { (kind, seconds) -> Steps.CHECKS.getValue(kind).summary + if (seconds > 0) " (ждать ${Steps.words(seconds)})" else "" }
             ?: labels[s] }
             .joinToString(" → ")
     }

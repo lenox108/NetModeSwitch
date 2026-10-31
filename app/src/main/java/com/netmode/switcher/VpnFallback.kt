@@ -75,8 +75,36 @@ internal object StepChecks {
             val owner = runCatching { VpnControl.owner() }.getOrNull()
             vpnUp(owner, rule.vpnApp, rule.vpnFallback)
         }
-        else -> internet()
+        // A failed look is not "no VPN": what comes next may be starting a second one.
+        Steps.CHECK_NO_VPN -> runCatching { VpnControl.owner() == null }.getOrDefault(false)
+        Steps.CHECK_NET -> internet()
+        Steps.CHECK_NO_NET -> !internet()
+        Steps.CHECK_WIFI -> wifi()
+        Steps.CHECK_NO_WIFI -> !wifi()
+        Steps.CHECK_HOTSPOT -> runCatching { HotspotControl.isOn() }.getOrDefault(false)
+        Steps.CHECK_NO_HOTSPOT -> runCatching { !HotspotControl.isOn() }.getOrDefault(false)
+        Steps.CHECK_CHARGING -> charging()
+        Steps.CHECK_NO_CHARGING -> !charging()
+        Steps.CHECK_UNLOCKED -> unlocked()
+        Steps.CHECK_LOCKED -> !unlocked()
+        Steps.CHECK_NO_CALL -> !Freezer.inCall()
+        Steps.CHECK_NO_ROAMING -> !ConditionWatch.roamingNow(App.ctx)
+        else -> false
     }
+
+    @Suppress("DEPRECATION")
+    private fun wifi(): Boolean = runCatching {
+        val cm = App.ctx.getSystemService(ConnectivityManager::class.java)
+        cm.allNetworks.any { cm.getNetworkCapabilities(it)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true }
+    }.getOrDefault(false)
+
+    private fun charging(): Boolean =
+        App.ctx.registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
+            ?.getIntExtra(android.os.BatteryManager.EXTRA_PLUGGED, 0)?.let { it != 0 } == true
+
+    private fun unlocked(): Boolean =
+        App.ctx.getSystemService(android.os.PowerManager::class.java).isInteractive &&
+            !App.ctx.getSystemService(android.app.KeyguardManager::class.java).isKeyguardLocked
 
     /** With an app chosen, another VPN does not count: AdGuard being up says nothing of Amnezia. */
     fun vpnUp(owner: String?, primary: String?, fallback: String?): Boolean =

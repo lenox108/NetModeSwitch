@@ -711,7 +711,7 @@ object Freezer {
     private fun onScreen(resumed: String, key: String): Boolean =
         Regex("\\bu${AppKey.user(key)} ${Regex.escape(AppKey.pkg(key))}/").containsMatchIn(resumed)
 
-    private fun inCall(): Boolean = runCatching {
+    internal fun inCall(): Boolean = runCatching {
         val mode = App.ctx.getSystemService(AudioManager::class.java).mode
         mode == AudioManager.MODE_IN_CALL || mode == AudioManager.MODE_IN_COMMUNICATION
     }.getOrDefault(false)

@@ -698,16 +698,17 @@
                             android:layout_height="wrap_content"
                             android:text="@string/add_pause"
                             app:icon="@drawable/ic_hourglass" />
-
-                        <!-- A condition between actions: if it fails, the rest does not run. -->
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/addCheck"
-                            style="@style/Widget.Material3.Button.TextButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/add_check"
-                            app:icon="@drawable/ic_add" />
                     </LinearLayout>
+
+                    <!-- A condition between actions: if it fails, the rest does not run.
+                         On a row of its own: three buttons do not fit one, the last gets squeezed. -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/addCheck"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/add_check"
+                        app:icon="@drawable/ic_add" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

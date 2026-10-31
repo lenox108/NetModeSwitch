@@ -26,8 +26,48 @@ object Steps {
     fun pauseOf(step: String): Int? = if (step.startsWith(PAUSE)) step.drop(PAUSE.length).toIntOrNull() else null
 
     const val CHECK_VPN = "VPN"
+    const val CHECK_NO_VPN = "NOVPN"
     const val CHECK_NET = "NET"
+    const val CHECK_NO_NET = "NONET"
+    const val CHECK_WIFI = "WIFI"
+    const val CHECK_NO_WIFI = "NOWIFI"
+    const val CHECK_HOTSPOT = "HOTSPOT"
+    const val CHECK_NO_HOTSPOT = "NOHOTSPOT"
+    const val CHECK_CHARGING = "CHARGING"
+    const val CHECK_NO_CHARGING = "NOCHARGING"
+    const val CHECK_UNLOCKED = "UNLOCKED"
+    const val CHECK_LOCKED = "LOCKED"
+    const val CHECK_NO_CALL = "NOCALL"
+    const val CHECK_NO_ROAMING = "NOROAMING"
     private const val CHECK = "?"
+
+    /**
+     * A condition as the editor, the rule's summary and the log word it. [isFailure]: the rule
+     * meant to get this and did not, worth a notice. The rest are plain branches: not charging
+     * is no error.
+     */
+    class CheckInfo(@androidx.annotation.StringRes val label: Int, val summary: String, val unmet: String, val isFailure: Boolean = false)
+
+    /** In the order the editor lists them. */
+    val CHECKS: Map<String, CheckInfo> = linkedMapOf(
+        CHECK_VPN to CheckInfo(R.string.check_step_vpn, "если VPN есть", "VPN не подключён", isFailure = true),
+        CHECK_NO_VPN to CheckInfo(R.string.check_step_no_vpn, "если VPN нет", "VPN ещё подключён"),
+        CHECK_NET to CheckInfo(R.string.check_step_net, "если интернет есть", "нет интернета", isFailure = true),
+        CHECK_NO_NET to CheckInfo(R.string.check_step_no_net, "если интернета нет", "интернет есть"),
+        CHECK_WIFI to CheckInfo(R.string.check_step_wifi, "если есть Wi-Fi", "Wi-Fi не подключён"),
+        CHECK_NO_WIFI to CheckInfo(R.string.check_step_no_wifi, "если нет Wi-Fi", "Wi-Fi подключён"),
+        CHECK_HOTSPOT to CheckInfo(R.string.check_step_hotspot, "если раздача включена", "раздача выключена"),
+        CHECK_NO_HOTSPOT to CheckInfo(R.string.check_step_no_hotspot, "если раздача выключена", "раздача включена"),
+        CHECK_CHARGING to CheckInfo(R.string.check_step_charging, "если на зарядке", "телефон не на зарядке"),
+        CHECK_NO_CHARGING to CheckInfo(R.string.check_step_no_charging, "если не на зарядке", "телефон на зарядке"),
+        CHECK_UNLOCKED to CheckInfo(R.string.check_step_unlocked, "если разблокирован", "телефон заблокирован"),
+        CHECK_LOCKED to CheckInfo(R.string.check_step_locked, "если заблокирован", "телефон разблокирован"),
+        CHECK_NO_CALL to CheckInfo(R.string.check_step_no_call, "если нет звонка", "идёт звонок"),
+        CHECK_NO_ROAMING to CheckInfo(R.string.check_step_no_roaming, "если не в роуминге", "телефон в роуминге"),
+    )
+
+    /** How long a condition may take to come true; 0 looks once. */
+    val CHECK_WAITS = listOf(0, 15, 30, 60, 120)
 
     /** Goes on only when [kind] holds, at once or after waiting up to [seconds]; else the rest is dropped. */
     fun check(kind: String, seconds: Int) = "$CHECK$kind:$seconds"
@@ -36,7 +76,7 @@ object Steps {
         if (!step.startsWith(CHECK)) return null
         val kind = step.drop(CHECK.length).substringBefore(':')
         val seconds = step.substringAfter(':', "").toIntOrNull() ?: return null
-        return if (kind == CHECK_VPN || kind == CHECK_NET) kind to seconds else null
+        return if (kind in CHECKS) kind to seconds else null
     }
 
     /** A step of the order itself, not one of the rule's actions. */

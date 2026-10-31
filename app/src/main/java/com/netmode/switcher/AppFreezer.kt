@@ -1168,14 +1168,19 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
             if (check != null) {
                 val (kind, seconds) = check
                 if (StepChecks.passes(rule, kind)) continue
-                val what = if (kind == Steps.CHECK_VPN) "VPN не подключён" else "нет интернета"
+                val info = Steps.CHECKS.getValue(kind)
+                val what = info.unmet
                 // Waiting holds nothing: the queue comes back here, survives the app being unloaded.
-                if (!(waited && i == from)) {
+                if (seconds > 0 && !(waited && i == from)) {
                     StepQueue.schedule(rule, end, i, seconds, waited = true)
                     Prefs.log("($why): $what — жду ${Steps.words(seconds)}")
                     return
                 }
                 val line = "$what — остальные шаги не выполнены"
+                if (!info.isFailure) {
+                    Prefs.log("($why): $line")
+                    return
+                }
                 Prefs.log("($why): ошибка: $line")
                 RunNotices.failed(rule, listOf(line))
                 return

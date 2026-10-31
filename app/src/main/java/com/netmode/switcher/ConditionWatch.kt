@@ -762,12 +762,16 @@ object ConditionWatch {
         }
     }
 
-    private fun readRoaming(ctx: Context, notify: Boolean = true) {
+    internal fun roamingNow(ctx: Context): Boolean {
         val base = ctx.getSystemService(TelephonyManager::class.java)
-        val now = Sims.slots().any { slot ->
+        return Sims.slots().any { slot ->
             val sub = Compat.subId(slot)
             sub >= 0 && runCatching { base.createForSubscriptionId(sub).isNetworkRoaming }.getOrDefault(false)
         }
+    }
+
+    private fun readRoaming(ctx: Context, notify: Boolean = true) {
+        val now = roamingNow(ctx)
         if (now != roaming) {
             roaming = now
             if (notify) evaluate(Trigger.ROAMING)

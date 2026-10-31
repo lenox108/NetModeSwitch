@@ -68,6 +68,10 @@ class NewFeaturesTest {
     @Test fun checkStepsParseAndAreKept() {
         val step = Steps.check(Steps.CHECK_VPN, 30)
         assertEquals(Steps.CHECK_VPN to 30, Steps.checkOf(step))
+        for (kind in Steps.CHECKS.keys) assertEquals(kind to 0, Steps.checkOf(Steps.check(kind, 0)))
+        assertEquals(null, Steps.checkOf("?UNKNOWN:30"))
+        // A condition that merely did not hold is a branch: only the two old ones report a failure.
+        assertEquals(setOf(Steps.CHECK_VPN, Steps.CHECK_NET), Steps.CHECKS.filterValues { it.isFailure }.keys)
         assertNull(Steps.checkOf("VPN"))
         assertNull(Steps.checkOf("P30"))
         assertNull(Steps.checkOf("?VPN:abc"))
