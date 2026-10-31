@@ -38,6 +38,8 @@ class NotifHideActivity : AppCompatActivity() {
     private var shownBlocked: Set<String>? = null
     private var shownJournal: List<NotifJournalEntry>? = null
     private var journalExpanded = false
+    /** Journal entries opened to their full text, by [journalKey]. */
+    private val openedEvents = mutableSetOf<String>()
     private val expandedApps = mutableSetOf<String>()
     private val collapsedSearchApps = mutableSetOf<String>()
     private val labels = mutableMapOf<String, String>()
@@ -62,6 +64,7 @@ class NotifHideActivity : AppCompatActivity() {
         expandedApps.addAll(savedInstanceState?.getStringArrayList("recent_apps").orEmpty())
         ui.historySearch.doAfterTextChanged { collapsedSearchApps.clear(); renderRecent(shownRecent.orEmpty()) }
         journalExpanded = savedInstanceState?.getBoolean("journal_expanded") ?: false
+        openedEvents.addAll(savedInstanceState?.getStringArrayList("journal_opened").orEmpty())
         ui.journalToggle.setOnClickListener {
             journalExpanded = !journalExpanded
             renderJournal()
@@ -99,6 +102,7 @@ class NotifHideActivity : AppCompatActivity() {
         outState.putBoolean("recent_expanded", recentExpanded)
         outState.putStringArrayList("recent_apps", ArrayList(expandedApps))
         outState.putBoolean("journal_expanded", journalExpanded)
+        outState.putStringArrayList("journal_opened", ArrayList(openedEvents))
         super.onSaveInstanceState(outState)
     }
 
@@ -247,26 +251,7 @@ class NotifHideActivity : AppCompatActivity() {
         val rules = Prefs.hideRules
         if (rules.isEmpty()) return empty(ui.ruleList, R.string.hide_rules_empty)
         rules.forEach { r ->
-            val what = listOfNotNull(
-                r.channel?.let { getString(R.string.hide_channel, it) } ?: getString(R.string.hide_all_channels),
-                r.title?.let { getString(R.string.hide_with_title, it) },
-            ).joinToString(" · ")
-            val how = when {
-                r.channelWas != null -> " · " + getString(R.string.hide_channel_off)
-                r.active() -> " · " + getString(R.string.hide_listener_mode)
-                else -> ""
-            }
-            val conditions = listOfNotNull(what, getString(R.string.hide_only_ongoing).takeIf { r.ongoingOnly },
-                getString(R.string.hide_dismiss_short).takeIf { r.dismiss },
-                r.exclusions.takeIf { it.isNotEmpty() }?.joinToString(", ", prefix = getString(R.string.hide_except_prefix)))
-                .joinToString(" · ")
-            val state = when {
-                !r.enabled -> getString(R.string.hide_rule_off)
-                !r.active() -> getString(R.string.hide_paused_until, java.time.Instant.ofEpochMilli(r.pausedUntil)
-                    .atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("dd.MM HH:mm")))
-                else -> getString(R.string.hide_rule_on)
-            }
-            row(ui.ruleList, r.app, label(r.app), "$state · $conditions$how") { editRule(r) }
+            row(ui.ruleList, r.app, label(r.app), describe(r)) { editRule(r) }
             ui.ruleList.addView(MaterialSwitch(this).apply {
                 text = getString(R.string.hide_rule_enabled)
                 isChecked = r.enabled
@@ -277,6 +262,30 @@ class NotifHideActivity : AppCompatActivity() {
                 else pauseRule(r)
             }.apply { isEnabled = r.enabled })
         }
+    }
+
+    /** A rule in words: whether it works now, what it catches and how it hides. */
+    private fun describe(r: HideRule): String {
+        val what = listOfNotNull(
+            r.channel?.let { getString(R.string.hide_channel, it) } ?: getString(R.string.hide_all_channels),
+            r.title?.let { getString(R.string.hide_with_title, it) },
+        ).joinToString(" · ")
+        val how = when {
+            r.channelWas != null -> " · " + getString(R.string.hide_channel_off)
+            r.active() -> " · " + getString(R.string.hide_listener_mode)
+            else -> ""
+        }
+        val conditions = listOfNotNull(what, getString(R.string.hide_only_ongoing).takeIf { r.ongoingOnly },
+            getString(R.string.hide_dismiss_short).takeIf { r.dismiss },
+            r.exclusions.takeIf { it.isNotEmpty() }?.joinToString(", ", prefix = getString(R.string.hide_except_prefix)))
+            .joinToString(" · ")
+        val state = when {
+            !r.enabled -> getString(R.string.hide_rule_off)
+            !r.active() -> getString(R.string.hide_paused_until, java.time.Instant.ofEpochMilli(r.pausedUntil)
+                .atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("dd.MM HH:mm")))
+            else -> getString(R.string.hide_rule_on)
+        }
+        return "$state · $conditions$how"
     }
 
     private fun pauseRule(rule: HideRule) {
@@ -356,13 +365,37 @@ class NotifHideActivity : AppCompatActivity() {
                 "error" -> R.string.hide_journal_error
                 else -> R.string.hide_journal_unconfirmed
             })
-            row(ui.journalList, entry.app, entry.title.ifEmpty { label(entry.app) },
-                "$at · $outcome · ${label(entry.app)} · ${entry.reason}") {
-                Prefs.hideRules.firstOrNull { it.id == entry.ruleId }?.let { editRule(it) }
-                    ?: Toast.makeText(this, R.string.hide_journal_rule_removed, Toast.LENGTH_SHORT).show()
+            val key = journalKey(entry)
+            val opened = key in openedEvents
+            val rule = Prefs.hideRules.firstOrNull { it.id == entry.ruleId }
+            val sub = if (!opened) "$at · $outcome · ${label(entry.app)} · ${entry.reason}"
+            else listOfNotNull(
+                "$at · $outcome",
+                getString(R.string.hide_journal_app, label(entry.app)),
+                entry.reason.takeIf { it.isNotEmpty() }?.let { getString(R.string.hide_journal_rule_then, it) },
+                rule?.let { getString(R.string.hide_journal_rule_now, describe(it)) }
+                    ?: getString(R.string.hide_journal_rule_removed),
+            ).joinToString("\n")
+            // A tap opens the whole line in place; the rule is one more tap away, not the first one.
+            val row = row(ui.journalList, entry.app, entry.title.ifEmpty { label(entry.app) }, sub) {
+                if (!openedEvents.add(key)) openedEvents.remove(key)
+                renderJournal()
+            }
+            if (opened) {
+                row.label.maxLines = Int.MAX_VALUE
+                row.pkg.maxLines = Int.MAX_VALUE
+                ViewCompat.setStateDescription(row.root, getString(R.string.hide_recent_expanded))
+                if (rule != null) {
+                    ui.journalList.addView(textButton(getString(R.string.hide_journal_open_rule)) { editRule(rule) })
+                }
+            } else {
+                ViewCompat.setStateDescription(row.root, getString(R.string.hide_recent_collapsed))
             }
         }
+        openedEvents.retainAll(entries.map(::journalKey).toSet())
     }
+
+    private fun journalKey(e: NotifJournalEntry) = "${e.at}|${e.app}|${e.ruleId}|${e.title}"
 
     private fun textButton(title: String, onClick: () -> Unit) = MaterialButton(this).apply {
         text = title
@@ -455,7 +488,7 @@ class NotifHideActivity : AppCompatActivity() {
         })
     }
 
-    private fun row(parent: LinearLayout, app: String, title: String, sub: String, onClick: () -> Unit) {
+    private fun row(parent: LinearLayout, app: String, title: String, sub: String, onClick: () -> Unit): RowAppBinding {
         val row = RowAppBinding.inflate(layoutInflater, parent, false)
         row.check.visibility = View.GONE
         row.label.text = title
@@ -463,5 +496,6 @@ class NotifHideActivity : AppCompatActivity() {
         row.icon.setImageDrawable(runCatching { packageManager.getApplicationIcon(AppKey.pkg(app)) }.getOrNull())
         row.root.setOnClickListener { onClick() }
         parent.addView(row.root)
+        return row
     }
 }
