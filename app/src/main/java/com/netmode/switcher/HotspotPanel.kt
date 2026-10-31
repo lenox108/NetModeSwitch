@@ -46,6 +46,9 @@ internal class HotspotPanel(private val activity: AppCompatActivity, private val
     }
 
     fun start() {
+        renderBlocked()
+        activity.findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar).menu
+            .add(R.string.traffic_limit_menu).setOnMenuItemClickListener { askLimit(); true }
         activity.findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar).menu
             .add("Последний отчёт").setOnMenuItemClickListener {
                 if (reportFile.exists()) showReport(reportFile.readText()) else message("Сохранённых отчётов пока нет")
@@ -104,6 +107,10 @@ internal class HotspotPanel(private val activity: AppCompatActivity, private val
             "↓\u00a0${rate(sample.downRate)}     ↑\u00a0${rate(sample.upRate)}"
         ui.liveDetails.text = buildList {
             add("Выбрано: ${TetherRoute.label(Prefs.tetherMode)}")
+            val date = java.time.LocalDate.now()
+            val book = TetherTraffic.book()
+            add("Раздано сегодня ≈ ${TetherTraffic.label(book.today(date))} · за месяц ≈ ${TetherTraffic.label(book.thisMonth(date))}" +
+                TetherTraffic.limitMb.takeIf { it > 0 }?.let { " из $it МБ" }.orEmpty())
             if (sample != null) {
                 add("Получено ≈ ${bytes(sample.download)} · отправлено ≈ ${bytes(sample.upload)}")
                 val seconds = ((now - sample.since) / 1000).coerceAtLeast(0)
@@ -154,12 +161,67 @@ internal class HotspotPanel(private val activity: AppCompatActivity, private val
         }
         MaterialAlertDialogBuilder(activity).setTitle("Имя устройства").setView(edit)
             .setMessage("MAC: ${peer.mac}\n${peer.addresses.joinToString().ifBlank { "IP пока неизвестен" }}\n\nИмя хранится на телефоне. При смене случайного MAC адреса устройство появится как новое.")
+            .setNeutralButton(R.string.ap_block) { _, _ -> confirmBlock(peer.mac) }
             .setPositiveButton(R.string.save) { _, _ ->
                 names.edit().putString(peer.mac, edit.text.toString().trim()).apply()
                 peerSignature = ""
                 // Do not turn the stale snapshot into a new traffic measurement.
                 renderPeers(snapshot)
             }.setNegativeButton(R.string.cancel, null).show()
+    }
+
+    private fun confirmBlock(mac: String) {
+        val name = names.getString(mac, "").orEmpty().ifBlank { mac }
+        MaterialAlertDialogBuilder(activity)
+            .setMessage(activity.getString(R.string.ap_block_confirm, name))
+            .setPositiveButton(R.string.ap_block) { _, _ -> changeBlocked { it + mac } }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun changeBlocked(change: (List<String>) -> List<String>) {
+        activity.lifecycleScope.launch {
+            val error = runCatching {
+                val now = HotspotConfig.blocked() ?: error(activity.getString(R.string.ap_block_unread))
+                HotspotConfig.setBlocked(change(now))
+            }.getOrElse { it.message ?: it.javaClass.simpleName }
+            Prefs.log(if (error == null) "точка доступа: список заблокированных изменён" else "точка доступа: блокировка — ошибка $error")
+            if (error != null) message(activity.getString(R.string.ap_block_failed, error))
+            renderBlocked()
+        }
+    }
+
+    /** The refused devices, each with a way back: they are not in the list of who is connected. */
+    private fun renderBlocked() {
+        activity.lifecycleScope.launch {
+            val macs = runCatching { HotspotConfig.blocked() }.getOrNull().orEmpty()
+            ui.blockedList.removeAllViews()
+            macs.forEach { mac ->
+                val name = names.getString(mac, "").orEmpty().ifBlank { "Устройство ${mac.takeLast(5)}" }
+                ui.blockedList.addView(MaterialButton(activity, null, android.R.attr.borderlessButtonStyle).apply {
+                    text = activity.getString(R.string.ap_blocked_row, name)
+                    textSize = 14f
+                    isAllCaps = false
+                    gravity = android.view.Gravity.START or android.view.Gravity.CENTER_VERTICAL
+                    setOnClickListener { changeBlocked { list -> list - mac } }
+                })
+            }
+        }
+    }
+
+    private fun askLimit() {
+        val edit = TextInputEditText(activity).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            hint = activity.getString(R.string.traffic_limit_hint)
+            TetherTraffic.limitMb.takeIf { it > 0 }?.let { setText(it.toString()) }
+        }
+        MaterialAlertDialogBuilder(activity)
+            .setTitle(R.string.traffic_limit_menu)
+            .setMessage(R.string.traffic_limit_about)
+            .setView(edit)
+            .setPositiveButton(R.string.save) { _, _ -> TetherTraffic.limitMb = edit.text.toString().toLongOrNull() ?: 0 }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun capture() {

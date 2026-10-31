@@ -13,7 +13,7 @@ import android.os.IBinder
  * only the keys given, and prints "ok" or "error=...". Keys:
  *   ssid, pass, sec (open|wpa2|wpa3|wpa3t), band (2|5|6|25), channel (0 = auto),
  *   hidden (0|1), clients (0 = no limit), autooff (0|1), timeout (minutes),
- *   ax (0|1), mac (random|device)
+ *   ax (0|1), mac (random|device), blocked (comma-separated client MACs, may be empty)
  *
  * SoftApConfiguration and its Builder are system APIs, so everything goes through reflection.
  */
@@ -89,6 +89,7 @@ object ApConfigCli {
         println("timeout=${((call(c, "getShutdownTimeoutMillis") as? Long) ?: 0L).coerceAtLeast(0) / 60_000}")
         println("ax=${if (call(c, "isIeee80211axEnabled") == false) 0 else 1}")
         println("mac=" + if (call(c, "getMacRandomizationSetting") == MAC_NONE) "device" else "random")
+        println("blocked=" + ((call(c, "getBlockedClientList") as? List<*>)?.joinToString(",").orEmpty()))
     }
 
     private fun build(current: Any, set: Map<String, String>): Any {
@@ -140,6 +141,9 @@ object ApConfigCli {
         }
         set["ax"]?.let { invoke("setIeee80211axEnabled", it == "1") }
         set["mac"]?.let { invoke("setMacRandomizationSetting", if (it == "device") MAC_NONE else MAC_PERSISTENT) }
+        set["blocked"]?.let { list ->
+            invoke("setBlockedClientList", list.split(',').filter { it.isNotBlank() }.map { android.net.MacAddress.fromString(it) })
+        }
         return builderClass.getMethod("build").invoke(b)!!
     }
 }

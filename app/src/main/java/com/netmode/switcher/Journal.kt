@@ -27,10 +27,10 @@ internal object Journal {
         "ошибк", "не удалось", "неизвестно", "не подтвердилось", "заблокирована", "нужен root",
         "не выключил", "не включил", "не запустился", "неверный адрес",
     )
-    private val WARNINGS = listOf("пропущен", "не активна", "без root", "подожди", "занята")
+    private val WARNINGS = listOf("превышен", "жду ", "пропущен", "не активна", "без root", "подожди", "занята")
 
     /** The hotspot holds its clients back until the VPN is up, usually for a moment: on purpose. */
-    private const val WAITING_FOR_VPN = "vpn не подключён — раздача заблокирована"
+    private val WAITING_FOR_VPN = listOf("vpn не подключён — раздача заблокирована", "vpn сменился — раздача заблокирована")
 
     /**
      * A VPN that was to go off is off already: nothing failed, there was nothing to do.
@@ -81,7 +81,7 @@ internal object Journal {
         // These first: their wording overlaps the lists below.
         val settled = words.replace(ALREADY_OFF, "").replace(CANCELLED, "")
         return when {
-            WAITING_FOR_VPN in settled -> JournalEntry.Severity.WARNING
+            WAITING_FOR_VPN.any { it in settled } -> JournalEntry.Severity.WARNING
             ERRORS.any { it in settled } -> JournalEntry.Severity.ERROR
             WARNINGS.any { it in settled } -> JournalEntry.Severity.WARNING
             CANCELLED.containsMatchIn(words) -> JournalEntry.Severity.INFO

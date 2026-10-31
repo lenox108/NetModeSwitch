@@ -196,8 +196,9 @@ object TetherRoute {
             else TetherPath(ap, TUN, TABLE.toString(), false, MAP_DNS)
         // Persisted identity allows a new app process to adopt the existing tunnel. Boot id,
         // interface generations and APK path prevent adopting a stale or older implementation.
-        val generation = Privileged.exec("cat /proc/sys/kernel/random/boot_id; cat /sys/class/net/$ap/ifindex" +
+        suspend fun readGeneration() = Privileged.exec("cat /proc/sys/kernel/random/boot_id; cat /sys/class/net/$ap/ifindex" +
             if (vpn != null) "; cat /sys/class/net/$vpn/ifindex" else "")
+        val generation = readGeneration()
         val identity = tetherIdentity(BuildConfig.VERSION_CODE.toString(), App.ctx.applicationInfo.sourceDir,
             generation, mode.name, ap, vpn.orEmpty(),
             if (mode == TetherMode.PROXY) proxy else "",
@@ -257,7 +258,11 @@ object TetherRoute {
                 // Reinstall the hold if a late verification failed after releasing it.
                 val held = runCatching { checked(TetherScripts.hold(ap), "@HELD"); true }.getOrDefault(false)
                 Log.e(TAG, "tether setup failed", e)
-                "раздача через ${label(mode)}: ошибка — ${e.message}" + if (held) "; раздача заблокирована" else "; проверь правила раздачи"
+                // Another VPN taking over mid-setup (the same name, a new interface) is no fault
+                // of the route: its arrival rebuilds it, and the hold keeps clients in meanwhile.
+                val replaced = held && vpn != null && runCatching { readGeneration() != generation }.getOrDefault(false)
+                if (replaced) "раздача через VPN: VPN сменился — раздача заблокирована до нового VPN"
+                else "раздача через ${label(mode)}: ошибка — ${e.message}" + if (held) "; раздача заблокирована" else "; проверь правила раздачи"
             }
         }
     }

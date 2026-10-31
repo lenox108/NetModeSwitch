@@ -227,6 +227,8 @@ data class AppRule(
     val endVpn: Toggle? = null,
     /** Separate off targets keep old rules (including a stale [vpnApp]) unscoped. */
     val vpnOffApp: String? = null,
+    /** Tried when [vpnApp] will not connect, and taken over to if its tunnel carries no internet. */
+    val vpnFallback: String? = null,
     val endVpnOffApp: String? = null,
     /** For [Trigger.NET_MODE]: which SIM is watched and for which mode. */
     val triggerSlot: Int = 0,
@@ -480,7 +482,9 @@ data class AppRule(
      */
     private fun ordered(steps: List<String>, labels: LinkedHashMap<String, String?>): String {
         if (steps.isEmpty()) return labels.values.filterNotNull().joinToString(" · ")
-        return steps.mapNotNull { s -> Steps.pauseOf(s)?.let { "⏳ " + Steps.words(it) } ?: labels[s] }
+        return steps.mapNotNull { s -> Steps.pauseOf(s)?.let { "⏳ " + Steps.words(it) }
+            ?: Steps.checkOf(s)?.let { (kind, seconds) -> "если " + (if (kind == Steps.CHECK_VPN) "VPN" else "интернет") + " есть (ждать ${Steps.words(seconds)})" }
+            ?: labels[s] }
             .joinToString(" → ")
     }
 
@@ -700,7 +704,7 @@ data class AppRule(
         .put("endTiles", JSONObject().apply { endTiles.forEach { (c, t) -> put(c, t.name) } })
         .put("vpnApp", vpnApp ?: JSONObject.NULL).put("vpnTile", vpnTile ?: JSONObject.NULL).put("vpn", vpn?.name ?: JSONObject.NULL)
         .put("endVpn", endVpn?.name ?: JSONObject.NULL)
-        .put("vpnOffApp", vpnOffApp ?: JSONObject.NULL).put("endVpnOffApp", endVpnOffApp ?: JSONObject.NULL)
+        .put("vpnFb", vpnFallback ?: JSONObject.NULL).put("vpnOffApp", vpnOffApp ?: JSONObject.NULL).put("endVpnOffApp", endVpnOffApp ?: JSONObject.NULL)
         .put("endCustom", endCustom)
         .put("eNet", endNet?.name ?: JSONObject.NULL).put("eData", endData?.name ?: JSONObject.NULL)
         .put("eWifi", endWifi?.name ?: JSONObject.NULL).put("eAp", endHotspot?.name ?: JSONObject.NULL)
@@ -792,7 +796,7 @@ data class AppRule(
                 vpnApp = o.str("vpnApp") ?: o.str("vpnTile")?.substringBefore('/'),
                 vpn = o.str("vpn")?.let { runCatching { Toggle.valueOf(it) }.getOrNull() },
                 endVpn = o.str("endVpn")?.let { runCatching { Toggle.valueOf(it) }.getOrNull() },
-                vpnOffApp = o.str("vpnOffApp"), endVpnOffApp = o.str("endVpnOffApp"),
+                vpnFallback = o.str("vpnFb"), vpnOffApp = o.str("vpnOffApp"), endVpnOffApp = o.str("endVpnOffApp"),
                 // Rules saved with the single on/off switch: off meant every app stays stopped.
                 keepStopped = o.optJSONArray("keepStopped")
                     ?.let { a -> (0 until a.length()).map { a.getString(it) }.toSet() }

@@ -145,6 +145,11 @@ class MainActivity : AppCompatActivity() {
         if (tile == HotspotProxyTileService::class.java.name || tile == HotspotVpnTileService::class.java.name || HotspotPresetTiles.containsClass(tile)) {
             startActivity(Intent(this, HotspotActivity::class.java))
         }
+        // Holding the tile leads to where the pairing code and the port are shown.
+        if (tile == AdbWifiTileService::class.java.name) {
+            runCatching { startActivity(Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)) }
+            return true
+        }
         if (tile == FreezerTileService::class.java.name) {
             startActivity(IceShortcuts.folderIntent(this))
             return true

@@ -1185,4 +1185,24 @@
     <string name="setup_check_no_access">Для проверки нужен доступ из первого шага. Её можно запустить позже.</string>
     <string name="setup_rule_title">Первое правило</string>
     <string name="setup_rule_body">Выбери шаблон: откроется редактор, и правило сохранится, только если ты нажмёшь «Сохранить».</string>
+    <string name="adb_wifi_title">Отладка по Wi-Fi</string>
+    <string name="adb_wifi_unsupported">нужен Android 11</string>
+    <string name="adb_wifi_failed">Отладка по Wi-Fi не переключилась: нужен Wi-Fi и root или Shizuku</string>
+    <string name="vpn_fallback_choose">Запасной VPN: нет</string>
+    <string name="vpn_fallback_x">Запасной VPN: %1$s (нажми, чтобы убрать)</string>
+    <string name="add_check">Добавить условие</string>
+    <string name="check_step_title">Идти дальше, только если…</string>
+    <string name="check_step_vpn">VPN подключён</string>
+    <string name="check_step_net">Есть интернет</string>
+    <string name="ap_block">Заблокировать</string>
+    <string name="ap_block_confirm">Заблокировать «%1$s»? Устройство отключится и не сможет подключиться снова, пока его не разблокируешь. Прошивка может при этом перезапустить точку.</string>
+    <string name="ap_block_unread">список недоступен на этой версии Android</string>
+    <string name="ap_block_failed">Не удалось: %1$s</string>
+    <string name="ap_blocked_row">Заблокировано: %1$s · нажми, чтобы вернуть</string>
+    <string name="traffic_limit_menu">Лимит раздачи за месяц</string>
+    <string name="traffic_limit_hint">Мегабайты, 0 — без лимита</string>
+    <string name="traffic_limit_about">При превышении придёт уведомление, раздача не выключится. Счёт идёт по интерфейсу точки, пока она включена и приложение работает, поэтому он приблизительный.</string>
+    <string name="traffic_limit_channel">Лимит раздачи</string>
+    <string name="traffic_limit_title">Превышен лимит раздачи</string>
+    <string name="traffic_limit_text">За месяц %1$s из %2$d МБ</string>
 </resources>

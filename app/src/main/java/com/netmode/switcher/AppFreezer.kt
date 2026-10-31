@@ -1160,10 +1160,26 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
      * Runs [rule]'s start steps, or its end steps when [end], from [from] on, one after the
      * other. At a pause the rest is handed to [StepQueue] and comes back to [continueSteps].
      */
-    private suspend fun runSteps(rule: AppRule, end: Boolean, from: Int, why: String) {
+    private suspend fun runSteps(rule: AppRule, end: Boolean, from: Int, why: String, waited: Boolean = false) {
         val steps = if (end) rule.endSteps else rule.steps
         for (i in from until steps.size) {
             val step = steps[i]
+            val check = Steps.checkOf(step)
+            if (check != null) {
+                val (kind, seconds) = check
+                if (StepChecks.passes(rule, kind)) continue
+                val what = if (kind == Steps.CHECK_VPN) "VPN не подключён" else "нет интернета"
+                // Waiting holds nothing: the queue comes back here, survives the app being unloaded.
+                if (!(waited && i == from)) {
+                    StepQueue.schedule(rule, end, i, seconds, waited = true)
+                    Prefs.log("($why): $what — жду ${Steps.words(seconds)}")
+                    return
+                }
+                val line = "$what — остальные шаги не выполнены"
+                Prefs.log("($why): ошибка: $line")
+                RunNotices.failed(rule, listOf(line))
+                return
+            }
             Steps.pauseOf(step)?.let { seconds ->
                 if (i == steps.lastIndex) return
                 StepQueue.schedule(rule, end, i + 1, seconds)
@@ -1293,7 +1309,7 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
         acted()
         if (!p.end) beginRun(rule, fresh = false)
         try {
-            runSteps(rule, p.end, p.next, why)
+            runSteps(rule, p.end, p.next, why, p.waited)
         } finally {
             if (!p.end) endRun(rule)
         }
@@ -1702,7 +1718,8 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
                             val before = VpnControl.owner()
                             val app = rule.vpnApp
                             if (app != null && VpnControl.validPkg(app) && (before != app || FrozenApp.SYSVPN in existing)) record(FrozenApp.SYSVPN, before ?: "off")
-                            if (app == null) "VPN: не выбрано приложение" else VpnControl.on(app)
+                            if (app == null) "VPN: не выбрано приложение"
+                            else VpnFallback.connect(rule, app, rule.vpnFallback).joinToString(", ")
                         } else VpnControl.off(rule.vpnOffApp) { pkg -> record(FrozenApp.SYSVPN, pkg) }
                     }
                 }

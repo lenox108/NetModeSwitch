@@ -25,6 +25,23 @@ object Steps {
 
     fun pauseOf(step: String): Int? = if (step.startsWith(PAUSE)) step.drop(PAUSE.length).toIntOrNull() else null
 
+    const val CHECK_VPN = "VPN"
+    const val CHECK_NET = "NET"
+    private const val CHECK = "?"
+
+    /** Goes on only when [kind] holds, at once or after waiting up to [seconds]; else the rest is dropped. */
+    fun check(kind: String, seconds: Int) = "$CHECK$kind:$seconds"
+
+    fun checkOf(step: String): Pair<String, Int>? {
+        if (!step.startsWith(CHECK)) return null
+        val kind = step.drop(CHECK.length).substringBefore(':')
+        val seconds = step.substringAfter(':', "").toIntOrNull() ?: return null
+        return if (kind == CHECK_VPN || kind == CHECK_NET) kind to seconds else null
+    }
+
+    /** A step of the order itself, not one of the rule's actions. */
+    fun isMark(step: String) = pauseOf(step) != null || checkOf(step) != null
+
     /** "00:01:30" */
     fun clock(seconds: Int) = "%02d:%02d:%02d".format(seconds / 3600, seconds / 60 % 60, seconds % 60)
 
@@ -45,20 +62,20 @@ object Steps {
 
     /** What is worth saving of [steps]: nothing when they add nothing to the old fixed order. */
     fun toSave(steps: List<String>, legacy: List<String>): List<String> {
-        val trimmed = steps.dropLastWhile { pauseOf(it) != null }
-        if (trimmed.none { pauseOf(it) != null } && trimmed == trimmed.sortedBy { legacy.indexOf(it) }) return emptyList()
+        val trimmed = steps.dropLastWhile { isMark(it) }
+        if (trimmed.none { isMark(it) } && trimmed == trimmed.sortedBy { legacy.indexOf(it) }) return emptyList()
         return trimmed
     }
 }
 
 /** The rest of a rule's start ([end] false) or end, waiting out a pause: from step [next], at [due]. */
-data class PendingSteps(val ruleId: Long, val end: Boolean, val next: Int, val due: Long, val sig: Int) {
+data class PendingSteps(val ruleId: Long, val end: Boolean, val next: Int, val due: Long, val sig: Int, val waited: Boolean = false) {
     fun toJson(): org.json.JSONObject = org.json.JSONObject()
-        .put("id", ruleId).put("end", end).put("next", next).put("due", due).put("sig", sig)
+        .put("id", ruleId).put("end", end).put("next", next).put("due", due).put("sig", sig).put("waited", waited)
 
     companion object {
         fun fromJson(o: org.json.JSONObject) = PendingSteps(
-            o.getLong("id"), o.getBoolean("end"), o.getInt("next"), o.getLong("due"), o.getInt("sig"),
+            o.getLong("id"), o.getBoolean("end"), o.getInt("next"), o.getLong("due"), o.getInt("sig"), o.optBoolean("waited", false),
         )
     }
 }
@@ -77,9 +94,9 @@ object StepQueue {
     /** Identifies the steps a pause belongs to: a rule edited during it drops the rest. */
     fun sig(rule: AppRule, end: Boolean): Int = (if (end) rule.endSteps else rule.steps).hashCode()
 
-    fun schedule(rule: AppRule, end: Boolean, next: Int, seconds: Int) {
+    fun schedule(rule: AppRule, end: Boolean, next: Int, seconds: Int, waited: Boolean = false) {
         val ms = seconds * 1000L
-        val p = PendingSteps(rule.id, end, next, System.currentTimeMillis() + ms, sig(rule, end))
+        val p = PendingSteps(rule.id, end, next, System.currentTimeMillis() + ms, sig(rule, end), waited)
         Prefs.pendingSteps = Prefs.pendingSteps.filterNot { it.ruleId == rule.id && it.end == end } + p
         arm()
         if (ms > HELD_MAX_MS) return

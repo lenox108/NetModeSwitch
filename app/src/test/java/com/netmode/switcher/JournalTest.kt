@@ -42,6 +42,11 @@ class JournalTest {
         assertEquals(Severity.ERROR, Journal.parse("30.10 10:11  раздача через VPN: ошибка — раздача заблокирована").severity)
     }
 
+    @Test fun aVpnTakingOverDuringSetupIsAWaitNotAnError() {
+        assertEquals(Severity.WARNING, Journal.parse("31.10 09:37  раздача через VPN: VPN сменился — раздача заблокирована до нового VPN").severity)
+        assertEquals(Severity.ERROR, Journal.parse("31.10 09:37  раздача через VPN: ошибка — маршрут не прошёл проверку; раздача заблокирована").severity)
+    }
+
     @Test fun aVpnAlreadyOffAtTheEndIsNoProblem() {
         val e = Journal.parse("30.10 11:13  (точка доступа включена — больше нет): в конце — Happ · Переключить уже вкл, VPN AmneziaVPN не подключён — пропущено")
         assertEquals(Severity.DONE, e.severity)

@@ -92,6 +92,26 @@ object HotspotConfig {
         )
     }
 
+    /** Clients refused by the Wi-Fi service; null when it cannot be read. */
+    suspend fun blocked(): List<String>? {
+        val out = Privileged.exec("${cli()} get")
+        return if (out.contains("error=")) null else parseBlocked(out)
+    }
+
+    /** Returns null on success, or the error text. */
+    suspend fun setBlocked(macs: List<String>): String? {
+        val out = Privileged.exec("${cli()} set ${q("blocked=" + blockedArg(macs))}").trim()
+        return if (out.lines().any { it == "ok" }) null else out.substringAfter("error=", out)
+    }
+
+    internal fun parseBlocked(out: String): List<String> = out.lineSequence()
+        .firstOrNull { it.startsWith("blocked=") }?.substringAfter('=').orEmpty()
+        .split(',').map { it.trim().lowercase() }.filter(HotspotParsing::validMac)
+
+    /** Valid addresses only: this crosses the shell boundary. */
+    internal fun blockedArg(macs: List<String>) =
+        macs.map { it.trim().lowercase() }.filter(HotspotParsing::validMac).distinct().joinToString(",")
+
     /** Returns null on success, or the error text. */
     suspend fun write(s: ApSettings, previous: ApSettings): String? = configure("set", s, previous)
 

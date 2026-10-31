@@ -150,6 +150,7 @@ class RuleEditActivity : AppCompatActivity() {
     private var hotspot: Pair<Toggle?, TetherMode?> = null to null
     private var vpn: Toggle? = null
     private var vpnApp: String? = null
+    private var vpnFallback: String? = null
     private var vpnOffApp: String? = null
     private var dataSim: Int? = null
     private var airplane: Toggle? = null
@@ -389,7 +390,7 @@ class RuleEditActivity : AppCompatActivity() {
 
         if (r == null) return
         netMode = r.netMode; netSlot = r.netSlot; data = r.mobileData; wifi = r.wifi
-        hotspot = r.hotspot to r.hotspotVia; vpn = r.vpn; vpnApp = r.vpnApp; dataSim = r.dataSim
+        hotspot = r.hotspot to r.hotspotVia; vpn = r.vpn; vpnApp = r.vpnApp; vpnFallback = r.vpnFallback; dataSim = r.dataSim
         vpnOffApp = r.vpnOffApp
         airplane = r.airplane; powerSave = r.powerSave; btOff = r.bluetoothOff; locOff = r.locationOff
         tiles = r.tiles; packages = r.packages; keepStopped = r.keepStopped
@@ -611,6 +612,7 @@ class RuleEditActivity : AppCompatActivity() {
             paint()
         }
         v.addPause.setOnClickListener { askPause(60) { steps += Steps.pause(it); paint() } }
+        v.addCheck.setOnClickListener { askCheck(Steps.CHECK_VPN, 30) { steps += it; paint() } }
         v.addEndPause.setOnClickListener { askPause(60) { atEnd.steps += Steps.pause(it); paint() } }
         v.unstop.setOnClickListener {
             val labels = AppPickerActivity.labels(packages).toTypedArray()
@@ -1012,7 +1014,7 @@ class RuleEditActivity : AppCompatActivity() {
             val box = block(container, order, commit)
             val a = Act.entries.firstOrNull { it.name == step }
             if (a == null) {
-                pauseRow(box, order, i, commit)
+                if (Steps.checkOf(step) != null) checkRow(box, order, i, commit) else pauseRow(box, order, i, commit)
                 continue
             }
             val remove = { removeAction(a) }
@@ -1071,7 +1073,7 @@ class RuleEditActivity : AppCompatActivity() {
                     val c = choice(onOff, indexOf(vpn)) { vpn = toggleOf(it) }
                     rowChoices[a] = c
                     row(box, a, getString(a.title), c, remove)
-                    if (vpn == Toggle.ON) sub(box, vpnAppButton())
+                    if (vpn == Toggle.ON) { sub(box, vpnAppButton()); sub(box, vpnFallbackButton()) }
                     if (vpn == Toggle.OFF) {
                         sub(box, vpnOffAppButton(vpnOffApp) { vpnOffApp = it })
                         sub(box, hint(getString(R.string.vpn_off_hint)))
@@ -1161,6 +1163,7 @@ class RuleEditActivity : AppCompatActivity() {
         }
         v.noActions.visibility = if (shown.isEmpty()) View.VISIBLE else View.GONE
         v.addPause.visibility = if (shown.isEmpty()) View.GONE else View.VISIBLE
+        v.addCheck.visibility = v.addPause.visibility
         v.orderHint.visibility = if (order.size > 1) View.VISIBLE else View.GONE
         v.addAction.visibility = if (Act.entries.any { allowed(it) && it !in shown }) View.VISIBLE else View.GONE
     }
@@ -1182,6 +1185,17 @@ class RuleEditActivity : AppCompatActivity() {
         setOnClickListener { pickVpnApp { vpnApp = it; paint() } }
     }
 
+    private fun vpnFallbackButton() = MaterialButton(this, null, android.R.attr.borderlessButtonStyle).apply {
+        isAllCaps = false
+        gravity = Gravity.START or Gravity.CENTER_VERTICAL
+        text = vpnFallback?.let { getString(R.string.vpn_fallback_x, AppPickerActivity.labels(listOf(it)).first()) }
+            ?: getString(R.string.vpn_fallback_choose)
+        setOnClickListener {
+            if (vpnFallback != null) { vpnFallback = null; paint() }
+            else pickVpnApp { vpnFallback = it.takeIf { pkg -> pkg != vpnApp }; paint() }
+        }
+    }
+
     /**
      * One ending's rows: the rule's end, or the unlock block. [custom] — set by hand, [nothing]
      * — the unlock block's "ничего не менять", with no rows at all.
@@ -1196,13 +1210,13 @@ class RuleEditActivity : AppCompatActivity() {
         val order = st.steps.filter(visible).toMutableList()
         val hidden = st.steps.filterNot(visible)
         val commit = { st.steps.clear(); st.steps += order + hidden }
-        addPause.visibility = if (order.any { Steps.pauseOf(it) == null }) View.VISIBLE else View.GONE
+        addPause.visibility = if (order.any { !Steps.isMark(it) }) View.VISIBLE else View.GONE
         orderHint.visibility = if (order.size > 1) View.VISIBLE else View.GONE
         for ((i, step) in order.withIndex()) {
             val box = block(container, order, commit)
             val a = Act.entries.firstOrNull { it.name == step }
             if (a == null) {
-                pauseRow(box, order, i, commit)
+                if (Steps.checkOf(step) != null) checkRow(box, order, i, commit) else pauseRow(box, order, i, commit)
                 continue
             }
             val remove = { st.shown -= a; st.clear(a); paint() }
@@ -1310,7 +1324,7 @@ class RuleEditActivity : AppCompatActivity() {
 
     /** Keeps [list] to the actions in [acts], in its own order; ones not in it yet go last. */
     private fun sync(list: MutableList<String>, acts: Collection<Act>) {
-        list.removeAll { s -> Steps.pauseOf(s) == null && acts.none { it.name == s } }
+        list.removeAll { s -> !Steps.isMark(s) && acts.none { it.name == s } }
         acts.filter { it.name !in list }.forEach { list += it.name }
     }
 
@@ -1403,6 +1417,33 @@ class RuleEditActivity : AppCompatActivity() {
     }
 
     /** "⌛ Пауза ………… 00:01:00 ×" */
+    private fun checkRow(box: LinearLayout, order: MutableList<String>, i: Int, commit: () -> Unit) {
+        val (kind, seconds) = Steps.checkOf(order[i]) ?: return
+        val b = MaterialButton(this, null, android.R.attr.borderlessButtonStyle).apply {
+            isAllCaps = false
+            text = Steps.words(seconds)
+            setOnClickListener { askCheck(kind, seconds) { order[i] = it; commit(); paint() } }
+        }
+        val title = getString(if (kind == Steps.CHECK_VPN) R.string.check_step_vpn else R.string.check_step_net)
+        row(box, R.drawable.ic_hourglass, title, b) { order.removeAt(i); commit(); paint() }
+    }
+
+    private fun askCheck(kind: String, seconds: Int, done: (String) -> Unit) {
+        val choices = listOf(Steps.CHECK_VPN to 15, Steps.CHECK_VPN to 30, Steps.CHECK_VPN to 60, Steps.CHECK_VPN to 120,
+            Steps.CHECK_NET to 15, Steps.CHECK_NET to 30, Steps.CHECK_NET to 60, Steps.CHECK_NET to 120)
+        val labels = choices.map { (k, s) ->
+            getString(if (k == Steps.CHECK_VPN) R.string.check_step_vpn else R.string.check_step_net) + " · " + Steps.words(s)
+        }
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.check_step_title)
+            .setSingleChoiceItems(labels.toTypedArray(), choices.indexOf(kind to seconds)) { d, i ->
+                done(Steps.check(choices[i].first, choices[i].second))
+                d.dismiss()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
     private fun pauseRow(box: LinearLayout, order: MutableList<String>, i: Int, commit: () -> Unit) {
         val seconds = Steps.pauseOf(order[i]) ?: 0
         val b = MaterialButton(this, null, android.R.attr.borderlessButtonStyle).apply {
@@ -1969,6 +2010,7 @@ class RuleEditActivity : AppCompatActivity() {
             tiles = tiles.takeIf { Act.TILES in shown }.orEmpty(),
             endTiles = e(Act.TILES, atEnd.tiles).orEmpty(),
             vpnApp = vpnApp,
+            vpnFallback = vpnFallback.takeIf { Act.VPN in shown && vpn == Toggle.ON },
             vpn = vpn.takeIf { Act.VPN in shown },
             vpnOffApp = vpnOffApp.takeIf { Act.VPN in shown && vpn == Toggle.OFF },
             endVpn = e(Act.VPN, atEnd.vpn),
@@ -2039,9 +2081,9 @@ class RuleEditActivity : AppCompatActivity() {
             endDataSim = e(Act.DATASIM, atEnd.dataSim),
             waitLocked = v.waitRow.toggle.isChecked && t != Trigger.LOCKED && t != Trigger.MANUAL,
             waitAppsOnly = v.waitRow.toggle.isChecked && t != Trigger.LOCKED && t != Trigger.MANUAL && v.waitApps.isChecked && v.waitApps.visibility == View.VISIBLE,
-            steps = Steps.toSave(steps.filter { s -> Steps.pauseOf(s) != null || shown.any { it.name == s } }, Steps.START_ORDER),
+            steps = Steps.toSave(steps.filter { s -> Steps.isMark(s) || shown.any { it.name == s } }, Steps.START_ORDER),
             endSteps = if (!restores) emptyList() else Steps.toSave(atEnd.steps.filter { s ->
-                Steps.pauseOf(s) != null || atEnd.shown.any { it.name == s && allowedEnd(it) && (custom || it.anyEnd) }
+                Steps.isMark(s) || atEnd.shown.any { it.name == s && allowedEnd(it) && (custom || it.anyEnd) }
             }, Steps.END_ORDER),
         )
         // The same as the end, it is no block of its own: unlocking ends the night.
@@ -2073,7 +2115,7 @@ class RuleEditActivity : AppCompatActivity() {
             note = u.texts[Act.NOTE].takeIf { Act.NOTE in u.shown }, http = u.texts[Act.HTTP].takeIf { Act.HTTP in u.shown },
             shell = u.texts[Act.SHELL].takeIf { Act.SHELL in u.shown },
             steps = Steps.toSave(u.steps.filter { s ->
-                Steps.pauseOf(s) != null || u.shown.any { it.name == s && allowedEnd(it) && (custom || it.anyEnd) }
+                Steps.isMark(s) || u.shown.any { it.name == s && allowedEnd(it) && (custom || it.anyEnd) }
             }, Steps.END_ORDER),
         )
     }

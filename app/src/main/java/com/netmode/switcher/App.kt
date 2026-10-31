@@ -23,6 +23,7 @@ class App : Application() {
                 .setTimeout(20)
         )
         runCatching { HotspotPresetTiles.watch() }
+        runCatching { TetherTraffic.watch() }
 
         // OxygenOS drops the PendingIntent network callback when it cleans the app up, so it
         // is re-registered on every process start. The call is a single binder round trip and
