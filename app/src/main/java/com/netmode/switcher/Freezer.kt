@@ -144,6 +144,10 @@ object Freezer {
     private val retryAt = ConcurrentHashMap<String, Long>()
     enum class WaitReason { BUSY, CALL, ON_SCREEN, NO_ACCESS, FAILED }
     private val waiting = ConcurrentHashMap<String, WaitReason>()
+
+    /** Freezes refused in a row, per key, and the system's last answer: retries back off, the log hears once. */
+    private val failCount = ConcurrentHashMap<String, Int>()
+    private val failWhy = ConcurrentHashMap<String, String>()
     @Volatile private var foregroundKey: String? = null
 
     fun waitReason(key: String): WaitReason? = waiting[key]
@@ -437,6 +441,9 @@ object Freezer {
      */
     suspend fun check(why: String, screenOff: Boolean = false, force: Set<String> = emptySet()) = lock.withLock {
         val now = System.currentTimeMillis()
+        // An app uninstalled since: dropped from the list, or its freeze fails at every look.
+        val pm = App.ctx.packageManager
+        if (apps.any { !AppKey.isClone(it.key) && !installed(pm, it.key) }) syncLocked(boot = false)
         val thawed = apps.filter { a -> !a.frozen && a.heldBy == 0L && a.keepUntil != -1L &&
             (a.key in force || a.keepUntil > 0L || delayOf(a) != NEVER) }
         if (thawed.isEmpty()) return@withLock IceWatch.arm(nextDue(now))
@@ -567,6 +574,12 @@ object Freezer {
             if (!b.frozen && b.thawedAt == 0L) b = b.copy(thawedAt = now)
             b
         } }
+        // Clones live in another user, out of this app's sight: the shell tells which are gone.
+        val clones = apps.filter { AppKey.isClone(it.key) }
+        if (clones.isNotEmpty() && Privileged.available()) {
+            runCatching { Privileged.exec(goneScript(clones.map { it.key }) + "true\n") }.getOrNull()
+                ?.let { dropGone(gone(it), "удалено с телефона") }
+        }
         if (boot && Prefs.iceBootCheck) {
             val thawed = apps.filter { !it.frozen && it.heldBy == 0L && !IcePolicy.protected(it, now) }.map { it.key }
             if (thawed.isNotEmpty() && Privileged.available()) freezeLocked(thawed, "после перезагрузки")
@@ -583,25 +596,45 @@ object Freezer {
         if (targets.isEmpty()) return 0
         // Frozen the other way: thawed first, or a disabled app would stay disabled under a suspension.
         val moving = targets.filter { it.frozen && it.frozenAs != modeOf(it) }
-        val script = (if (moving.isNotEmpty()) thawScript(moving) else "") + freezeScript(targets.filter { !it.frozen || it in moving })
+        val script = goneScript(targets.map { it.key }.filter { AppKey.isClone(it) }) +
+            (if (moving.isNotEmpty()) thawScript(moving) else "") + freezeScript(targets.filter { !it.frozen || it in moving })
         val out = runCatching { Privileged.exec(script, timeoutMs = 15_000L + 3_000L * targets.size) }
             .onFailure { Prefs.log("морозилка ($why): ошибка — ${it.message}") }
             .getOrNull() ?: run {
                 targets.forEach { waiting[it.key] = WaitReason.FAILED; retryAt[it.key] = System.currentTimeMillis() + 60_000L }
                 return 0
             }
-        val failed = failures(out)
-        val done = targets.filter { it.key !in failed }.associateBy { it.key }
+        val removed = gone(out)
+        dropGone(removed, why)
+        val reasons = failures(out) - removed
+        val failed = reasons.keys
+        val done = targets.filter { it.key !in failed && it.key !in removed }.associateBy { it.key }
         edit { list ->
             list.map { a ->
                 if (a.key in done) a.copy(frozenAs = modeOf(done.getValue(a.key)), thawedAt = 0L, heldBy = 0L, keepUntil = 0L) else a
             }
         }
-        done.keys.forEach { seenAt -= it; retryAt -= it; waiting -= it }
-        failed.forEach { waiting[it] = WaitReason.FAILED; retryAt[it] = System.currentTimeMillis() + 60_000L }
-        Prefs.log("морозилка ($why): заморожено ${done.size}" +
-            (if (done.size <= 3) " — " + done.keys.joinToString(", ") { label(it) } else "") +
-            if (failed.isNotEmpty()) ", не удалось: " + failed.joinToString(", ") { label(it) } else "")
+        done.keys.forEach { seenAt -= it; retryAt -= it; waiting -= it; failCount -= it; failWhy -= it }
+        val now = System.currentTimeMillis()
+        // Refused again the same way: no new entry — the first one said it, and a retry every
+        // minute would fill the log with the same line.
+        val news = failed.filter { k ->
+            val n = (failCount[k] ?: 0) + 1
+            failCount[k] = n
+            waiting[k] = WaitReason.FAILED
+            retryAt[k] = now + IcePolicy.failRetryMs(n)
+            val why = reasons.getValue(k)
+            (n == 1 || failWhy[k] != why).also { failWhy[k] = why }
+        }
+        if (done.isNotEmpty() || news.isNotEmpty()) {
+            Prefs.log("морозилка ($why): " +
+                (if (done.isNotEmpty()) "заморожено ${done.size}" +
+                    (if (done.size <= 3) " — " + done.keys.joinToString(", ") { label(it) } else "") else "") +
+                (if (done.isNotEmpty() && news.isNotEmpty()) "; " else "") +
+                (if (news.isNotEmpty()) "не удалось заморозить: " + news.joinToString(", ") { k ->
+                    label(k) + reasons.getValue(k).let { if (it.isEmpty()) "" else " ($it)" }
+                } + " — следующая попытка через ${IcePolicy.failRetryMs(failCount[news.first()] ?: 1) / 60_000L} мин" else ""))
+        }
         Log.i(TAG, "freezer froze ${done.keys}, failed $failed")
         return done.size
     }
@@ -615,7 +648,7 @@ object Freezer {
             val out = runCatching { Privileged.exec(thawScript(frozen), timeoutMs = 15_000L + 3_000L * frozen.size) }
                 .onFailure { Prefs.log("морозилка ($why): ошибка — ${it.message}") }
                 .getOrNull() ?: run { targets.forEach { waiting[it.key] = WaitReason.FAILED }; return emptySet() }
-            failures(out)
+            failures(out).keys
         }
         val now = System.currentTimeMillis()
         val ok = targets.map { it.key }.filter { it !in failed }.toSet()
@@ -626,7 +659,7 @@ object Freezer {
                     heldBy = if (hold != 0L) hold else a.heldBy)
             }
         }
-        ok.forEach { retryAt -= it; waiting -= it }
+        ok.forEach { retryAt -= it; waiting -= it; failCount -= it; failWhy -= it }
         failed.forEach { waiting[it] = WaitReason.FAILED }
         if (frozen.isNotEmpty()) {
             Prefs.log("морозилка ($why): разморожено ${frozen.size - failed.size}" +
@@ -636,8 +669,35 @@ object Freezer {
         return ok
     }
 
-    private fun failures(out: String): Set<String> =
-        out.lineSequence().filter { it.startsWith("@F ") }.map { it.removePrefix("@F ").trim() }.toSet()
+    /**
+     * "@G key" for each of [keys] no longer installed in its user. A user whose list cannot be
+     * read says nothing, so a failed `pm` never passes for an uninstall.
+     */
+    private fun goneScript(keys: List<String>): String = buildString {
+        val d = "$"
+        for ((u, group) in keys.groupBy { AppKey.user(it) }) {
+            appendLine("l=$d(pm list packages --user $u 2>/dev/null)")
+            for (k in group) appendLine("[ -n \"${d}l\" ] && { echo \"${d}l\" | grep -qxF 'package:${AppKey.pkg(k)}' || echo \"@G $k\"; }")
+        }
+    }
+
+    private fun gone(out: String): Set<String> =
+        out.lineSequence().filter { it.startsWith("@G ") }.map { it.removePrefix("@G ").trim() }.filter { it.isNotEmpty() }.toSet()
+
+    /** Takes uninstalled apps off the list and forgets their waits. */
+    private fun dropGone(keys: Set<String>, why: String) {
+        if (keys.isEmpty()) return
+        val names = keys.joinToString(", ") { label(it) }
+        edit { list -> list.filter { it.key !in keys } }
+        keys.forEach { seenAt -= it; retryAt -= it; waiting -= it; failCount -= it; failWhy -= it }
+        Prefs.log("морозилка ($why): убрано из списка, приложения больше нет — $names")
+    }
+
+    /** "@F key [what the system said]" → key to its reason (empty when none was printed). */
+    private fun failures(out: String): Map<String, String> =
+        out.lineSequence().filter { it.startsWith("@F ") }.map { it.removePrefix("@F ").trim() }
+            .filter { it.isNotEmpty() }
+            .associate { it.substringBefore(' ') to it.substringAfter(' ', "").trim().take(160) }
 
     private fun cli(): String = "CLASSPATH=${App.ctx.applicationInfo.sourceDir} app_process /system/bin"
 
@@ -660,11 +720,13 @@ object Freezer {
             appendLine("case \"${d}r\" in ok=*) f=\",${d}{r#ok=},\" ;; *) f=all ;; esac")
             for (k in group) {
                 val p = AppKey.pkg(k)
-                appendLine("case \"${d}f\" in all|*,$p,*) pm suspend --user $u $p 2>&1 | grep -q 'suspended state: true' || echo \"@F $k\" ;; esac")
+                appendLine("case \"${d}f\" in all|*,$p,*) o=$d(pm suspend --user $u $p 2>&1); " +
+                    "case \"${d}o\" in *'suspended state: true'*) ;; *) echo \"@F $k $d(echo \"${d}o\" | tr '\\n' ' ')\" ;; esac ;; esac")
             }
         }
         for (a in targets.filter { modeOf(it) == IceMode.DEEP }) {
-            appendLine("pm disable-user --user ${AppKey.user(a.key)} ${AppKey.pkg(a.key)} 2>&1 | grep -q 'new state' || echo \"@F ${a.key}\"")
+            appendLine("o=$d(pm disable-user --user ${AppKey.user(a.key)} ${AppKey.pkg(a.key)} 2>&1); " +
+                "case \"${d}o\" in *'new state'*) ;; *) echo \"@F ${a.key} $d(echo \"${d}o\" | tr '\\n' ' ')\" ;; esac")
         }
         for (a in targets) appendLine("am force-stop ${AppKey.shell(a.key)} >/dev/null 2>&1")
     }
