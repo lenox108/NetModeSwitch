@@ -441,6 +441,9 @@ object Freezer {
      */
     suspend fun check(why: String, screenOff: Boolean = false, force: Set<String> = emptySet()) = lock.withLock {
         val now = System.currentTimeMillis()
+        // An app uninstalled since: dropped from the list, or its freeze fails at every look.
+        val pm = App.ctx.packageManager
+        if (apps.any { !AppKey.isClone(it.key) && !installed(pm, it.key) }) syncLocked(boot = false)
         val thawed = apps.filter { a -> !a.frozen && a.heldBy == 0L && a.keepUntil != -1L &&
             (a.key in force || a.keepUntil > 0L || delayOf(a) != NEVER) }
         if (thawed.isEmpty()) return@withLock IceWatch.arm(nextDue(now))
