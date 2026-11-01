@@ -176,4 +176,9 @@ class IcePolicyTest {
             assertEquals(name, IceSort.valueOf(name).name)
         }
     }
+
+    @Test fun refusedFreezeRetriesBackOffToHourly() {
+        val steps = (1..7).map { IcePolicy.failRetryMs(it) / 60_000L }
+        assertEquals(listOf(1L, 5L, 15L, 30L, 60L, 60L, 60L), steps)
+    }
 }
