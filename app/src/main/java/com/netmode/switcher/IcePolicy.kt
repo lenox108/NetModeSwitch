@@ -12,6 +12,15 @@ object IcePolicy {
         return maxOf(a.thawedAt, lastSeen) + minutes * 60_000L
     }
 
+    /** After the [n]th refused freeze in a row: 1, 5, 15, 30 min, then hourly. */
+    fun failRetryMs(n: Int): Long = when {
+        n <= 1 -> 60_000L
+        n == 2 -> 5 * 60_000L
+        n == 3 -> 15 * 60_000L
+        n == 4 -> 30 * 60_000L
+        else -> 60 * 60_000L
+    }
+
     fun sameState(a: IceApp, b: IceApp): Boolean =
         a.frozenAs == b.frozenAs && a.thawedAt == b.thawedAt && a.heldBy == b.heldBy &&
             a.keepUntil == b.keepUntil && a.launchedAt == b.launchedAt && a.mode == b.mode
