@@ -77,6 +77,16 @@ class IceFolderActivity : AppCompatActivity() {
         super.onSaveInstanceState(outState)
     }
 
+    /**
+     * Back from an app opened here (or from anywhere else): nothing is under the finger now,
+     * so the chosen sort applies again — "Последние открытые" puts that app first at once.
+     * Not onStart: after a rotation the restored order must stay.
+     */
+    override fun onRestart() {
+        super.onRestart()
+        settledOrder = null
+    }
+
     override fun onResume() {
         super.onResume()
         renderFolder?.invoke()
