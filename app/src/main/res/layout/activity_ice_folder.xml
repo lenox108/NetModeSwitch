@@ -47,10 +47,16 @@
         android:layout_marginEnd="20dp"
         android:text="@string/ice_grid_hint" />
 
-    <FrameLayout
+    <!-- Pull down to check the list again and apply the chosen sort. -->
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/refresh"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
 
         <GridView
             android:id="@+id/grid"
@@ -76,6 +82,7 @@
             android:textColor="?attr/colorOnSurfaceVariant"
             android:visibility="gone" />
     </FrameLayout>
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
     <com.netmode.switcher.IceActionLayout style="@style/NMS.IceActionBar">
 

@@ -65,6 +65,7 @@ dependencies {
     implementation(libs.material)
     implementation(libs.lifecycle.runtime.ktx)
     implementation(libs.coroutines.android)
+    implementation(libs.swiperefreshlayout)
     implementation(libs.libsu.core)
     implementation(libs.shizuku.api)
     implementation(libs.shizuku.provider)

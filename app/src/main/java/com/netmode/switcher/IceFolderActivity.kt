@@ -219,6 +219,22 @@ class IceFolderActivity : AppCompatActivity() {
             icons.preload(shown.map { it.first.key })
         }
         ui.search.doAfterTextChanged { renderFolder?.invoke() }
+        // The grid sits in a frame with the empty text: ask the grid itself whether it is at the top.
+        ui.refresh.setOnChildScrollUpCallback { _, _ -> ui.grid.canScrollVertically(-1) }
+        ui.refresh.setOnRefreshListener {
+            lifecycleScope.launch {
+                val fresh = withContext(Dispatchers.IO) {
+                    runCatching { Freezer.sync() }
+                    val keys = Freezer.apps.map { it.key }
+                    keys.zip(AppPickerActivity.labels(keys)).toMap()
+                }
+                labels.clear()
+                labels += fresh
+                settledOrder = null
+                ui.refresh.isRefreshing = false
+                renderFolder?.invoke()
+            }
+        }
         Prefs.listen(folderPrefs)
         // Asking the system for a name takes time: on the main thread it would hold the opening.
         lifecycleScope.launch {
