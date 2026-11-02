@@ -8,6 +8,7 @@ coroutines = "1.10.2"
 libsu = "6.0.0"
 shizuku = "13.1.5"
 hiddenapibypass = "6.1"
+swiperefreshlayout = "1.1.0"
 junit = "4.13.2"
 
 [libraries]
@@ -21,6 +22,7 @@ libsu-service = { group = "com.github.topjohnwu.libsu", name = "service", versio
 shizuku-api = { group = "dev.rikka.shizuku", name = "api", version.ref = "shizuku" }
 shizuku-provider = { group = "dev.rikka.shizuku", name = "provider", version.ref = "shizuku" }
 hiddenapibypass = { group = "org.lsposed.hiddenapibypass", name = "hiddenapibypass", version.ref = "hiddenapibypass" }
+swiperefreshlayout = { group = "androidx.swiperefreshlayout", name = "swiperefreshlayout", version.ref = "swiperefreshlayout" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 
 [plugins]
