@@ -104,4 +104,19 @@ class TileStateProbeTest {
         assertNull(TileStateProbe.foreground("Permission Denial: can't dump ActivityManager"))
         assertNull(TileStateProbe.foreground(""))
     }
+
+    @Test fun happGoesByItsOwnSilentCommands() {
+        val happ = "su.happ.proxyutility/.service.QSTileService"
+        assertEquals("am start -a android.intent.action.VIEW -d happ://disconnect_without_ui", TileStateProbe.command(happ, false))
+        assertEquals("am start -a android.intent.action.VIEW -d happ://connect_without_ui", TileStateProbe.command(happ, true))
+    }
+
+    @Test fun otherTilesKeepTheClick() {
+        assertNull(TileStateProbe.command("org.amnezia.vpn/.AmneziaTileService", false))
+    }
+
+    @Test fun aCommandErrorFallsBackToTheClick() {
+        assertTrue(TileStateProbe.commandStarted("Starting: Intent { act=android.intent.action.VIEW dat=happ://disconnect_without_ui/... }"))
+        assertFalse(TileStateProbe.commandStarted("Error: Activity not started, unable to resolve Intent"))
+    }
 }

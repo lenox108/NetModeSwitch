@@ -8,6 +8,18 @@ internal object TileStateProbe {
         component in explicit || component.substringBefore('/') in setOf("org.amnezia.vpn", "org.amnezia.awg")
 
     /**
+     * The app's own command for a state, where it has one. Happ ignores a tile click while the
+     * shade is closed: its tile then reads inactive and the proxy stays on. These act at once,
+     * show nothing, and are harmless when the state already holds, unlike a click.
+     */
+    fun command(component: String, on: Boolean): String? =
+        if (component.substringBefore('/') != "su.happ.proxyutility") null
+        else "am start -a android.intent.action.VIEW -d happ://" + (if (on) "connect" else "disconnect") + "_without_ui"
+
+    /** An older version without the command answers with an error: the tile click is still there. */
+    fun commandStarted(output: String): Boolean = !output.contains("Error")
+
+    /**
      * What [vpn] reads, cut down on the device: the await loop asks every 2 s, and the full dump
      * is large. Keeps the first lines, where a failed dump says so, then "Current Networks:"
      * up to and including the next header, and stops reading there.

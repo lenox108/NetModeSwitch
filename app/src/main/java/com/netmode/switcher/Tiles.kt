@@ -126,7 +126,9 @@ object Tiles {
             prepare = ::ensureAdded,
             click = { c ->
                 TileClickWatch.suppress(listOf(c))
-                Privileged.exec("cmd statusbar click-tile '$c' 2>&1")
+                val command = TileStateProbe.command(c, targets.getValue(c))
+                val sent = command != null && TileStateProbe.commandStarted(Privileged.exec("$command 2>&1"))
+                if (!sent) Privileged.exec("cmd statusbar click-tile '$c' 2>&1")
                 // Simultaneous clicks can interfere while SystemUI binds another service.
                 delay(2_000)
             },
