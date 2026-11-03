@@ -825,15 +825,7 @@ object AppFreezer {
 apps=" ${launchable.joinToString(" ")} "
 skipall=" ${skipAll.joinToString(" ")} "
 skipkeys=" ${skipKeys.joinToString(" ")} "
-# Padlocks per app and user ("pkg#user"); one counts only where the app is installed there.
-entries=${'$'}(cat $RECENTS_LOCK 2>/dev/null | grep -oE '\{[^}]*\}' | grep -E '"scenes":(1|2)[,}]' | grep -oE '"packageNameUserId":"[^"]+' | cut -d'"' -f4)
-locked=""
-for u in ${'$'}(echo "${'$'}entries" | grep '#' | cut -d'#' -f2 | sort -u); do
-    inst=" ${'$'}(pm list packages --user ${'$'}u 2>/dev/null | cut -d: -f2 | tr '\n' ' ') "
-    for e in ${'$'}(echo "${'$'}entries" | grep "#${'$'}u${'$'}"); do
-        case "${'$'}inst" in *" ${'$'}{e%#*} "*) locked="${'$'}locked ${'$'}e" ;; esac
-    done
-done
+$LOCKED_SCRIPT
 echo "@K ${'$'}(echo ${'$'}locked | wc -w)"
 skipkeys="${'$'}skipkeys ${'$'}locked "
 # Every running app process as "pkg#user": the user from its uid name, u0_a123 / u999_a123.
@@ -916,6 +908,31 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
      * the launcher's folder there.
      */
     private const val RECENTS_LOCK = "/proc/1/root/data/user_de/0/*/files/oplus/recenttask/app_lock_data_file_name"
+
+    /** Sets `locked` to the padlocked apps as " pkg#user …"; one counts only where the app is installed there. */
+    private val LOCKED_SCRIPT = """
+entries=${'$'}(cat $RECENTS_LOCK 2>/dev/null | grep -oE '\{[^}]*\}' | grep -E '"scenes":(1|2)[,}]' | grep -oE '"packageNameUserId":"[^"]+' | cut -d'"' -f4)
+locked=""
+for u in ${'$'}(echo "${'$'}entries" | grep '#' | cut -d'#' -f2 | sort -u); do
+    inst=" ${'$'}(pm list packages --user ${'$'}u 2>/dev/null | cut -d: -f2 | tr '\n' ' ') "
+    for e in ${'$'}(echo "${'$'}entries" | grep "#${'$'}u${'$'}"); do
+        case "${'$'}inst" in *" ${'$'}{e%#*} "*) locked="${'$'}locked ${'$'}e" ;; esac
+    done
+done
+""".trim()
+
+    /**
+     * App keys ("pkg" / "pkg@user") among [keys] that are padlocked in the recents. Such an app
+     * is left alone by a stop (with or without the background ban) just as by unloading: the
+     * padlock is the user's own "keep this running". Empty where there is no padlock file.
+     */
+    private suspend fun recentsLocked(keys: List<String>): Set<String> {
+        if (keys.isEmpty()) return emptySet()
+        val out = runCatching { Privileged.exec("$LOCKED_SCRIPT\necho \"@K ${'$'}locked\"") }.getOrNull() ?: return emptySet()
+        val locked = out.lineSequence().firstOrNull { it.startsWith("@K") }
+            ?.removePrefix("@K")?.trim()?.split(Regex("\\s+"))?.filter { it.isNotEmpty() }?.toSet().orEmpty()
+        return keys.filter { "${AppKey.pkg(it)}#${AppKey.user(it)}" in locked }.toSet()
+    }
 
     /** Owner of the apps a rule holds from its end until its next start. */
     fun endOwner(ruleId: Long): Long = -ruleId
@@ -1462,11 +1479,18 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
         val infos = keys
             .filter { AppKey.valid(it) && AppKey.pkg(it) !in guarded && it !in thawProtected }
             .mapNotNull { k -> runCatching { k to pm.getApplicationInfo(AppKey.pkg(k), 0) }.getOrNull() }
-        if (infos.isEmpty()) {
-            Prefs.log("приложения ($why): нечего останавливать")
+        // A padlock in the recents keeps an app from being stopped, as it does from unloading;
+        // freezing (pm suspend) is a deliberate block and still goes ahead.
+        val padlocked = recentsLocked(infos.map { it.first }.filter { methodOf(it) != FreezeMethod.SUSPEND })
+        if (padlocked.isNotEmpty()) {
+            Prefs.log("приложения ($why): закреплены замком, не тронуты — " +
+                AppPickerActivity.labels(padlocked.toList()).joinToString(", "))
+        }
+        if (infos.none { it.first !in padlocked }) {
+            if (padlocked.isEmpty()) Prefs.log("приложения ($why): нечего останавливать")
             return
         }
-        val pkgs = infos.map { it.first }
+        val pkgs = infos.map { it.first }.filterNot { it in padlocked }
         // Only the original's flag is visible to the app; a clone suspended by another tool is
         // not detectable here, so it is treated as not suspended before.
         val wasSuspended = infos
