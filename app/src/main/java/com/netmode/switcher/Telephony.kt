@@ -97,6 +97,11 @@ object Telephony {
         return if (mask == 0L) -1L else mask
     }
 
+    /** What the last write answered, for the error message when it was refused. */
+    @Volatile
+    var lastWriteReply: String = ""
+        private set
+
     suspend fun writeMask(slot: Int, mask: Long): Boolean = writeWith(Profile.method, slot, mask)
 
     suspend fun writeWith(method: WriteMethod, slot: Int, mask: Long): Boolean = when (method) {
@@ -105,11 +110,14 @@ object Telephony {
             val binary = mask.toString(2).padStart(20, '0')
             val out = Privileged.exec("$SET -s $slot $binary")
             Log.i(TAG, "slot $slot set $binary -> $out")
+            lastWriteReply = out
             out.contains("completed", ignoreCase = true)
         }
         WriteMethod.BINDER -> {
             val sub = subOf(slot)
-            sub >= 0 && Privileged.exec("${cli()} set $sub $mask").lineSequence().any { it.trim() == "ok" }
+            if (sub < 0) { lastWriteReply = "нет подписки для слота $slot"; false }
+            else Privileged.exec("${cli()} set $sub $mask").also { lastWriteReply = it }
+                .lineSequence().any { it.trim() == "ok" }
         }
     }
 }
