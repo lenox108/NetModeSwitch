@@ -1,6 +1,7 @@
 package com.netmode.switcher
 
 import android.util.Log
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -37,13 +38,9 @@ object ModeController {
 
     suspend fun apply(slot: Int, target: NetMode, source: Source): Result<NetMode> = lock.withLock {
         runCatching {
-            if (!Telephony.writeMask(slot, Profile.maskFor(target, slot))) {
-                error("Команда телефонии не приняла запись для SIM ${slot + 1}")
-            }
-
             // Never trust the write. A silent OEM no-op is the failure mode to catch here:
-            // without this check it would look like success and lie to the user.
-            val back = Telephony.readMask(slot)
+            // without the read-back it would look like success and lie to the user.
+            val back = writeVerified(slot, Profile.maskFor(target, slot)) { NetMode.of(it) == target }
             val actual = NetMode.of(back)
             if (actual != target) {
                 error("SIM ${slot + 1}: просили ${target.label}, радио сообщает ${Raf.describe(back)}")
@@ -58,11 +55,38 @@ object ModeController {
     /** Writes a raw mask — a user's own setting put back as it was, not one of the presets. */
     suspend fun applyMask(slot: Int, mask: Long): Result<NetMode?> = lock.withLock {
         runCatching {
-            if (!Telephony.writeMask(slot, mask)) error("Команда телефонии не приняла запись для SIM ${slot + 1}")
-            val back = Telephony.readMask(slot)
+            val back = writeVerified(slot, mask) { it == mask }
             if (back != mask) error("SIM ${slot + 1}: просили ${Raf.describe(mask)}, радио сообщает ${Raf.describe(back)}")
             NetMode.of(back).also { remember(slot, it); NetModeTiles.refresh() }
         }
+    }
+
+    /**
+     * Writes [mask] and reads it back, retrying a refused or not yet applied write.
+     *
+     * `cmd phone` can refuse a write while the radio is busy — seen once as a Wi-Fi rule fired
+     * on arrival home. A single refusal left the rule undone with nothing to try again, since
+     * the rule fires only on the event, so a few spaced attempts are made before giving up. A write reported as refused is still read back: what matters is the radio.
+     * Returns the last mask read; throws when no write was accepted and the mode is not there.
+     */
+    private suspend fun writeVerified(slot: Int, mask: Long, done: (Long) -> Boolean): Long {
+        var back = -1L
+        var accepted = false
+        for (attempt in 0 until WRITE_ATTEMPTS) {
+            if (attempt > 0) {
+                Log.w(TAG, "slot $slot write attempt $attempt failed: ${Telephony.lastWriteReply}")
+                delay(WRITE_RETRY_MS * attempt)
+            }
+            accepted = Telephony.writeMask(slot, mask) || accepted
+            back = Telephony.readMask(slot)
+            if (done(back)) return back
+        }
+        if (!accepted) {
+            val reply = Telephony.lastWriteReply.lineSequence().map { it.trim() }.firstOrNull { it.isNotEmpty() }
+            error("Команда телефонии не приняла запись для SIM ${slot + 1}" +
+                " (попыток: $WRITE_ATTEMPTS${reply?.let { ", ответ: ${it.take(120)}" } ?: ""})")
+        }
+        return back
     }
 
     /**
@@ -115,4 +139,6 @@ object ModeController {
     }
 
     private const val TAG = "netmode"
+    private const val WRITE_ATTEMPTS = 3
+    private const val WRITE_RETRY_MS = 1_500L
 }
