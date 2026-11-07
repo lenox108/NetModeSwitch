@@ -22,6 +22,7 @@ class App : Application() {
             Shell.Builder.create()
                 .setTimeout(20)
         )
+        runCatching { ChannelDescriptions.apply(this) }
         runCatching { HotspotPresetTiles.watch() }
         runCatching { TetherTraffic.watch() }
 

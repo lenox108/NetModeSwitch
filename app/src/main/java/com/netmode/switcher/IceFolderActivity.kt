@@ -11,12 +11,18 @@ import android.widget.BaseAdapter
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.widget.doAfterTextChanged
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.netmode.switcher.databinding.ActivityIceFolderBinding
 import com.netmode.switcher.databinding.CellIceBinding
+import com.netmode.switcher.databinding.RowIceBinding
+import com.netmode.switcher.IceGrid.Look
+import com.google.android.material.color.MaterialColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -24,6 +30,8 @@ import kotlinx.coroutines.withContext
 class IceFolderActivity : AppCompatActivity() {
     private lateinit var ui: ActivityIceFolderBinding
     private var renderFolder: (() -> Unit)? = null
+    /** Swaps the rows for another look: views of the old look are not reused. */
+    private var applyLook: (() -> Unit)? = null
     private var folderGroups: IceGroupControls? = null
     /** The order fixed at opening: a launch or a thaw must not move the icons under the finger. */
     private var settledOrder: List<String>? = null
@@ -32,6 +40,7 @@ class IceFolderActivity : AppCompatActivity() {
     private var renderPending = false
     private val folderPrefs = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == "ice_folder_sort" || key == "ice_sort" || key == "ice_order") runOnUiThread { settledOrder = null }
+        if (key == "ice_folder_view") runOnUiThread { applyLook?.invoke() }
         if (key == Prefs.KEY_ICE_APPS || key == "ice_groups" || key == "ice_folder_sort" || key == "ice_sort" || key == "ice_order" || key in IceGrid.preferenceKeys) {
             runOnUiThread { renderFolder?.invoke() }
         }
@@ -104,9 +113,12 @@ class IceFolderActivity : AppCompatActivity() {
     override fun onDestroy() {
         Prefs.unlisten(folderPrefs)
         renderFolder = null
+        applyLook = null
         folderGroups = null
         super.onDestroy()
     }
+
+    private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
     private fun toast(text: String) = Toast.makeText(applicationContext, text, Toast.LENGTH_SHORT).show()
 
@@ -149,7 +161,14 @@ class IceFolderActivity : AppCompatActivity() {
         ui.toolbar.setNavigationOnClickListener { finish() }
         ui.toolbar.inflateMenu(R.menu.ice_folder)
         ui.toolbar.setOnMenuItemClickListener {
-            IceOrderDialog.choose(this, Prefs.iceFolderSort) { Prefs.iceFolderSort = it }
+            when (it.itemId) {
+                R.id.action_view -> Prefs.iceFolderView = when (IceGrid.folderLook) {
+                    Look.LIST -> Look.COMPACT
+                    Look.COMPACT -> Look.GRID
+                    Look.GRID -> Look.LIST
+                }.pref
+                else -> IceOrderDialog.choose(this, Prefs.iceFolderSort) { order -> Prefs.iceFolderSort = order }
+            }
             true
         }
         ui.manage.setOnClickListener {
@@ -165,27 +184,80 @@ class IceFolderActivity : AppCompatActivity() {
         var labelsReady = false
         val accessibility = getSystemService(AccessibilityManager::class.java)
         var shown = emptyList<Pair<IceApp, String>>()
+        var look = IceGrid.folderLook
         val adapter = object : BaseAdapter() {
             override fun getCount() = shown.size
             override fun getItem(position: Int) = shown[position]
             override fun getItemId(position: Int) = position.toLong()
+            override fun getViewTypeCount() = 2
+            override fun getItemViewType(position: Int) = if (look == Look.GRID) 1 else 0
             override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                if (look != Look.GRID) return row(position, convertView, parent)
                 val c = convertView?.tag as? CellIceBinding
                     ?: CellIceBinding.inflate(layoutInflater, parent, false).also { it.root.tag = it }
                 val (a, name) = shown[position]
                 IceGrid.style(c, ui.grid, a, showState = false)
                 c.label.text = if (a.favorite) getString(R.string.ice_favorite_name, name) else name
                 icons.bind(c.icon, a.key)
-                c.badge.visibility = if (a.frozen) View.VISIBLE else View.GONE
+                IceModeIndicator.bindBadge(c.badge, a)
                 // The status may read the rules from storage: only TalkBack needs it, not each bind.
                 c.root.contentDescription = if (accessibility.isEnabled) name + ", " + IceStatus.text(this@IceFolderActivity, a) else name
                 c.root.setOnClickListener { open(a.key) }
                 c.root.setOnLongClickListener { folderAppActions(a.key); true }
                 return c.root
             }
+
+            /** List looks: the same rows as the freezer screen, with the mode marker in place of its buttons. */
+            private fun row(position: Int, convertView: View?, parent: ViewGroup): View {
+                val r = convertView?.tag as? RowIceBinding
+                    ?: RowIceBinding.inflate(layoutInflater, parent, false).also { it.root.tag = it }
+                val (a, name) = shown[position]
+                val compact = look == Look.COMPACT
+                IceGrid.style(r, ui.grid, compact, selecting = false)
+                r.launch.visibility = View.GONE
+                r.toggle.visibility = View.GONE
+                val state = IceStatus.text(this@IceFolderActivity, a)
+                val color = MaterialColors.getColor(r.root,
+                    if (a.frozen) androidx.appcompat.R.attr.colorPrimary else com.google.android.material.R.attr.colorTertiary)
+                r.label.text = if (a.favorite) getString(R.string.ice_favorite_name, name) else name
+                r.label.setTextColor(if (compact) color else MaterialColors.getColor(r.root, com.google.android.material.R.attr.colorOnSurface))
+                r.status.text = state
+                r.status.setTextColor(color)
+                icons.bind(r.icon, a.key)
+                IceModeIndicator.bindMarker(r.freezeMode, a, if (compact) 24 else 28)
+                r.open.contentDescription = "$name, $state"
+                r.open.setOnClickListener { open(a.key) }
+                r.open.setOnLongClickListener { folderAppActions(a.key); true }
+                r.root.setOnClickListener { open(a.key) }
+                r.root.setOnLongClickListener { folderAppActions(a.key); true }
+                return r.root
+            }
+        }
+        fun paintLook() {
+            val item = ui.toolbar.menu.findItem(R.id.action_view) ?: return
+            item.setIcon(when (look) {
+                Look.LIST -> R.drawable.ic_view_list
+                Look.COMPACT -> R.drawable.ic_view_compact
+                Look.GRID -> R.drawable.ic_view_grid
+            })
+            item.title = getString(R.string.ice_folder_view, getString(look.title))
+        }
+        fun layoutLook() {
+            val pad = if (look == Look.GRID) dp(8) else 0
+            ui.grid.setPadding(pad, dp(if (look == Look.GRID) 8 else 0), pad, dp(8))
+            ui.grid.verticalSpacing = dp(if (look == Look.GRID) 4 else 0)
+            IceGrid.apply(ui.grid, list = look != Look.GRID)
+        }
+        applyLook = {
+            look = IceGrid.folderLook
+            paintLook()
+            layoutLook()
+            ui.grid.adapter = adapter
+            renderFolder?.invoke()
         }
         ui.grid.adapter = adapter
-        IceGrid.apply(ui.grid, list = false)
+        paintLook()
+        layoutLook()
         IceGrid.watchBounds(ui.grid)
         ui.grid.setOnScrollListener(object : AbsListView.OnScrollListener {
             override fun onScrollStateChanged(view: AbsListView, state: Int) {
@@ -214,11 +286,20 @@ class IceFolderActivity : AppCompatActivity() {
             ui.freezeAll.isEnabled = apps.isNotEmpty()
             ui.freezeAll.visibility = if (groups.selection.isAll) View.VISIBLE else View.GONE
             ui.folderHint.visibility = if (groups.selection.isAll) View.VISIBLE else View.GONE
-            IceGrid.apply(ui.grid, list = false)
+            IceGrid.apply(ui.grid, list = look != Look.GRID)
             adapter.notifyDataSetChanged()
             icons.preload(shown.map { it.first.key })
         }
         ui.search.doAfterTextChanged { renderFolder?.invoke() }
+        // List rows show countdowns: refresh them while the folder is on screen.
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                while (true) {
+                    delay(30_000)
+                    if (look != Look.GRID) renderFolder?.invoke()
+                }
+            }
+        }
         // The grid sits in a frame with the empty text: ask the grid itself whether it is at the top.
         ui.refresh.setOnChildScrollUpCallback { _, _ -> ui.grid.canScrollVertically(-1) }
         ui.refresh.setOnRefreshListener {

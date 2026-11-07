@@ -35,6 +35,7 @@ object IceGrid {
     const val MAX_ROWS = 12
     val preferenceKeys = setOf("ice_view", "ice_columns", "ice_rows", "ice_icon_size", "ice_labels")
     val look: Look get() = Look.entries.firstOrNull { it.pref == Prefs.iceView } ?: Look.LIST
+    val folderLook: Look get() = Look.entries.firstOrNull { it.pref == Prefs.iceFolderView } ?: Look.GRID
     val size: Size get() = Size.entries.firstOrNull { it.pref == Prefs.iceIconSize } ?: Size.M
 
     private fun dp(ctx: Context, v: Int) = (v * ctx.resources.displayMetrics.density).toInt()

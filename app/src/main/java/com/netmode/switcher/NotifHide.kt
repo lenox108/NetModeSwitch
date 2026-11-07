@@ -327,6 +327,8 @@ object NotifHide {
     @Synchronized
     private fun seen(sbn: StatusBarNotification) {
         if (sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) return
+        // "Код 123456 скопирован": the title is the code itself, never kept.
+        if (sbn.packageName == App.ctx.packageName && sbn.notification.channelId == SmsCodes.CHANNEL) return
         // Only titles go to persistent history; message bodies stay in memory.
         val e = entryOf(sbn)
         val now = System.currentTimeMillis()

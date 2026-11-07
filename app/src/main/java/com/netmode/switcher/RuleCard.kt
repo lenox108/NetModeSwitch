@@ -40,7 +40,7 @@ internal object RuleCard {
         R.drawable.ic_apps.takeIf { r.packages.isNotEmpty() },
         R.drawable.ic_t_signal.takeIf { r.netMode != null },
         R.drawable.ic_t_data.takeIf { r.mobileData != null },
-        R.drawable.ic_t_wifi.takeIf { r.wifi != null },
+        R.drawable.ic_t_wifi.takeIf { r.wifi != null || r.join != null },
         R.drawable.ic_hotspot.takeIf { r.hotspot != null },
         R.drawable.ic_a_vpn.takeIf { r.vpn != null },
         R.drawable.ic_a_tiles.takeIf { r.tiles.isNotEmpty() },

@@ -36,6 +36,7 @@ class RuleEditActivity : AppCompatActivity() {
         NET(R.drawable.ic_t_net, R.string.act_network),
         DATA(R.drawable.ic_t_data, R.string.act_data_short),
         WIFI(R.drawable.ic_t_wifi, R.string.act_wifi),
+        JOIN(R.drawable.ic_t_wifi, R.string.act_join),
         HOTSPOT(R.drawable.ic_hotspot, R.string.act_hotspot),
         VPN(R.drawable.ic_a_vpn, R.string.act_vpn),
         DATASIM(R.drawable.ic_a_sim, R.string.act_datasim),
@@ -61,7 +62,7 @@ class RuleEditActivity : AppCompatActivity() {
         val isText: Boolean get() = this == NOTE || this == HTTP || this == SHELL
 
         /** Only at the start: something done once, with nothing to put back or set at the end. */
-        val startOnly: Boolean get() = this == RECONNECT || this == ICE
+        val startOnly: Boolean get() = this == RECONNECT || this == ICE || this == JOIN
     }
 
     private class TriggerInfo(val trigger: Trigger, val icon: Int, val title: Int, val hint: Int, val short: Int)
@@ -166,6 +167,8 @@ class RuleEditActivity : AppCompatActivity() {
     /** [Act.ICE]: thaw (or freeze) these freezer groups and apps, see [IceAction]. */
     private var iceThaw = true
     private var iceTargets = listOf<String>()
+    /** [Act.JOIN]: the saved network to connect to. */
+    private var join: WifiTarget? = null
     private var sys = mapOf<String, String>()
     /** The one-offs' texts: [Act.NOTE], [Act.HTTP], [Act.SHELL]. */
     private val texts = mutableMapOf<Act, String>()
@@ -205,7 +208,7 @@ class RuleEditActivity : AppCompatActivity() {
                 Act.LAUNCH -> launchApps = emptyList()
                 Act.SYS -> sys = emptyMap()
                 Act.NOTE, Act.HTTP, Act.SHELL -> texts -= a
-                Act.UNLOAD, Act.RECONNECT, Act.ICE -> Unit
+                Act.UNLOAD, Act.RECONNECT, Act.ICE, Act.JOIN -> Unit
             }
         }
 
@@ -429,6 +432,7 @@ class RuleEditActivity : AppCompatActivity() {
         atEnd.shown += shown.filter { !it.anyEnd }
         if (r.unload) shown += Act.UNLOAD
         if (r.reconnect) shown += Act.RECONNECT
+        r.join?.let { join = it; shown += Act.JOIN }
         r.ice?.let { iceThaw = it.thaw; iceTargets = it.targets; shown += Act.ICE }
         if (r.endUnload) atEnd.shown += Act.UNLOAD
         unloadAll = r.unloadAll; atEnd.unloadAll = r.endUnloadAll
@@ -669,7 +673,7 @@ class RuleEditActivity : AppCompatActivity() {
     private fun allowed(a: Act): Boolean {
         val t = effectiveTrigger
         return when (a) {
-            Act.WIFI, Act.HOTSPOT -> t != Trigger.WIFI && t != Trigger.WIFI_OTHER && t != Trigger.HOTSPOT
+            Act.WIFI, Act.HOTSPOT, Act.JOIN -> t != Trigger.WIFI && t != Trigger.WIFI_OTHER && t != Trigger.HOTSPOT
             Act.DATA -> t != Trigger.MOBILE_DATA
             // "VPN up → VPN off" undoes its own start; at the end, bringing it back is allowed.
             Act.VPN -> t != Trigger.VPN
@@ -1091,6 +1095,11 @@ class RuleEditActivity : AppCompatActivity() {
                     row(box, a, getString(a.title), null, remove)
                     sub(box, hint(getString(R.string.act_reconnect_hint)))
                 }
+                Act.JOIN -> {
+                    row(box, a, getString(a.title), changeButton(join == null) { pickJoin() }, remove)
+                    join?.let { sub(box, hint(it.label)) }
+                    sub(box, hint(getString(if (WifiJoin.bssidSupported) R.string.act_join_hint else R.string.act_join_hint_a10)))
+                }
                 Act.ICE -> {
                     // Not in rowChoices: adding the action opens the target list, not this choice.
                     val c = choice(listOf(getString(R.string.ice_act_thaw), getString(R.string.ice_act_freeze)), if (iceThaw) 0 else 1) { iceThaw = it == 0 }
@@ -1315,7 +1324,7 @@ class RuleEditActivity : AppCompatActivity() {
                     st.texts[a]?.let { sub(box, hint(it)) }
                 }
                 // Never offered at the end (see allowedEnd).
-                Act.RECONNECT, Act.ICE -> Unit
+                Act.RECONNECT, Act.ICE, Act.JOIN -> Unit
             }
         }
     }
@@ -1508,6 +1517,7 @@ class RuleEditActivity : AppCompatActivity() {
             Act.SYS -> sys = emptyMap()
             Act.NOTE, Act.HTTP, Act.SHELL -> texts -= a
             Act.ICE -> iceTargets = emptyList()
+            Act.JOIN -> join = null
             Act.UNLOAD, Act.RECONNECT -> Unit
         }
         paint()
@@ -1542,6 +1552,85 @@ class RuleEditActivity : AppCompatActivity() {
                 if (iceTargets.isEmpty()) { shown -= Act.ICE; paint() }
             }
             .show()
+    }
+
+    /**
+     * [Act.JOIN]: one of the saved networks (or a name typed in), then optionally the access
+     * point's MAC. Cancelling a new action takes it out again.
+     */
+    private fun pickJoin() {
+        fun cancel() { if (join == null) { shown -= Act.JOIN; paint() } }
+        lifecycleScope.launch {
+            val saved = WifiJoin.saved()
+            val manual = getString(R.string.join_manual)
+            val items = saved + manual
+            MaterialAlertDialogBuilder(this@RuleEditActivity)
+                .setTitle(if (saved.isEmpty()) R.string.join_none_saved else R.string.join_pick)
+                .setItems(items.toTypedArray()) { _, i ->
+                    if (i < saved.size) chosenSsid(saved[i]) else askJoinSsid()
+                }
+                .setNegativeButton(R.string.cancel) { _, _ -> cancel() }
+                .setOnCancelListener { cancel() }
+                .show()
+        }
+    }
+
+    private fun askJoinSsid() {
+        val input = com.google.android.material.textfield.TextInputEditText(this).apply {
+            setText(join?.ssid.orEmpty())
+            hint = getString(R.string.join_ssid_hint)
+        }
+        val box = android.widget.FrameLayout(this).apply { setPadding(dp(24), dp(8), dp(24), 0); addView(input) }
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.join_ssid_title)
+            .setView(box)
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                val ssid = input.text?.toString()?.trim().orEmpty()
+                if (ssid.isEmpty()) { if (join == null) { shown -= Act.JOIN; paint() } } else chosenSsid(ssid)
+            }
+            .setNegativeButton(R.string.cancel) { _, _ -> if (join == null) { shown -= Act.JOIN; paint() } }
+            .show()
+    }
+
+    /** Android 10 cannot tie a connection to one access point: the name is all there is. */
+    private fun chosenSsid(ssid: String) {
+        if (WifiJoin.bssidSupported) askBssid(ssid) else { join = WifiTarget(ssid); paint() }
+    }
+
+    /** The access point's MAC, optional; the one connected to now is offered as a hint. */
+    private fun askBssid(ssid: String) {
+        lifecycleScope.launch {
+            val here = WifiJoin.currentBssid(ssid)
+            val keep = join?.bssid.takeIf { join?.ssid == ssid }
+            val input = com.google.android.material.textfield.TextInputEditText(this@RuleEditActivity).apply {
+                setText(keep.orEmpty())
+                hint = here ?: "aa:bb:cc:dd:ee:ff"
+                typeface = android.graphics.Typeface.MONOSPACE
+            }
+            val box = android.widget.FrameLayout(this@RuleEditActivity).apply { setPadding(dp(24), dp(8), dp(24), 0); addView(input) }
+            val dialog = MaterialAlertDialogBuilder(this@RuleEditActivity)
+                .setTitle(R.string.join_bssid_title)
+                .setMessage(getString(R.string.join_bssid_msg, ssid) +
+                    (here?.let { "\n\n" + getString(R.string.join_bssid_here, it) } ?: ""))
+                .setView(box)
+                .setPositiveButton(android.R.string.ok, null)
+                .setNegativeButton(R.string.join_any_ap) { _, _ -> join = WifiTarget(ssid); paint() }
+                .apply { if (here != null) setNeutralButton(R.string.join_this_ap) { _, _ -> join = WifiTarget(ssid, here); paint() } }
+                .setOnCancelListener { if (join == null) { shown -= Act.JOIN; paint() } }
+                .show()
+            // OK checks the MAC and keeps the dialog open on a typo.
+            dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).setOnClickListener {
+                val raw = input.text?.toString()?.trim().orEmpty()
+                val bssid = if (raw.isEmpty()) null else WifiTarget.normalizeBssid(raw)
+                if (raw.isNotEmpty() && bssid == null) {
+                    input.error = getString(R.string.join_bssid_bad)
+                } else {
+                    join = WifiTarget(ssid, bssid)
+                    dialog.dismiss()
+                    paint()
+                }
+            }
+        }
     }
 
     /** Adds an action to "Что сделать" ([target] null) or to an ending. */
@@ -1584,6 +1673,7 @@ class RuleEditActivity : AppCompatActivity() {
                     Act.SYS -> pickSys(sys) { sys = it; if (sys.isEmpty()) shown -= Act.SYS; paint() }
                     Act.NOTE, Act.HTTP, Act.SHELL -> askText(a, null) { t -> if (t == null) shown -= a else texts[a] = t; paint() }
                     Act.ICE -> pickIce()
+                    Act.JOIN -> pickJoin()
                     else -> Unit
                 }
                 paint()
@@ -2067,6 +2157,7 @@ class RuleEditActivity : AppCompatActivity() {
             lockWindow = t == Trigger.LOCKED && v.lockWindow.isChecked,
             unload = Act.UNLOAD in shown,
             reconnect = Act.RECONNECT in shown,
+            join = join.takeIf { Act.JOIN in shown },
             ice = IceAction(iceThaw, iceTargets).takeIf { Act.ICE in shown && iceTargets.isNotEmpty() },
             sys = sys.takeIf { Act.SYS in shown }.orEmpty(),
             endSys = e(Act.SYS, atEnd.sys).orEmpty(),

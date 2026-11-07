@@ -26,3 +26,4 @@
 -keep class com.netmode.switcher.SimCli { public static void main(java.lang.String[]); }
 -keep class com.netmode.switcher.PhoneCli { public static void main(java.lang.String[]); }
 -keep class com.netmode.switcher.SocksCli { public static void main(java.lang.String[]); }
+-keep class com.netmode.switcher.WifiJoinCli { public static void main(java.lang.String[]); }

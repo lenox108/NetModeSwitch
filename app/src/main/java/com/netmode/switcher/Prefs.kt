@@ -161,6 +161,34 @@ object Prefs {
         get() = sp.getString("vpn_always_on", null)
         set(value) = sp.edit().putString("vpn_always_on", value).commit().let { }
 
+    /** Copy one-time codes from incoming SMS to the clipboard; see SmsCodes. */
+    var smsCodeEnabled: Boolean
+        get() = sp.getBoolean("sms_code_enabled", false)
+        set(value) = sp.edit().putBoolean("sms_code_enabled", value).commit().let { }
+
+    /** Also from other apps' notifications: RCS chats and push codes that are not SMS. */
+    var smsCodeFromNotif: Boolean
+        get() = sp.getBoolean("sms_code_from_notif", false)
+        set(value) = sp.edit().putBoolean("sms_code_from_notif", value).commit().let { }
+
+    /** Seconds after which a copied code is wiped from the clipboard; 0 keeps it. */
+    var smsCodeClearSec: Int
+        get() = sp.getInt("sms_code_clear_sec", 0)
+        set(value) = sp.edit().putInt("sms_code_clear_sec", value).apply()
+
+    /** Wipe the code from the clipboard as soon as it is pasted somewhere; needs AppWatchService. */
+    var smsCodeClearOnPaste: Boolean
+        get() = sp.getBoolean("sms_code_clear_on_paste", false)
+        set(value) = sp.edit().putBoolean("sms_code_clear_on_paste", value).apply()
+
+    /** Senders (or app names / packages) whose codes are never copied, matched as a part. */
+    var smsCodeExclude: List<String>
+        get() = runCatching {
+            val a = JSONArray(sp.getString("sms_code_exclude", "[]"))
+            (0 until a.length()).map { a.getString(it) }
+        }.getOrDefault(emptyList())
+        set(value) = sp.edit().putString("sms_code_exclude", JSONArray(value).toString()).apply()
+
     /** Where hotspot clients' traffic goes; see TetherRoute. */
     var tetherMode: TetherMode
         get() = runCatching { TetherMode.valueOf(sp.getString("tether_mode", null) ?: "DIRECT") }
@@ -432,6 +460,11 @@ object Prefs {
         set(value) = sp.edit().putString("ice_sort", value.name).apply()
 
     /** The folder's own order; until one is chosen it follows the freezer screen's. */
+    /** The launcher folder's own look ("list", "compact", "grid"); the freezer screen keeps [iceView]. */
+    var iceFolderView: String
+        get() = sp.getString("ice_folder_view", "grid")!!
+        set(value) = sp.edit().putString("ice_folder_view", value).apply()
+
     var iceFolderSort: IceSort
         get() = runCatching { IceSort.valueOf(sp.getString("ice_folder_sort", null)!!) }.getOrDefault(iceSort)
         set(value) = sp.edit().putString("ice_folder_sort", value.name).apply()

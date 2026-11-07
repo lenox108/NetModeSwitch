@@ -447,6 +447,20 @@
     <string name="scene_disabled">«%1$s» выключена в списке правил</string>
     <string name="scene_gone">Этой сцены больше нет</string>
     <string name="act_reconnect">Переподключить моб. сеть</string>
+    <string name="act_join">Подключиться к Wi-Fi</string>
+    <string name="act_join_hint">Только к сети, сохранённой на телефоне: её пароль берётся из системы. Wi-Fi включится, если выключен. С MAC — к этой точке доступа; дальше телефон может сам перейти на другую точку той же сети</string>
+    <string name="act_join_hint_a10">Только к сети, сохранённой на телефоне: её пароль берётся из системы. Wi-Fi включится, если выключен. Выбрать точку доступа по MAC на Android 10 нельзя</string>
+    <string name="join_pick">Сохранённая сеть</string>
+    <string name="join_none_saved">Не удалось прочитать сохранённые сети</string>
+    <string name="join_manual">Ввести название…</string>
+    <string name="join_ssid_title">Название сети (SSID)</string>
+    <string name="join_ssid_hint">Как в списке сетей Wi-Fi</string>
+    <string name="join_bssid_title">MAC точки доступа</string>
+    <string name="join_bssid_msg">Необязательно. С MAC телефон подключится к сети «%1$s» только через эту точку — когда у сети несколько точек (mesh, репитер). Без MAC — через любую.</string>
+    <string name="join_bssid_here">Сейчас подключено через %1$s</string>
+    <string name="join_bssid_bad">Не похоже на MAC: нужно 6 пар символов 0–9, a–f</string>
+    <string name="join_any_ap">Любая точка</string>
+    <string name="join_this_ap">Эта точка</string>
     <string name="act_reconnect_hint">Режим полёта на 3 секунды и обратно. Не чаще раза в 5 минут</string>
     <string name="notice_label">При срабатывании</string>
     <string name="notice_silent">молча</string>
@@ -1049,6 +1063,7 @@
     <string name="ice_view_list">Список</string>
     <string name="ice_view_compact">Компактный список</string>
     <string name="ice_view_grid">Значки</string>
+    <string name="ice_folder_view">Вид папки: %1$s</string>
     <string name="ice_card">Карточка приложения</string>
     <string name="ice_grid_hint">Нажатие — открыть, долгое — действия</string>
     <string name="ice_sel_group">Группа</string>
@@ -1225,4 +1240,52 @@
     <string name="traffic_limit_channel">Лимит раздачи</string>
     <string name="traffic_limit_title">Превышен лимит раздачи</string>
     <string name="traffic_limit_text">За месяц %1$s из %2$d МБ</string>
+
+    <!-- Коды из СМС -->
+    <string name="sec_sms_code">Коды из СМС</string>
+    <string name="sms_code_switch">Копировать коды из СМС</string>
+    <string name="sms_code_summary">Код подтверждения из входящей СМС сразу попадает в буфер обмена</string>
+    <string name="sms_code_summary_no_perm">Нет разрешения на приём СМС — нажмите, чтобы выдать</string>
+    <string name="sms_code_notif_switch">Также из уведомлений</string>
+    <string name="sms_code_notif_summary">Коды из RCS-чатов и пуш-уведомлений приложений, которые приходят не по СМС</string>
+    <string name="sms_code_notif_summary_off">Нужен доступ к уведомлениям и к скрытым кодам — нажмите, чтобы выдать</string>
+    <string name="sms_code_clear">Очищать буфер</string>
+    <string name="sms_code_clear_never">Не очищать</string>
+    <string name="sms_code_clear_sec">Через %1$d с</string>
+    <string name="sms_code_clear_min">Через %1$d мин</string>
+    <string name="sms_code_paste_switch">Очищать после вставки</string>
+    <string name="sms_code_paste_summary">Как только код вставлен в поле, он стирается из буфера. Работает через спец. возможности NetModeSwitch</string>
+    <string name="sms_code_paste_summary_off">Нужна служба спец. возможностей NetModeSwitch — нажмите, чтобы включить</string>
+    <string name="sms_code_exclude">Исключения</string>
+    <string name="sms_code_exclude_hint">Отправители и приложения, коды от которых не копируются</string>
+    <string name="sms_code_exclude_none">нет</string>
+    <string name="sms_code_exclude_dialog">По одному в строке: имя отправителя как в «Сообщениях» (VTB, 900), номер телефона или название приложения. Достаточно части, регистр не важен.</string>
+    <string name="sms_code_test">Проверить на тексте</string>
+    <string name="sms_code_test_hint">Вставьте текст сообщения, чтобы увидеть, какой код будет найден</string>
+    <string name="sms_code_test_found">Найден код: %1$s</string>
+    <string name="sms_code_test_none">Код не найден</string>
+    <string name="sms_code_denied">Разрешение на приём СМС не выдано. Откройте «О приложении» → ⋮ → «Разрешить ограниченные настройки», затем выдайте разрешение «SMS».</string>
+    <string name="sms_code_open_app_info">О приложении</string>
+    <string name="sms_code_screen_hint">Когда приходит СМС с кодом подтверждения, код сразу копируется в буфер обмена — остаётся вставить его в поле. В шторке появится тихое уведомление с кнопками «Копировать» и «Не копировать от…». Текст сообщений нигде не сохраняется.</string>
+    <string name="sms_code_exclude_help">Что писать в исключения. Для СМС — имя отправителя так, как оно видно в «Сообщениях» (например VTB, 900, MegaFon) или его номер. Для кодов из уведомлений — название приложения (Telegram) или заголовок уведомления. Достаточно части, регистр и пробелы не важны. Проще всего — нажать «Не копировать от…» в уведомлении о скопированном коде: отправитель добавится сам.</string>
+    <string name="sms_code_sensitive_failed">Android скрывает коды в уведомлениях от сторонних приложений. Снять это ограничение можно только через root или Shizuku.</string>
+    <string name="sms_code_card_off">Выключено</string>
+    <string name="sms_code_card_on">Копируются в буфер</string>
+    <string name="sms_code_card_no_perm">Нет разрешения на СМС</string>
+    <string name="sms_code_channel">Коды из СМС</string>
+    <string name="sms_code_clip_label">Код подтверждения</string>
+    <string name="sms_code_copied">Код %1$s скопирован</string>
+    <string name="sms_code_copied_public">Код подтверждения скопирован</string>
+    <string name="sms_code_from">От: %1$s</string>
+    <string name="sms_code_copy_again">Копировать</string>
+    <string name="sms_code_never_from">Не копировать от %1$s</string>
+    <string name="sms_code_excluded">%1$s добавлен в исключения</string>
+
+    <!-- Descriptions of the app's notification channels, shown in the system settings. -->
+    <string name="notif_kind_watch">Значок «Правила работают в фоне» и строка с режимами SIM. Если выключить, фоновая работа не остановится, пропадёт только значок</string>
+    <string name="notif_kind_ask">«Выполнить?» перед запуском правила. Если отключить, такие правила будут выполняться без вопроса</string>
+    <string name="notif_kind_done">Что сделало правило, с кнопкой «Отменить», и текст действия «Показать уведомление»</string>
+    <string name="notif_kind_failed">Что у правила не получилось, с кнопкой «Повторить»</string>
+    <string name="notif_kind_tether">Предупреждение о превышении месячного лимита раздачи</string>
+    <string name="notif_kind_sms">«Код … скопирован» с кнопками. Сами коды копируются и без него</string>
 </resources>

@@ -18,11 +18,14 @@ class AppWatchService : AccessibilityService() {
 
     override fun onServiceConnected() {
         connected = true
+        instance = this
+        if (SmsCodes.awaitingPaste()) watchText(true)
         TileClickWatch.connected(this)
     }
 
     override fun onDestroy() {
         connected = false
+        if (instance === this) instance = null
         TileClickWatch.disconnected()
         super.onDestroy()
     }
@@ -32,6 +35,7 @@ class AppWatchService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
         if (event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED) { TileClickWatch.onEvent(event); return }
+        if (event.eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED) { SmsCodes.onTextChanged(this, event); return }
         if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         TileClickWatch.windowChanged()
         val pkg = event.packageName?.toString() ?: return
@@ -93,6 +97,22 @@ class AppWatchService : AccessibilityService() {
         @Volatile var connected = false
             private set
 
+        @Volatile private var instance: AppWatchService? = null
+
+        /**
+         * Text changes are heard only while a copied code waits to be pasted ("Очищать после
+         * вставки"): every keystroke in every app is an event, so not a moment longer.
+         */
+        fun watchText(on: Boolean) {
+            val s = instance ?: return
+            runCatching {
+                val info = s.serviceInfo ?: return
+                val types = if (on) info.eventTypes or AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED
+                else info.eventTypes and AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED.inv()
+                if (types != info.eventTypes) { info.eventTypes = types; s.serviceInfo = info }
+            }
+        }
+
         /** com.android.internal.app.SuspendedAppActivity: what a suspended app's icon opens. */
         private const val SUSPENDED_DIALOG = "SuspendedAppActivity"
 
@@ -108,7 +128,8 @@ class AppWatchService : AccessibilityService() {
             val now = Privileged.exec("settings get secure enabled_accessibility_services").trim()
                 .takeIf { it.isNotEmpty() && it != "null" }?.split(':').orEmpty()
             // The rules' "Мгновенно" and the freezer's own-icon launch share the service.
-            val want = on || Prefs.instantApps || Prefs.iceNativeInstant || TileClickWatch.needed()
+            val want = on || Prefs.instantApps || Prefs.iceNativeInstant || TileClickWatch.needed() ||
+                (Prefs.smsCodeEnabled && Prefs.smsCodeClearOnPaste)
             if (want == (me in now)) return
             val next = if (want) (now - me + me) else (now - me)
             val value = next.joinToString(":")

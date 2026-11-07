@@ -359,6 +359,7 @@ object AppFreezer {
                 if (what == PENDING_ALL) {
                     sideActions(rule, why)
                     if (rule.reconnect) reconnect(why)
+                    rule.join?.let { WifiJoin.run(it, why) }
                     Freezer.ruleStart(rule, why)
                     if (rule.unload) unloadBackground(why, keep = rule.launchApps, all = rule.unloadAll)
                     launchApps(rule.launchApps, why)
@@ -1292,6 +1293,7 @@ done
             "SHELL" -> noteFailures(OneShots.run(null, null, rule.shell, why))
             "UNLOAD" -> if (rule.unload) unloadBackground(why, keep = rule.launchApps, all = rule.unloadAll)
             "RECONNECT" -> if (rule.reconnect) reconnect(why)
+            "JOIN" -> rule.join?.let { WifiJoin.run(it, why) }
             "ICE" -> Freezer.ruleStart(rule, why)
             else -> keysOf(step, rule.tiles.keys).takeIf { it.isNotEmpty() }?.let { sideActions(rule, why, only = it) }
         }
@@ -1438,6 +1440,7 @@ done
             }
             sideActions(rule, why)
             if (rule.reconnect) reconnect(why)
+            rule.join?.let { WifiJoin.run(it, why) }
             Freezer.ruleStart(rule, why)
             // Unloading is as much in the way of someone using the phone as stopping apps: it
             // waits with them. Before the launches, or it would take the apps just opened.

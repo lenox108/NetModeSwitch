@@ -66,6 +66,7 @@ class NotifListener : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         sbn?.let { NotifHide.onPosted(this, it) }
+        sbn?.let { runCatching { SmsCodes.onNotification(this, it) } }
         NotifWatch.refresh(this)
     }
 

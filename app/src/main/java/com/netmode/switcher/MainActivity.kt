@@ -79,12 +79,13 @@ class MainActivity : AppCompatActivity() {
 
         ui.rulesCard.setOnClickListener { startActivity(Intent(this, AppRulesActivity::class.java)) }
         ui.hideCard.setOnClickListener { startActivity(Intent(this, NotifHideActivity::class.java)) }
+        ui.smsCard.setOnClickListener { startActivity(Intent(this, SmsCodeActivity::class.java)) }
         ui.iceCard.setOnClickListener { startActivity(Intent(this, FreezerActivity::class.java)) }
         ui.apCard.setOnClickListener { startActivity(Intent(this, HotspotActivity::class.java)) }
         ui.logAll.setOnClickListener { startActivity(Intent(this, LogActivity::class.java)) }
         // Too narrow for its text (small screen, large font): side by side would break words.
         if (resources.configuration.let { it.screenWidthDp / it.fontScale } < MIN_ROW_WIDTH_DP) {
-            listOf(ui.statusRow, ui.navRow1, ui.navRow2).forEach(::stack)
+            listOf(ui.statusRow, ui.navRow1, ui.navRow2, ui.navRow3).forEach(::stack)
         }
         ui.problemCard.setOnClickListener {
             startActivity(Intent(this, LogActivity::class.java).putExtra(LogActivity.EXTRA_PROBLEMS, true))
@@ -173,6 +174,7 @@ class MainActivity : AppCompatActivity() {
         renderStatus()
         renderLog()
         renderRules()
+        renderSmsCard()
         renderQuick()
         Prefs.listen(logChanged)
         offerCheck()
@@ -446,6 +448,14 @@ class MainActivity : AppCompatActivity() {
             bindLogRow(row, entry, maxLines = 2)
             row.root.setOnClickListener { startActivity(Intent(this, LogActivity::class.java)) }
         }
+    }
+
+    private fun renderSmsCard() {
+        ui.smsSummary.setText(when {
+            !Prefs.smsCodeEnabled -> R.string.sms_code_card_off
+            !SmsCodes.smsGranted(this) -> R.string.sms_code_card_no_perm
+            else -> R.string.sms_code_card_on
+        })
     }
 
     private fun renderRules() {

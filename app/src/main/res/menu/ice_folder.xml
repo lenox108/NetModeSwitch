@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
+    <!-- Steps through list, compact list and icons; the icon shows the current look. -->
+    <item
+        android:id="@+id/action_view"
+        android:icon="@drawable/ic_view_grid"
+        android:title="@string/ice_view"
+        app:showAsAction="always" />
     <item
         android:id="@+id/action_sort"
         android:icon="@drawable/ic_sort"

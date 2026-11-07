@@ -439,7 +439,7 @@ class FreezerActivity : AppCompatActivity() {
         val name = labels[a.key] ?: a.key
         c.label.text = displayName(a, name)
         icons.bind(c.icon, a.key, a.frozen)
-        c.badge.visibility = if (a.frozen) View.VISIBLE else View.GONE
+        IceModeIndicator.bindBadge(c.badge, a)
         c.check.visibility = if (selecting) View.VISIBLE else View.GONE
         c.check.isChecked = a.key in selected
         paintSelected(c.root, a.key in selected)

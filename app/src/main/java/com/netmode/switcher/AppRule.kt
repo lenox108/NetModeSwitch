@@ -151,7 +151,7 @@ enum class RunNotice {
 internal fun trafficLabel(mb: Int): String = if (mb >= 1024 && mb % 1024 == 0) "${mb / 1024} ГБ" else "$mb МБ"
 
 private val CONFLICT_NAMES = mapOf(
-    "NET" to "режим сети", "DATA" to "моб. интернет", "WIFI" to "Wi-Fi", "HOTSPOT" to "точка доступа",
+    "NET" to "режим сети", "DATA" to "моб. интернет", "WIFI" to "Wi-Fi", "JOIN" to "сеть Wi-Fi", "HOTSPOT" to "точка доступа",
     "VPN" to "VPN", "AIRPLANE" to "режим полёта", "POWERSAVE" to "энергосбережение",
     "DATASIM" to "SIM для интернета", "BT" to "Bluetooth", "LOC" to "геолокация", "TILE" to "плитки",
 )
@@ -323,6 +323,8 @@ data class AppRule(
      * network afresh — what brings a stuck mobile connection back. Nothing to put back.
      */
     val reconnect: Boolean = false,
+    /** At the start: connect to this saved Wi-Fi network (see [WifiJoin]). Nothing to put back. */
+    val join: WifiTarget? = null,
     /** At the start: the freezer thaws or freezes apps (see [Freezer.ruleStart]). */
     val ice: IceAction? = null,
     val notice: RunNotice = RunNotice.SILENT,
@@ -357,6 +359,7 @@ data class AppRule(
             netMode?.let { m -> (if (netSlot == SLOT_ALL) listOf(0, 1) else listOf(netSlot)).forEach { put("NET$it", m.name) } }
             mobileData?.let { put("DATA", it.name) }
             wifi?.let { put("WIFI", it.name) }
+            join?.let { put("JOIN", it.ssid.lowercase()); if (wifi == null) put("WIFI", Toggle.ON.name) }
             hotspot?.let { put("HOTSPOT", it.name) }
             if (hotspot == Toggle.ON) {
                 hotspotBand?.let { put("HOTSPOT:BAND", it) }
@@ -417,7 +420,7 @@ data class AppRule(
         get() = packages.isNotEmpty() || bluetoothOff || locationOff ||
             wifi != null || hotspot != null || netMode != null || mobileData != null ||
             tiles.isNotEmpty() || vpn != null || airplane != null || powerSave != null || dataSim != null ||
-            launchApps.isNotEmpty() || unload || reconnect || ice != null || sys.isNotEmpty() || note != null || http != null || shell != null ||
+            launchApps.isNotEmpty() || unload || reconnect || join != null || ice != null || sys.isNotEmpty() || note != null || http != null || shell != null ||
             (restores && (endStopApps.isNotEmpty() || endLaunchApps.isNotEmpty() || endUnload || endSets ||
                 endNote != null || endHttp != null || endShell != null))
 
@@ -466,6 +469,7 @@ data class AppRule(
             "AIRPLANE" to airplane?.let { if (it == Toggle.ON) "полёт вкл" else "полёт выкл" },
             "POWERSAVE" to powerSave?.let { if (it == Toggle.ON) "энергосбережение вкл" else "энергосбережение выкл" },
             "DATASIM" to dataSim?.let { "интернет через SIM ${it + 1}" },
+            "JOIN" to join?.label,
             "RECONNECT" to "переподключить моб. сеть".takeIf { reconnect },
             "ICE" to ice?.label,
             "SYS" to sys.takeIf { it.isNotEmpty() }?.let { SysKey.summary(it) },
@@ -724,7 +728,7 @@ data class AppRule(
         .put("steps", JSONArray(steps)).put("eSteps", JSONArray(endSteps))
         .put("unlock", unlockEnd?.toJson() ?: JSONObject.NULL)
         .put("eMethods", JSONObject().apply { endAppMethods.forEach { (p, m) -> put(p, m.name) } })
-        .put("recon", reconnect).put("notice", notice.name)
+        .put("recon", reconnect).put("join", join?.toJson() ?: JSONObject.NULL).put("notice", notice.name)
         .put("ice", ice?.toJson() ?: JSONObject.NULL)
         .put("extras", JSONArray().apply { extras.forEach { put(it.toJson()) } })
         .put("sys", JSONObject(sys as Map<*, *>)).put("eSys", JSONObject(endSys as Map<*, *>))
@@ -841,6 +845,7 @@ data class AppRule(
                     appLeaveDelay = o.optInt("leaveS", 0), appPassThrough = o.strings("tPass"),
                     appScreenOffStays = o.optBoolean("screenStay", false),
                     reconnect = o.optBoolean("recon", false),
+                    join = o.optJSONObject("join")?.let { WifiTarget.fromJson(it) },
                     ice = o.optJSONObject("ice")?.let { runCatching { IceAction.fromJson(it) }.getOrNull() },
                     notice = runCatching { RunNotice.valueOf(o.getString("notice")) }.getOrDefault(RunNotice.SILENT),
                     extras = Extra.listFromJson(o.optJSONArray("extras")),
