@@ -16,6 +16,43 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+    <!-- The name spans the whole card, over the buttons: a short column must not cut it. -->
+    <LinearLayout
+        android:id="@+id/header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:orientation="horizontal"
+        android:paddingStart="22dp">
+
+        <ImageView
+            android:id="@+id/icon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="top"
+            android:layout_marginTop="1dp"
+            android:importantForAccessibility="no"
+            app:tint="?attr/colorPrimary" />
+
+        <TextView
+            android:id="@+id/title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="14dp"
+            android:layout_weight="1"
+            android:breakStrategy="balanced"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
@@ -31,31 +68,13 @@
             android:scaleType="center"
             android:src="@drawable/ic_drag" />
 
-        <ImageView
-            android:id="@+id/icon"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_gravity="top"
-            android:layout_marginTop="2dp"
-            android:importantForAccessibility="no"
-            app:tint="?attr/colorPrimary" />
-
         <LinearLayout
+            android:id="@+id/body"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="14dp"
+            android:layout_marginStart="38dp"
             android:layout_weight="1"
             android:orientation="vertical">
-
-            <TextView
-                android:id="@+id/title"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:textColor="?attr/colorOnSurface"
-                android:textSize="16sp"
-                android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/whenLine"
@@ -135,5 +154,6 @@
             android:id="@+id/enabled"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
+    </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

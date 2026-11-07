@@ -181,6 +181,8 @@ class AppRulesActivity : AppCompatActivity() {
             }
             // Dragged within a group, the rules out of sight would lose their place.
             row.drag.visibility = if (!selecting && rules.size > 1 && groupFilter == null) View.VISIBLE else View.GONE
+            // The header sits above the handle's column; without a handle both start at the edge.
+            row.header.setPaddingRelative(if (row.drag.visibility == View.VISIBLE) (22 * resources.displayMetrics.density).toInt() else 0, 0, 0, 0)
             if (!selecting) dragBy(row.drag, row.root) { from, to -> moved(ids, from, to) }
             ui.appList.addView(row.root)
         }

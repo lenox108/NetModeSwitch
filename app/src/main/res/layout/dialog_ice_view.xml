@@ -20,37 +20,44 @@
             app:selectionRequired="true"
             app:singleSelection="true" />
 
+        <!-- Titles in their own row: a title that wraps must not push its picker below the other. -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:baselineAligned="false"
             android:orientation="horizontal">
-            <LinearLayout
+            <TextView
+                style="@style/NMS.Section"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:gravity="center_horizontal"
-                android:orientation="vertical">
-                <TextView style="@style/NMS.Section" android:text="@string/ice_columns_title" />
-                <NumberPicker
-                    android:id="@+id/columns"
-                    android:layout_width="match_parent"
-                    android:layout_height="128dp"
-                    android:descendantFocusability="blocksDescendants" />
-            </LinearLayout>
-            <LinearLayout
+                android:gravity="center_horizontal|bottom"
+                android:text="@string/ice_columns_title" />
+            <TextView
+                style="@style/NMS.Section"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:gravity="center_horizontal"
-                android:orientation="vertical">
-                <TextView style="@style/NMS.Section" android:text="@string/ice_rows_title" />
-                <NumberPicker
-                    android:id="@+id/rows"
-                    android:layout_width="match_parent"
-                    android:layout_height="128dp"
-                    android:descendantFocusability="blocksDescendants" />
-            </LinearLayout>
+                android:gravity="center_horizontal|bottom"
+                android:text="@string/ice_rows_title" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:baselineAligned="false"
+            android:orientation="horizontal">
+            <NumberPicker
+                android:id="@+id/columns"
+                android:layout_width="0dp"
+                android:layout_height="128dp"
+                android:layout_weight="1"
+                android:descendantFocusability="blocksDescendants" />
+            <NumberPicker
+                android:id="@+id/rows"
+                android:layout_width="0dp"
+                android:layout_height="128dp"
+                android:layout_weight="1"
+                android:descendantFocusability="blocksDescendants" />
         </LinearLayout>
         <TextView style="@style/NMS.Hint" android:text="@string/ice_view_columns_hint" />
         <TextView style="@style/NMS.Hint" android:text="@string/ice_view_rows_hint" />
