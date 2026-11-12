@@ -116,6 +116,52 @@ object IceGone {
         }
     }
 
+    /** A clone's freeze as `dumpsys package` shows it in its user. */
+    data class State(val suspended: Boolean, val disabled: Boolean) {
+        /** Disabled wins: a disabled app is frozen the deep way whatever else it has. */
+        val mode: IceMode? get() = when {
+            disabled -> IceMode.DEEP
+            suspended -> IceMode.SOFT
+            else -> null
+        }
+
+        fun frozenAs(want: IceMode): Boolean = if (want == IceMode.DEEP) disabled else suspended
+    }
+
+    /** "@S key <that user's line of dumpsys package>" for each of [keys]. */
+    fun stateScript(keys: List<String>): String = buildString {
+        val d = "$"
+        for (k in keys) {
+            appendLine("echo \"@S $k $d(dumpsys package ${AppKey.pkg(k)} 2>/dev/null | grep -m1 -E '^ *User ${AppKey.user(k)}: .*installed=')\"")
+        }
+    }
+
+    /**
+     * Key to state, for each key whose user line was found ("User 999: … installed=true …
+     * suspended=true … enabled=3 …"). enabled 2 and 3 are disabled and disabled-user.
+     */
+    fun states(out: String): Map<String, State> = out.lineSequence().map { it.trim() }
+        .filter { it.startsWith("@S ") && "installed=" in it }
+        .associate { line ->
+            val key = line.removePrefix("@S ").substringBefore(' ')
+            val enabled = Regex("\\benabled=(\\d+)").find(line)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+            key to State(suspended = "suspended=true" in line, disabled = enabled == 2 || enabled == 3)
+        }
+
+    /** One more try through pm alone: "@O key what pm said" for each. */
+    fun retryScript(targets: List<Pair<String, IceMode>>): String = buildString {
+        val d = "$"
+        for ((k, mode) in targets) {
+            val cmd = if (mode == IceMode.DEEP) "pm disable-user" else "pm suspend"
+            appendLine("echo \"@O $k $d($cmd --user ${AppKey.user(k)} ${AppKey.pkg(k)} 2>&1 | tr '\\n' ' ')\"")
+            appendLine("am force-stop --user ${AppKey.user(k)} ${AppKey.pkg(k)} >/dev/null 2>&1")
+        }
+    }
+
+    fun said(out: String): Map<String, String> = out.lineSequence().map { it.trim() }
+        .filter { it.startsWith("@O ") }
+        .associate { it.removePrefix("@O ").substringBefore(' ') to it.substringAfter(' ').substringAfter(' ', "").trim() }
+
     /** Keys the confirmation answered for and found no path for. */
     fun gone(out: String, keys: List<String>): Set<String> {
         val lines = out.lineSequence().map { it.trim() }.toSet()

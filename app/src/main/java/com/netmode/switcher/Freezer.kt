@@ -576,7 +576,20 @@ object Freezer {
         } }
         // Clones live in another user, out of this app's sight: the shell tells which are gone.
         val clones = apps.filter { AppKey.isClone(it.key) }
-        if (clones.isNotEmpty() && Privileged.available()) dropGone(goneClones(clones.map { it.key }), "удалено с телефона")
+        if (clones.isNotEmpty() && Privileged.available()) {
+            dropGone(goneClones(clones.map { it.key }), "удалено с телефона")
+            // Their real state, as for the originals above: thawed or frozen past the freezer.
+            val states = cloneStates(apps.filter { AppKey.isClone(it.key) }.map { it.key })
+            if (states.isNotEmpty()) edit { list -> list.map { a ->
+                val st = states[a.key] ?: return@map a
+                val r = st.mode
+                when {
+                    a.frozen && r == null -> a.copy(frozenAs = null, thawedAt = now)
+                    r != null && a.frozenAs != r -> a.copy(frozenAs = r, thawedAt = 0L, heldBy = 0L, keepUntil = 0L)
+                    else -> a
+                }
+            } }
+        }
         if (boot && Prefs.iceBootCheck) {
             val thawed = apps.filter { !it.frozen && it.heldBy == 0L && !IcePolicy.protected(it, now) }.map { it.key }
             if (thawed.isNotEmpty() && Privileged.available()) freezeLocked(thawed, "после перезагрузки")
@@ -606,7 +619,11 @@ object Freezer {
                 targets.forEach { waiting[it.key] = WaitReason.FAILED; retryAt[it.key] = System.currentTimeMillis() + 60_000L }
                 return 0
             }
-        val reasons = failures(out)
+        val reasons = failures(out).toMutableMap()
+        // The app cannot see its clones' state, and a call that says "ok" is not proof: each
+        // clone is looked at in its user, tried once more with pm, and only then counts.
+        val clones = targets.filter { AppKey.isClone(it.key) && it.key !in reasons }
+        if (clones.isNotEmpty()) reasons += verifyClones(clones)
         val failed = reasons.keys
         val done = targets.filter { it.key !in failed }.associateBy { it.key }
         edit { list ->
@@ -682,6 +699,30 @@ object Freezer {
         if (suspects.isEmpty()) return emptySet()
         val confirmed = runCatching { Privileged.exec(IceGone.confirmScript(suspects)) }.getOrNull() ?: return emptySet()
         return IceGone.gone(confirmed, suspects)
+    }
+
+    /** How each of [keys] is frozen in its own user; a key missing from the map: unknown. */
+    private suspend fun cloneStates(keys: List<String>): Map<String, IceGone.State> =
+        if (keys.isEmpty()) emptyMap()
+        else runCatching { Privileged.exec(IceGone.stateScript(keys), timeoutMs = 15_000L + 2_000L * keys.size) }
+            .getOrNull()?.let { IceGone.states(it) }.orEmpty()
+
+    /**
+     * Clones of [targets] that did not end up frozen their way, with the reason. One that is not
+     * gets a second try through pm alone; a clone whose state cannot be read is trusted.
+     */
+    private suspend fun verifyClones(targets: List<IceApp>): Map<String, String> {
+        fun wrong(states: Map<String, IceGone.State>) =
+            targets.filter { a -> states[a.key]?.let { !it.frozenAs(modeOf(a)) } == true }
+        val first = wrong(cloneStates(targets.map { it.key }))
+        if (first.isEmpty()) return emptyMap()
+        val retry = runCatching { Privileged.exec(IceGone.retryScript(first.map { it.key to modeOf(it) }), timeoutMs = 15_000L + 3_000L * first.size) }
+            .getOrNull().orEmpty()
+        val said = IceGone.said(retry)
+        val still = wrong(cloneStates(first.map { it.key }))
+        return still.associate { a ->
+            a.key to ("клон не заморожен системой" + said[a.key]?.takeIf { it.isNotEmpty() }?.let { ": $it" }.orEmpty()).take(160)
+        }
     }
 
     /** Takes uninstalled apps off the list and forgets their waits. */
