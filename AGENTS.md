@@ -1,3 +1,15 @@
+# Agent language — read first
+
+Owner's rule (taken from propda2, 12.11.2026); mandatory for cloud and local agents alike:
+
+- Everything during a task is **in English**: reasoning, planning, notes, tool descriptions, and
+  **progress messages shown to the owner mid-task** ("looking into X", "build running", etc.).
+  A message being addressed to the owner does NOT make it Russian.
+- Only the **final report** at the end of a task, and direct answers to the owner's questions, are
+  **in Russian**.
+- Tasks handed off to the local agent (spawn_task): title, summary and prompt **in English**, always.
+- Keep English updates terse to save tokens.
+
 # Работа с NetModeSwitch
 
 Android-проект находится в этом каталоге. Текущий контекст, изменения и ограничения описаны в [HANDOFF.md](HANDOFF.md); подробности последней работы — в [HANDOFF_2026-10-22.md](HANDOFF_2026-10-22.md).
