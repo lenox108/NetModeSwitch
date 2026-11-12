@@ -65,3 +65,60 @@ object IceOrder {
     fun move(keys: List<String>, from: Int, to: Int): List<String> =
         keys.toMutableList().apply { add(to, removeAt(from)) }
 }
+
+/**
+ * Whether a freezer clone is still installed in its user. Clones are out of this app's own
+ * PackageManager, so the shell lists each user's packages and Kotlin compares them; a miss is
+ * then confirmed with `pm path`, so one odd answer never takes a clone off the list.
+ */
+object IceGone {
+    /** "@U user", that user's `pm list packages` lines, "@E user" — per user of [keys]. */
+    fun listScript(keys: List<String>): String = buildString {
+        for (u in keys.map { AppKey.user(it) }.distinct()) {
+            appendLine("echo '@U $u'")
+            appendLine("pm list packages --user $u 2>/dev/null")
+            appendLine("echo '@E $u'")
+        }
+    }
+
+    /**
+     * Keys whose package is missing from their user's list. A user whose list was not read
+     * through to its end marker, or came back empty, says nothing.
+     */
+    fun suspects(out: String, keys: List<String>): List<String> {
+        val lists = mutableMapOf<Int, MutableSet<String>>()
+        val complete = mutableSetOf<Int>()
+        var current: Int? = null
+        for (raw in out.lineSequence()) {
+            val line = raw.trim()
+            when {
+                line.startsWith("@U ") -> current = line.removePrefix("@U ").trim().toIntOrNull()?.also { lists.getOrPut(it) { mutableSetOf() } }
+                line.startsWith("@E ") -> {
+                    if (current != null && line.removePrefix("@E ").trim().toIntOrNull() == current) complete += current
+                    current = null
+                }
+                current != null && line.startsWith("package:") ->
+                    lists.getValue(current) += line.removePrefix("package:").substringBefore(' ').substringBefore('=').trim()
+            }
+        }
+        return keys.filter { k ->
+            val u = AppKey.user(k)
+            val have = lists[u]
+            u in complete && !have.isNullOrEmpty() && AppKey.pkg(k) !in have
+        }
+    }
+
+    /** "@P key" for each of [keys] the system still has an APK path for in its user. */
+    fun confirmScript(keys: List<String>): String = buildString {
+        val d = "$"
+        for (k in keys) {
+            appendLine("case \"$d(pm path --user ${AppKey.user(k)} ${AppKey.pkg(k)} 2>/dev/null)\" in *package:*) echo '@P $k' ;; *) echo '@N $k' ;; esac")
+        }
+    }
+
+    /** Keys the confirmation answered for and found no path for. */
+    fun gone(out: String, keys: List<String>): Set<String> {
+        val lines = out.lineSequence().map { it.trim() }.toSet()
+        return keys.filter { "@N $it" in lines && "@P $it" !in lines }.toSet()
+    }
+}

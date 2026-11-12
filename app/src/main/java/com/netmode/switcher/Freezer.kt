@@ -257,7 +257,7 @@ object Freezer {
         val now = System.currentTimeMillis()
         edit { it + fresh.map { k -> IceApp(k, thawedAt = now, addedAt = now) } }
         ConditionWatch.grantUsageAccess()
-        lock.withLock { if (Privileged.available()) freezeLocked(fresh, why) }
+        lock.withLock { if (Privileged.available()) freezeLocked(fresh, why, checkGone = false) }
         ensureInstant()
         return fresh.size
     }
@@ -576,10 +576,7 @@ object Freezer {
         } }
         // Clones live in another user, out of this app's sight: the shell tells which are gone.
         val clones = apps.filter { AppKey.isClone(it.key) }
-        if (clones.isNotEmpty() && Privileged.available()) {
-            runCatching { Privileged.exec(goneScript(clones.map { it.key }) + "true\n") }.getOrNull()
-                ?.let { dropGone(gone(it), "удалено с телефона") }
-        }
+        if (clones.isNotEmpty() && Privileged.available()) dropGone(goneClones(clones.map { it.key }), "удалено с телефона")
         if (boot && Prefs.iceBootCheck) {
             val thawed = apps.filter { !it.frozen && it.heldBy == 0L && !IcePolicy.protected(it, now) }.map { it.key }
             if (thawed.isNotEmpty() && Privileged.available()) freezeLocked(thawed, "после перезагрузки")
@@ -589,26 +586,29 @@ object Freezer {
     // --- shell ---------------------------------------------------------------------------------
 
     /** Freezes [keys] each its own way; returns how many froze. Under [lock]. */
-    private suspend fun freezeLocked(keys: List<String>, why: String, restoreModes: Map<String, IceMode> = emptyMap()): Int {
+    private suspend fun freezeLocked(
+        keys: List<String>, why: String, restoreModes: Map<String, IceMode> = emptyMap(), checkGone: Boolean = true,
+    ): Int {
         val guarded = AppFreezer.protectedPackages()
-        val targets = apps.filter { it.key in keys && AppKey.valid(it.key) && AppKey.pkg(it.key) !in guarded }
+        // A clone just picked from the list of installed ones is not checked again: a wrong
+        // "gone" would take it off the list the moment it was added.
+        val removed = if (checkGone) goneClones(keys.filter { AppKey.isClone(it) }) else emptySet()
+        dropGone(removed, why)
+        val targets = apps.filter { it.key in keys && it.key !in removed && AppKey.valid(it.key) && AppKey.pkg(it.key) !in guarded }
             .map { a -> a.copy(mode = restoreModes[a.key] ?: modeOf(a)) }
         if (targets.isEmpty()) return 0
         // Frozen the other way: thawed first, or a disabled app would stay disabled under a suspension.
         val moving = targets.filter { it.frozen && it.frozenAs != modeOf(it) }
-        val script = goneScript(targets.map { it.key }.filter { AppKey.isClone(it) }) +
-            (if (moving.isNotEmpty()) thawScript(moving) else "") + freezeScript(targets.filter { !it.frozen || it in moving })
+        val script = (if (moving.isNotEmpty()) thawScript(moving) else "") + freezeScript(targets.filter { !it.frozen || it in moving })
         val out = runCatching { Privileged.exec(script, timeoutMs = 15_000L + 3_000L * targets.size) }
             .onFailure { Prefs.log("морозилка ($why): ошибка — ${it.message}") }
             .getOrNull() ?: run {
                 targets.forEach { waiting[it.key] = WaitReason.FAILED; retryAt[it.key] = System.currentTimeMillis() + 60_000L }
                 return 0
             }
-        val removed = gone(out)
-        dropGone(removed, why)
-        val reasons = failures(out) - removed
+        val reasons = failures(out)
         val failed = reasons.keys
-        val done = targets.filter { it.key !in failed && it.key !in removed }.associateBy { it.key }
+        val done = targets.filter { it.key !in failed }.associateBy { it.key }
         edit { list ->
             list.map { a ->
                 if (a.key in done) a.copy(frozenAs = modeOf(done.getValue(a.key)), thawedAt = 0L, heldBy = 0L, keepUntil = 0L) else a
@@ -670,19 +670,19 @@ object Freezer {
     }
 
     /**
-     * "@G key" for each of [keys] no longer installed in its user. A user whose list cannot be
-     * read says nothing, so a failed `pm` never passes for an uninstall.
+     * Clones among [keys] that are really gone from their user. The package list of each user
+     * is compared here, not by grep in the shell, and every miss is confirmed with `pm path`:
+     * a user whose list cannot be read, or a package the system still has a path for, stays.
      */
-    private fun goneScript(keys: List<String>): String = buildString {
-        val d = "$"
-        for ((u, group) in keys.groupBy { AppKey.user(it) }) {
-            appendLine("l=$d(pm list packages --user $u 2>/dev/null)")
-            for (k in group) appendLine("[ -n \"${d}l\" ] && { echo \"${d}l\" | grep -qxF 'package:${AppKey.pkg(k)}' || echo \"@G $k\"; }")
-        }
+    private suspend fun goneClones(keys: List<String>): Set<String> {
+        val clones = keys.filter { AppKey.isClone(it) && AppKey.valid(it) }.distinct()
+        if (clones.isEmpty() || !Privileged.available()) return emptySet()
+        val listed = runCatching { Privileged.exec(IceGone.listScript(clones)) }.getOrNull() ?: return emptySet()
+        val suspects = IceGone.suspects(listed, clones)
+        if (suspects.isEmpty()) return emptySet()
+        val confirmed = runCatching { Privileged.exec(IceGone.confirmScript(suspects)) }.getOrNull() ?: return emptySet()
+        return IceGone.gone(confirmed, suspects)
     }
-
-    private fun gone(out: String): Set<String> =
-        out.lineSequence().filter { it.startsWith("@G ") }.map { it.removePrefix("@G ").trim() }.filter { it.isNotEmpty() }.toSet()
 
     /** Takes uninstalled apps off the list and forgets their waits. */
     private fun dropGone(keys: Set<String>, why: String) {
