@@ -61,7 +61,11 @@ class AppRulesActivity : AppCompatActivity() {
         ui.deleteSelected.setOnClickListener { confirmDelete(selected.toList()) }
         ui.held.setOnClickListener { chooseToReturn() }
         ui.addApps.setOnClickListener { startActivity(Intent(this, RuleEditActivity::class.java)) }
-        ui.fromTemplate.setOnClickListener { fromTemplate() }
+        // Shrink to a round "+" while scrolling down so it covers less; show the label again on the way up.
+        ui.scroll.setOnScrollChangeListener { _, _, y, _, oldY ->
+            if (y > oldY + SCROLL_SLOP) ui.addApps.shrink()
+            else if (y < oldY - SCROLL_SLOP || y == 0) ui.addApps.extend()
+        }
         renderTemplates()
     }
 
@@ -277,6 +281,7 @@ class AppRulesActivity : AppCompatActivity() {
                 isEnabled = count > 0
                 setOnMenuItemClickListener { startSelection(); true }
             }
+            ui.toolbar.menu.add(R.string.from_template).setOnMenuItemClickListener { fromTemplate(); true }
             ui.toolbar.menu.add(R.string.sort_title).setOnMenuItemClickListener { chooseSort(); true }
             ui.toolbar.menu.add(R.string.rule_import).setOnMenuItemClickListener {
                 importRule.launch(arrayOf("application/json", "text/plain", "*/*")); true
@@ -292,8 +297,7 @@ class AppRulesActivity : AppCompatActivity() {
             }
         }
         ui.selectBar.visibility = if (selecting) View.VISIBLE else View.GONE
-        ui.addApps.visibility = if (selecting) View.GONE else View.VISIBLE
-        ui.fromTemplate.visibility = if (selecting) View.GONE else View.VISIBLE
+        if (selecting) ui.addApps.hide() else ui.addApps.show()
         ui.intro.setText(if (selecting) R.string.rules_selection_hint else R.string.apps_intro)
         // The hint is for finding the long press: once there are rules each card shows its actions.
         ui.intro.visibility = if (selecting || count == 0) View.VISIBLE else View.GONE
@@ -507,5 +511,6 @@ class AppRulesActivity : AppCompatActivity() {
 
     private companion object {
         const val MAX_ACTION_ICONS = 8
+        const val SCROLL_SLOP = 4
     }
 }

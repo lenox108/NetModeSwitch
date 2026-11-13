@@ -13,11 +13,15 @@
         app:navigationIcon="?attr/homeAsUpIndicator"
         app:title="@string/section_apps" />
 
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
     <ScrollView
         android:id="@+id/scroll"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="match_parent"
         android:clipToPadding="false">
 
         <LinearLayout
@@ -26,7 +30,7 @@
             android:orientation="vertical"
             android:paddingStart="20dp"
             android:paddingEnd="20dp"
-            android:paddingBottom="24dp">
+            android:paddingBottom="96dp">
 
             <TextView
                 android:id="@+id/intro"
@@ -86,22 +90,20 @@
                     android:orientation="vertical" />
             </LinearLayout>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/addApps"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="@string/add_app_rule"
-                app:icon="@drawable/ic_add" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/fromTemplate"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/from_template" />
         </LinearLayout>
     </ScrollView>
+
+    <!-- Always reachable: the list can be long, so adding a rule must not need scrolling to the end.
+         The list keeps 96dp of bottom padding so the button never hides the last card's switch. -->
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+        android:id="@+id/addApps"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
+        android:text="@string/add_app_rule"
+        app:icon="@drawable/ic_add" />
+    </FrameLayout>
 
     <LinearLayout
         android:id="@+id/selectBar"
