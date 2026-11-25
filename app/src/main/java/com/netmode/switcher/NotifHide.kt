@@ -173,13 +173,24 @@ object NotifHide {
     /**
      * What is in the shade now, hidden ones aside; empty while the listener is not bound.
      * A group summary is left out while its group has notifications of its own to pick.
+     * The system's own autogroup summary is never listed: it is a container the system makes
+     * for an app, and one left behind after its children went (True Phone after a call) has
+     * no text, so the shade draws nothing for it. A childless summary with no title and no
+     * text is left out for the same reason.
      */
     fun shade(): List<ShadeEntry> {
         val all = NotifWatch.listener?.let { l -> runCatching { l.activeNotifications }.getOrNull() }.orEmpty()
         fun summary(s: StatusBarNotification) = s.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0
         val groups = all.filterNot(::summary).map { it.groupKey }.toSet()
-        return all.filter { !summary(it) || it.groupKey !in groups }.map(::entryOf)
+        return all.filter { s ->
+            !summary(s) || (s.groupKey !in groups && !isAutogroupSummary(s) && (titleOf(s).isNotBlank() || textOf(s).isNotBlank()))
+        }.map(::entryOf)
     }
+
+    /** Notification.FLAG_AUTOGROUP_SUMMARY is hidden API; its value has been 0x400 since Android 7. */
+    private const val FLAG_AUTOGROUP_SUMMARY = 0x400
+
+    fun isAutogroupSummary(sbn: StatusBarNotification) = sbn.notification.flags and FLAG_AUTOGROUP_SUMMARY != 0
 
     /** What the rules hold back now, for the screen to list; a group's summary is left out. */
     fun hiddenNow(): List<ShadeEntry> {

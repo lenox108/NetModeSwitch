@@ -90,6 +90,13 @@ object Prefs {
         set(value) = sp.edit().putLong("self_wifi_at", value).commit().let { }
 
     /** When a rule last switched Bluetooth off; the disconnects that follow are its own doing. */
+    /** The last SIM seen in a slot, for switching it back on: [SimSwitch.Target.encode]. */
+    fun simTarget(slot: Int): String? = sp.getString("sim_target_$slot", null)
+
+    fun setSimTarget(slot: Int, value: String) {
+        if (simTarget(slot) != value) sp.edit().putString("sim_target_$slot", value).apply()
+    }
+
     var selfBtAt: Long
         get() = sp.getLong("self_bt_at", 0L)
         set(value) = sp.edit().putLong("self_bt_at", value).commit().let { }

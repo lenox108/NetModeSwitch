@@ -491,6 +491,7 @@
     <string name="extra_battery">Заряд ≤ …</string>
     <string name="conflict_hint">Может спорить с: %1$s</string>
     <string name="act_sys">Системные настройки</string>
+    <string name="act_dnd">Не беспокоить</string>
     <string name="act_note">Показать уведомление</string>
     <string name="act_http">HTTP-запрос</string>
     <string name="act_shell">Shell-команда</string>
@@ -544,6 +545,8 @@
     <string name="app_screen_stays">Выключение экрана — не закрытие</string>
     <string name="app_screen_stays_hint">Для навигатора, музыки, видео: пока экран погашен, правило продолжает действовать</string>
     <string name="act_datasim">Интернет через SIM</string>
+    <string name="act_simpower">SIM вкл/выкл</string>
+    <string name="act_simpower_hint">Как переключатель «Использовать SIM» в настройках; у eSIM включается или выключается профиль (нужен root). Когда правило закончится, SIM вернётся в прежнее состояние</string>
     <string name="act_airplane">Режим полёта</string>
     <string name="act_powersave">Энергосбережение</string>
     <string name="act_tiles">Плитки приложений</string>
@@ -645,7 +648,7 @@
     <string name="act_unload_row">Выгрузить</string>
     <string name="unload_bg">фон</string>
     <string name="unload_all">всё</string>
-    <string name="unload_all_hint">Закрывает все открытые приложения, включая музыку и навигацию. Не трогает то, что на экране, будильник, звонилку и SMS. Уведомления после закрытия приходят как обычно</string>
+    <string name="unload_all_hint">Закрывает все открытые приложения, включая музыку и навигацию, и убирает их карточки из недавних. Не трогает то, что на экране, будильник, звонилку и SMS. Уведомления после закрытия приходят как обычно</string>
     <string name="unload_keep_none">Не выгружать: выбрать приложения</string>
     <string name="unload_keep_list">Не выгружать: %1$s</string>
     <string name="w_unload">Выгрузить фон</string>

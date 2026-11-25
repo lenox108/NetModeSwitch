@@ -153,11 +153,29 @@ internal fun trafficLabel(mb: Int): String = if (mb >= 1024 && mb % 1024 == 0) "
 private val CONFLICT_NAMES = mapOf(
     "NET" to "режим сети", "DATA" to "моб. интернет", "WIFI" to "Wi-Fi", "JOIN" to "сеть Wi-Fi", "HOTSPOT" to "точка доступа",
     "VPN" to "VPN", "AIRPLANE" to "режим полёта", "POWERSAVE" to "энергосбережение",
-    "DATASIM" to "SIM для интернета", "BT" to "Bluetooth", "LOC" to "геолокация", "TILE" to "плитки",
+    "DATASIM" to "SIM для интернета", "SIMPWR" to "SIM вкл/выкл", "BT" to "Bluetooth", "LOC" to "геолокация", "TILE" to "плитки",
 )
 
 /** Turn something on or off for the window; null in a rule means "leave it alone". */
 enum class Toggle { ON, OFF }
+
+/**
+ * "SIM вкл/выкл": the SIM in [slot] switched on or off for the window, as the system's own
+ * "Использовать SIM-карту" does; put back as it was at the end.
+ */
+data class SimPower(val slot: Int, val on: Boolean) {
+    val label: String get() = "SIM ${slot + 1} ${if (on) "вкл" else "выкл"}"
+
+    fun encode(): String = "$slot:${if (on) 1 else 0}"
+
+    companion object {
+        fun decode(s: String?): SimPower? {
+            val parts = s?.split(':') ?: return null
+            val slot = parts.getOrNull(0)?.toIntOrNull()?.takeIf { it >= 0 } ?: return null
+            return SimPower(slot, parts.getOrNull(1) == "1")
+        }
+    }
+}
 
 /**
  * A window with a set of actions, and everything put back as it was when the window closes.
@@ -258,6 +276,8 @@ data class AppRule(
     /** Slot of the SIM to use for mobile data, or null. */
     val dataSim: Int? = null,
     val endDataSim: Int? = null,
+    /** A SIM switched on or off at the start; only the start sets it, the end puts it back. */
+    val simPower: SimPower? = null,
     /**
      * Not while the phone is in use (screen on and unlocked): the start waits until a minute
      * after it is locked. The end is never held back.
@@ -369,6 +389,7 @@ data class AppRule(
             airplane?.let { put("AIRPLANE", it.name) }
             powerSave?.let { put("POWERSAVE", it.name) }
             dataSim?.let { put("DATASIM", it.toString()) }
+            simPower?.let { put("SIMPWR${it.slot}", if (it.on) "ON" else "OFF") }
             if (bluetoothOff) put("BT", "OFF")
             if (locationOff) put("LOC", "OFF")
             tiles.forEach { (c, t) -> put("TILE:$c", t.name) }
@@ -419,7 +440,7 @@ data class AppRule(
     val hasActions: Boolean
         get() = packages.isNotEmpty() || bluetoothOff || locationOff ||
             wifi != null || hotspot != null || netMode != null || mobileData != null ||
-            tiles.isNotEmpty() || vpn != null || airplane != null || powerSave != null || dataSim != null ||
+            tiles.isNotEmpty() || vpn != null || airplane != null || powerSave != null || dataSim != null || simPower != null ||
             launchApps.isNotEmpty() || unload || reconnect || join != null || ice != null || sys.isNotEmpty() || note != null || http != null || shell != null ||
             (restores && (endStopApps.isNotEmpty() || endLaunchApps.isNotEmpty() || endUnload || endSets ||
                 endNote != null || endHttp != null || endShell != null))
@@ -449,6 +470,7 @@ data class AppRule(
         entry == FrozenApp.AIRPLANE -> airplane != null
         entry == FrozenApp.POWERSAVE -> powerSave != null
         entry == FrozenApp.DATASIM -> dataSim != null
+        entry.startsWith(FrozenApp.SIMPWR) -> simPower?.let { entry == FrozenApp.SIMPWR + it.slot } == true
         entry.startsWith(FrozenApp.SYS) -> entry.removePrefix(FrozenApp.SYS) in sys
         entry.startsWith(FrozenApp.VPN_BACK) -> entry.removePrefix(FrozenApp.VPN_BACK) in packages
         else -> entry in packages
@@ -469,6 +491,7 @@ data class AppRule(
             "AIRPLANE" to airplane?.let { if (it == Toggle.ON) "полёт вкл" else "полёт выкл" },
             "POWERSAVE" to powerSave?.let { if (it == Toggle.ON) "энергосбережение вкл" else "энергосбережение выкл" },
             "DATASIM" to dataSim?.let { "интернет через SIM ${it + 1}" },
+            "SIMPWR" to simPower?.label,
             "JOIN" to join?.label,
             "RECONNECT" to "переподключить моб. сеть".takeIf { reconnect },
             "ICE" to ice?.label,
@@ -721,6 +744,7 @@ data class AppRule(
         .put("air", airplane?.name ?: JSONObject.NULL).put("eAir", endAirplane?.name ?: JSONObject.NULL)
         .put("ps", powerSave?.name ?: JSONObject.NULL).put("ePs", endPowerSave?.name ?: JSONObject.NULL)
         .put("dSim", dataSim ?: JSONObject.NULL).put("eDSim", endDataSim ?: JSONObject.NULL)
+        .put("simP", simPower?.encode() ?: JSONObject.NULL)
         .put("wait", waitLocked).put("waitApps", waitAppsOnly).put("wake", wakeWifi)
         .put("launch", JSONArray(launchApps)).put("eStop", JSONArray(endStopApps)).put("eLaunch", JSONArray(endLaunchApps))
         .put("unl", unload).put("eUnl", endUnload).put("unlAll", unloadAll).put("eUnlAll", endUnloadAll)
@@ -832,6 +856,7 @@ data class AppRule(
                 endPowerSave = o.str("ePs")?.let { runCatching { Toggle.valueOf(it) }.getOrNull() },
                 dataSim = if (o.isNull("dSim") || !o.has("dSim")) null else o.optInt("dSim"),
                 endDataSim = if (o.isNull("eDSim") || !o.has("eDSim")) null else o.optInt("eDSim"),
+                simPower = SimPower.decode(o.str("simP")),
             ).let { r ->
                 // Rules from before this setting: time rules wait, the rest do not.
                 r.copy(waitLocked = if (o.has("wait")) o.getBoolean("wait") else r.trigger == Trigger.TIME,
@@ -914,6 +939,8 @@ data class FrozenApp(
         const val SYS = "#sys:"
         /** The SIM used for mobile data; prev is its slot. */
         const val DATASIM = "#datasim"
+        /** Followed by the SIM slot: "#simpwr1"; prev is [SimSwitch.Target.prev]. */
+        const val SIMPWR = "#simpwr"
 
         fun fromJson(o: JSONObject) = FrozenApp(
             pkg = o.getString("pkg"),

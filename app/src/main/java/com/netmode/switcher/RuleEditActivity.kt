@@ -40,6 +40,7 @@ class RuleEditActivity : AppCompatActivity() {
         HOTSPOT(R.drawable.ic_hotspot, R.string.act_hotspot),
         VPN(R.drawable.ic_a_vpn, R.string.act_vpn),
         DATASIM(R.drawable.ic_a_sim, R.string.act_datasim),
+        SIMPWR(R.drawable.ic_a_sim, R.string.act_simpower),
         RECONNECT(R.drawable.ic_a_airplane, R.string.act_reconnect),
         ICE(R.drawable.ic_ice, R.string.act_ice),
         AIRPLANE(R.drawable.ic_a_airplane, R.string.act_airplane),
@@ -62,7 +63,7 @@ class RuleEditActivity : AppCompatActivity() {
         val isText: Boolean get() = this == NOTE || this == HTTP || this == SHELL
 
         /** Only at the start: something done once, with nothing to put back or set at the end. */
-        val startOnly: Boolean get() = this == RECONNECT || this == ICE || this == JOIN
+        val startOnly: Boolean get() = this == RECONNECT || this == ICE || this == JOIN || this == SIMPWR
     }
 
     private class TriggerInfo(val trigger: Trigger, val icon: Int, val title: Int, val hint: Int, val short: Int)
@@ -154,6 +155,8 @@ class RuleEditActivity : AppCompatActivity() {
     private var vpnFallback: String? = null
     private var vpnOffApp: String? = null
     private var dataSim: Int? = null
+    /** [Act.SIMPWR]: the SIM switched on or off for the window. */
+    private var simPower: SimPower? = null
     private var airplane: Toggle? = null
     private var powerSave: Toggle? = null
     private var btOff = false
@@ -208,7 +211,7 @@ class RuleEditActivity : AppCompatActivity() {
                 Act.LAUNCH -> launchApps = emptyList()
                 Act.SYS -> sys = emptyMap()
                 Act.NOTE, Act.HTTP, Act.SHELL -> texts -= a
-                Act.UNLOAD, Act.RECONNECT, Act.ICE, Act.JOIN -> Unit
+                Act.UNLOAD, Act.RECONNECT, Act.ICE, Act.JOIN, Act.SIMPWR -> Unit
             }
         }
 
@@ -409,6 +412,8 @@ class RuleEditActivity : AppCompatActivity() {
         if (hotspot.first != null) shown += Act.HOTSPOT
         if (vpn != null) shown += Act.VPN
         if (dataSim != null) shown += Act.DATASIM
+        simPower = r.simPower
+        if (simPower != null) shown += Act.SIMPWR
         if (airplane != null) shown += Act.AIRPLANE
         if (powerSave != null) shown += Act.POWERSAVE
         if (btOff) shown += Act.BT
@@ -686,6 +691,9 @@ class RuleEditActivity : AppCompatActivity() {
                 Trigger.PLACE, Trigger.ROAMING, Trigger.WEAK_SIGNAL, Trigger.CALL, Trigger.NET_MODE, Trigger.WIFI_OTHER, Trigger.HOTSPOT)
             Act.POWERSAVE -> !(t == Trigger.BATTERY && batteryLevel == 0)
             Act.DATASIM -> simSlots.size > 1
+            // Switching off the SIM the trigger watches would end the rule's own window.
+            Act.SIMPWR -> SimSwitch.supported && t !in setOf(Trigger.MOBILE_DATA, Trigger.ROAMING, Trigger.WEAK_SIGNAL,
+                Trigger.NET_MODE, Trigger.NO_INTERNET, Trigger.CALL, Trigger.PLACE)
             else -> true
         }
     }
@@ -1089,6 +1097,16 @@ class RuleEditActivity : AppCompatActivity() {
                     rowChoices[a] = c
                     row(box, a, getString(a.title), c, remove)
                 }
+                Act.SIMPWR -> {
+                    val cur = simPower ?: SimPower(simSlots.last(), on = false).also { simPower = it }
+                    val c = choice(simSlots.map { Sims.slotLabel(it) }, simSlots.indexOf(cur.slot).coerceAtLeast(0)) {
+                        simPower = SimPower(simSlots[it], simPower?.on ?: false)
+                    }
+                    rowChoices[a] = c
+                    row(box, a, getString(a.title), c, remove)
+                    sub(box, choice(onOff, if (cur.on) 0 else 1) { simPower = SimPower(simPower?.slot ?: cur.slot, it == 0) })
+                    sub(box, hint(getString(R.string.act_simpower_hint)))
+                }
                 Act.BT -> { btOff = true; row(box, a, getString(R.string.bt_off), null, remove) }
                 Act.LOC -> { locOff = true; row(box, a, getString(R.string.loc_off), null, remove) }
                 Act.RECONNECT -> {
@@ -1324,7 +1342,7 @@ class RuleEditActivity : AppCompatActivity() {
                     st.texts[a]?.let { sub(box, hint(it)) }
                 }
                 // Never offered at the end (see allowedEnd).
-                Act.RECONNECT, Act.ICE, Act.JOIN -> Unit
+                Act.RECONNECT, Act.ICE, Act.JOIN, Act.SIMPWR -> Unit
             }
         }
     }
@@ -1518,6 +1536,7 @@ class RuleEditActivity : AppCompatActivity() {
             Act.NOTE, Act.HTTP, Act.SHELL -> texts -= a
             Act.ICE -> iceTargets = emptyList()
             Act.JOIN -> join = null
+            Act.SIMPWR -> simPower = null
             Act.UNLOAD, Act.RECONNECT -> Unit
         }
         paint()
@@ -1640,10 +1659,19 @@ class RuleEditActivity : AppCompatActivity() {
             if (target != null) allowedEnd(it) && it !in target.shown && (custom || it.anyEnd)
             else allowed(it) && it !in shown
         }
-        if (options.isEmpty()) return
+        // "Не беспокоить" is a system setting, but buried there it is hard to find: offer it by
+        // name too. It lands in the same slot, so running and putting back stay as they are.
+        val sysOk = if (target != null) allowedEnd(Act.SYS) && custom else allowed(Act.SYS)
+        val dnd = sysOk && SysKey.DND.name !in (target?.sys ?: sys)
+        val dndAt = (options.indexOf(Act.SYS).takeIf { it >= 0 } ?: options.indexOfLast { it.ordinal < Act.SYS.ordinal }).let { it + 1 }
+        if (options.isEmpty() && !dnd) return
+        val labels = options.map { getString(it.title) }.toMutableList()
+        if (dnd) labels.add(dndAt, getString(R.string.act_dnd))
         MaterialAlertDialogBuilder(this)
             .setTitle(if (target != null) R.string.add_end_action else R.string.add_action)
-            .setItems(options.map { getString(it.title) }.toTypedArray()) { _, i ->
+            .setItems(labels.toTypedArray()) { _, picked ->
+                if (dnd && picked == dndAt) { addDnd(target); return@setItems }
+                val i = if (dnd && picked > dndAt) picked - 1 else picked
                 val a = options[i]
                 if (target != null) {
                     target.shown += a
@@ -1679,6 +1707,31 @@ class RuleEditActivity : AppCompatActivity() {
                 paint()
                 // Straight into the value, so adding an action is one step.
                 v.actions.post { rowChoices[a]?.performClick() }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    /** On or off for Do Not Disturb, kept in "Системные настройки" of the start or of [target]. */
+    private fun addDnd(target: EndState?) {
+        val k = SysKey.DND
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.act_dnd)
+            .setItems(arrayOf(getString(R.string.turn_on), getString(R.string.turn_off))) { _, j ->
+                val code = k.options[j]
+                if (target != null) {
+                    target.shown += Act.SYS
+                    target.sys = target.sys + (k.name to code)
+                } else {
+                    if (Act.SYS !in shown) {
+                        shown += Act.SYS
+                        // As for any new action at the start: offered in a custom end, set to "leave".
+                        atEnd.shown += Act.SYS
+                        unlock.shown += Act.SYS
+                    }
+                    sys = sys + (k.name to code)
+                }
+                paint()
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
@@ -2178,6 +2231,7 @@ class RuleEditActivity : AppCompatActivity() {
             powerSave = powerSave.takeIf { Act.POWERSAVE in shown },
             endPowerSave = e(Act.POWERSAVE, atEnd.powerSave),
             dataSim = dataSim.takeIf { Act.DATASIM in shown },
+            simPower = simPower.takeIf { Act.SIMPWR in shown },
             endDataSim = e(Act.DATASIM, atEnd.dataSim),
             waitLocked = v.waitRow.toggle.isChecked && t != Trigger.LOCKED && t != Trigger.MANUAL,
             waitAppsOnly = v.waitRow.toggle.isChecked && t != Trigger.LOCKED && t != Trigger.MANUAL && v.waitApps.isChecked && v.waitApps.visibility == View.VISIBLE,

@@ -48,7 +48,7 @@ internal object RuleCard {
         R.drawable.ic_a_locoff.takeIf { r.locationOff },
         R.drawable.ic_a_airplane.takeIf { r.airplane != null },
         R.drawable.ic_t_battery.takeIf { r.powerSave != null },
-        R.drawable.ic_a_sim.takeIf { r.dataSim != null },
+        R.drawable.ic_a_sim.takeIf { r.dataSim != null || r.simPower != null },
         R.drawable.ic_t_net.takeIf { r.reconnect || r.http != null },
         R.drawable.ic_ice.takeIf { r.ice != null },
         R.drawable.ic_settings.takeIf { r.sys.isNotEmpty() },

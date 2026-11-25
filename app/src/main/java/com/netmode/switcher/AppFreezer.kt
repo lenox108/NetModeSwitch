@@ -782,7 +782,8 @@ object AppFreezer {
      * navigation, a VPN, anything with a foreground service.
      *
      * With [all] those go too (force-stop), except the app on screen, and each stopped app
-     * is let out of the "stopped" state at once, so its push keeps arriving. Never
+     * is let out of the "stopped" state at once, so its push keeps arriving; their cards
+     * leave the recents too ([RecentsCli]), as ending a process alone leaves them. Never
      * force-stopped: the alarm clock, the dialer and the SMS app (alarms and calls would go),
      * and whatever the system or the user bound to a job — the VPN, a local proxy such as the
      * one the hotspot runs through, accessibility services, notification listeners, autofill,
@@ -818,6 +819,7 @@ object AppFreezer {
         val skipAll = (protected + Prefs.appRules.mapNotNull { it.vpnApp }.map { AppKey.pkg(it) } +
             listOfNotNull(ctx.packageName, home, keyboard)).toSet()
         fun shellKey(key: String) = "${AppKey.pkg(key)}#${AppKey.user(key)}"
+        val recents = "CLASSPATH=${ctx.applicationInfo.sourceDir} app_process /system/bin com.netmode.switcher.RecentsCli"
         val skipKeys = (keep + Freezer.protectedKeys() + Prefs.unloadExclude + Prefs.frozen.filterNot { it.isPseudo }.map { it.pkg })
             .filter { AppKey.valid(it) }.map(::shellKey).toSet()
         // One shell pass: those apps' running processes, before and after. In the "all" mode
@@ -862,6 +864,21 @@ for k in ${'$'}before; do
     """for pid in ${'$'}(ps -A -o PID=,USER=,NAME= | awk -v n="${'$'}p" -v u="u${'$'}{u}_" 'index(${'$'}2,u)==1 && (${'$'}3==n || index(${'$'}3,n":")==1) {print ${'$'}1}'); do kill -9 ${'$'}pid 2>/dev/null; done
     am kill --user ${'$'}u "${'$'}p" >/dev/null 2>&1"""}
 done
+# The recents' cards: ending the processes leaves them, as "Очистить всё" would not. The same
+# apps go, by the same rules; the card on screen, padlocked and excepted ones stay.
+cu=${'$'}(am get-current-user 2>/dev/null); case "${'$'}cu" in ''|*[!0-9]*) cu=0 ;; esac
+ids=""
+for t in ${'$'}($recents list ${'$'}cu 2>/dev/null | awk '${'$'}1=="@T" {print ${'$'}2"="${'$'}3}'); do
+    id=${'$'}{t%%=*}; k=${'$'}{t#*=}; p=${'$'}{k%#*}
+    [ "${'$'}k" = "${'$'}top" ] && continue
+    case "${'$'}apps" in *" ${'$'}p "*) ;; *) continue ;; esac
+    case "${'$'}skipall" in *" ${'$'}p "*) continue ;; esac
+    case "${'$'}skipkeys" in *" ${'$'}k "*) continue ;; esac
+    case " ${'$'}net " in *" ${'$'}k "*) continue ;; esac
+    case " ${'$'}vpn " in *" ${'$'}p "*) continue ;; esac
+    ids="${'$'}ids ${'$'}id"
+done
+[ -n "${'$'}ids" ] && $recents remove ${'$'}ids 2>/dev/null | grep '^@N '
 """ else """
 for k in ${'$'}before; do cmd activity kill --user ${'$'}{k#*#} "${'$'}{k%#*}" >/dev/null 2>&1; done
 """}
@@ -879,7 +896,9 @@ echo "@B ${'$'}(echo "${'$'}before" | grep -c .) @A ${'$'}(echo "${'$'}after" | 
         val a = Regex("""@A (\d+)""").find(out)?.groupValues?.get(1)?.toIntOrNull() ?: b
         val n = (b - a).coerceAtLeast(0)
         val locked = Regex("""@K (\d+)""").find(out)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+        val cards = Regex("""@N (\d+)""").find(out)?.groupValues?.get(1)?.toIntOrNull() ?: 0
         Prefs.log("($why): $what — закрыто приложений: $n" + (if (a > 0) ", работают дальше: $a" else "") +
+            (if (cards > 0) ", убрано из недавних: $cards" else "") +
             if (locked > 0) ", закреплённые замком не тронуты: $locked" else "")
         return n
     }
@@ -1238,6 +1257,7 @@ done
         "HOTSPOT" -> setOf(FrozenApp.HOTSPOT, FrozenApp.TETHER_MODE, FrozenApp.HOTSPOT_RADIO)
         "VPN" -> setOf(FrozenApp.SYSVPN)
         "DATASIM" -> setOf(FrozenApp.DATASIM)
+        "SIMPWR" -> (0 until 4).map { FrozenApp.SIMPWR + it }.toSet()
         "AIRPLANE" -> setOf(FrozenApp.AIRPLANE)
         "POWERSAVE" -> setOf(FrozenApp.POWERSAVE)
         "BT" -> setOf(FrozenApp.BLUETOOTH)
@@ -1748,8 +1768,34 @@ done
                     }
                 } else if (FrozenApp.DATASIM in existing) record(FrozenApp.DATASIM, slot.toString())
             }
+            // Run after the radios on its own: an eSIM profile switch takes seconds.
+            var simSwitch: Pair<SimPower, SimSwitch.Target>? = null
+            rule.simPower?.takeIf { wants(FrozenApp.SIMPWR + it.slot) }?.let { want ->
+                val key = FrozenApp.SIMPWR + want.slot
+                val target = SimSwitch.target(want.slot)
+                when {
+                    !SimSwitch.supported -> done += "SIM ${want.slot + 1}: вкл/выкл SIM нужен Android 11+"
+                    target == null -> done += "SIM ${want.slot + 1}: карта не найдена — не переключена"
+                    else -> {
+                        // Unreadable: taken as the other state, so the switch runs and is put back.
+                        val on = SimSwitch.isOn(target.sub) ?: !want.on
+                        if (on != want.on) {
+                            record(key, target.prev(on))
+                            simSwitch = want to target
+                        } else if (key in existing) record(key, target.prev(on))
+                    }
+                }
+            }
             if (rule.wifi != null || rule.hotspot != null || rule.airplane != null) Prefs.selfWifiAt = System.currentTimeMillis()
             if (script.isNotBlank()) Privileged.exec(script.toString())
+            simSwitch?.let { (p, target) ->
+                val error = switchSim(target, p.on)
+                if (error == null) done += "SIM ${p.slot + 1} ${if (target.embedded) "(eSIM) " else ""}${if (p.on) "включена" else "выключена"}"
+                else {
+                    done += "SIM ${p.slot + 1}: не удалось ${if (p.on) "включить" else "выключить"} — $error"
+                    unrecord(FrozenApp.SIMPWR + p.slot)
+                }
+            }
             if (via != null) done += applyTether()
 
             // Tiles and the VPN side by side, so their waits overlap: a broadcast receiver has a
@@ -1869,6 +1915,23 @@ done
         return "${cli()} com.netmode.switcher.SimCli data $sub | grep -q '^ok' || echo \"@F datasim\""
     }
 
+    /**
+     * Switches a SIM on or off through [SimCli]: a physical one as "Использовать SIM" does, an
+     * eSIM by enabling or disabling its profile. Null when done, else why not.
+     */
+    private suspend fun switchSim(t: SimSwitch.Target, on: Boolean): String? {
+        val args = if (t.embedded) "esim ${t.card} ${t.port} ${if (on) t.sub else -1}" else "uicc ${t.sub} ${if (on) 1 else 0}"
+        val out = runCatching { Privileged.exec("${cli()} com.netmode.switcher.SimCli $args", timeoutMs = 60_000L) }
+            .rethrowCancel().getOrElse { return it.message ?: "ошибка" }
+        val line = out.lineSequence().map { it.trim() }.lastOrNull { it == "ok" || it.startsWith("error=") }
+        return when {
+            line == "ok" -> null
+            line == "error=consent" -> "для eSIM нужен root (через Shizuku система просит подтверждение)"
+            line != null -> line.removePrefix("error=")
+            else -> out.trim().take(120).ifEmpty { "нет ответа" }
+        }
+    }
+
     private fun suspendMessage(rule: AppRule): String {
         val until = rule.lastStart(ZonedDateTime.now())?.let { rule.endAfter(it) }
             ?.let { " до %02d:%02d".format(it.hour, it.minute) }
@@ -1937,6 +2000,13 @@ done
             val line = runCatching { if (prev == "off") VpnControl.off() else VpnControl.on(prev) }
                 .getOrElse { "VPN: ошибка ${it.message}" }
             Prefs.log("возврат: $line")
+        }
+        for (e in entries.filter { it.pkg.startsWith(FrozenApp.SIMPWR) }) {
+            val (on, target) = SimSwitch.Target.fromPrev(e.prev) ?: continue
+            val error = switchSim(target, on)
+            val slot = e.pkg.removePrefix(FrozenApp.SIMPWR).toIntOrNull()?.plus(1)
+            if (error == null) Prefs.log("возврат: SIM $slot ${if (on) "включена" else "выключена"}")
+            else { netFailed++; Prefs.log("возврат: SIM $slot — $error") }
         }
         for (e in entries.filter { it.pkg.startsWith(FrozenApp.SYS) && it.prev != null }) {
             val key = SysKey.of(e.pkg.removePrefix(FrozenApp.SYS)) ?: continue

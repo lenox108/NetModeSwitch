@@ -277,6 +277,12 @@ class AppRulesActivity : AppCompatActivity() {
         ui.toolbar.setNavigationContentDescription(if (selecting) R.string.rules_cancel_selection else androidx.appcompat.R.string.abc_action_bar_up_description)
         ui.toolbar.menu.clear()
         if (!selecting) {
+            // Long lists push the bottom "Add rule" button far down; keep creation one tap away.
+            ui.toolbar.menu.add(R.string.add_app_rule).apply {
+                setIcon(R.drawable.ic_add)
+                setShowAsAction(android.view.MenuItem.SHOW_AS_ACTION_ALWAYS)
+                setOnMenuItemClickListener { startActivity(Intent(this@AppRulesActivity, RuleEditActivity::class.java)); true }
+            }
             ui.toolbar.menu.add(R.string.rules_select).apply {
                 isEnabled = count > 0
                 setOnMenuItemClickListener { startSelection(); true }

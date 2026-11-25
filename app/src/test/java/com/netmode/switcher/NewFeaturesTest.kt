@@ -57,6 +57,21 @@ class NewFeaturesTest {
         assertTrue(VpnFallback.shouldSwitch(4))
     }
 
+    @Test fun theMainVpnComesBackAfterTwoDirectChecksInARow() {
+        assertEquals(1, VpnFallback.nextPasses(0, directInternet = true))
+        assertEquals(0, VpnFallback.nextPasses(1, directInternet = false))
+        assertFalse(VpnFallback.shouldReturn(1))
+        assertTrue(VpnFallback.shouldReturn(2))
+    }
+
+    @Test fun aMainVpnThatKeepsFailingWaitsLongerEachTime() {
+        val min = VpnFallback.HOLD_MIN_MS
+        assertEquals(min, VpnFallback.nextHold(8 * min, mainLastedMs = null))
+        assertEquals(2 * min, VpnFallback.nextHold(min, mainLastedMs = 60_000L))
+        assertEquals(VpnFallback.HOLD_MAX_MS, VpnFallback.nextHold(VpnFallback.HOLD_MAX_MS, mainLastedMs = 60_000L))
+        assertEquals(min, VpnFallback.nextHold(8 * min, mainLastedMs = VpnFallback.STABLE_MS))
+    }
+
     @Test fun anotherVpnDoesNotPassACheckForAChosenOne() {
         assertTrue(StepChecks.vpnUp("org.amnezia.vpn", "org.amnezia.vpn", null))
         assertTrue(StepChecks.vpnUp("su.happ", "org.amnezia.vpn", "su.happ"))
